@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <title>KEANO DER LICHTKRIEGER - Handbuch</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@700;900&family=Permanent+Marker&display=swap');
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: #0a0012;
+            color: #fff;
+            line-height: 1.7;
+            padding: 30px;
+        }
+
+        h1 {
+            font-family: 'Permanent Marker', cursive;
+            text-align: center;
+            color: #ffcc00;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px #ff0055;
+        }
+
+        .sub {
+            text-align: center;
+            color: #00ffff;
+            font-size: 1rem;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #00ffff;
+            border-bottom: 2px solid #ff00ff;
+            padding-bottom: 8px;
+            margin-top: 35px;
+            font-size: 1.1rem;
+        }
+
+        h3 {
+            color: #ff00ff;
+            margin-top: 20px;
+            font-size: 0.95rem;
+        }
+
+        .box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid #ff00ff;
+            padding: 18px;
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+
+        th {
+            background: #ff00ff22;
+            color: #ff00ff;
+            text-align: left;
+            padding: 8px;
+            font-size: 0.8rem;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            font-size: 0.85rem;
+        }
+
+        .key {
+            display: inline-block;
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: 'Press Start 2P';
+            font-size: 0.65rem;
+        }
+
+        .hl {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        .combo {
+            color: #00ffcc;
+        }
+
+        ul {
+            list-style-type: '⚔️ ';
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                color: #000;
+            }
+
+            h1,
+            h2,
+            h3 {
+                text-shadow: none;
+            }
+
+            .box {
+                background: #f9f9f9;
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚔️ KEANO ⚔️</h1>
+    <div class="sub">DER LICHTKRIEGER</div>
+
+    <div class="box">
+        <h2>🎮 STEUERUNG</h2>
+        <table>
+            <tr>
+                <th>Aktion</th>
+                <th>Touch/Mobile</th>
+                <th>Tastatur</th>
+            </tr>
+            <tr>
+                <td>Bewegen</td>
+                <td>Analog-Stick</td>
+                <td><span class="key">A</span> <span class="key">D</span></td>
+            </tr>
+            <tr>
+                <td>Springen</td>
+                <td>Stick ↑</td>
+                <td><span class="key">W</span></td>
+            </tr>
+            <tr>
+                <td>Punch (Schlag)</td>
+                <td><span class="key">P</span> Button</td>
+                <td><span class="key">F</span></td>
+            </tr>
+            <tr>
+                <td>Kick (Tritt)</td>
+                <td><span class="key">K</span> Button</td>
+                <td><span class="key">G</span></td>
+            </tr>
+            <tr>
+                <td>Lichtblitz (Special)</td>
+                <td><span class="key">F</span> Button</td>
+                <td><span class="key">H</span></td>
+            </tr>
+            <tr>
+                <td>Super Move</td>
+                <td><span class="key">S</span> Button</td>
+                <td><span class="key">SPACE</span></td>
+            </tr>
+            <tr>
+                <td>Block</td>
+                <td>Stick ↓</td>
+                <td><span class="key">S</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>⚡ COMBO-SYSTEM</h2>
+        <p>Triff deinen Gegner mehrmals nacheinander <strong>ohne selbst getroffen zu werden</strong>!</p>
+        <table>
+            <tr>
+                <th>Combo Hits</th>
+                <th>Belohnung</th>
+                <th>Anzeige</th>
+            </tr>
+            <tr>
+                <td class="combo">2 Treffer</td>
+                <td>Combo-Bonus (Extra Super-Meter)</td>
+                <td>🔶 "2 HIT COMBO!"</td>
+            </tr>
+            <tr>
+                <td class="combo">3 Treffer</td>
+                <td><span class="hl">SPECIAL MOVE freigeschaltet</span> (Lichtblitz)</td>
+                <td>⚡ "3 HIT! SPECIAL READY!"</td>
+            </tr>
+            <tr>
+                <td class="combo">5 Treffer</td>
+                <td><span class="hl">SUPER MOVE freigeschaltet</span> (HADOU-KEANO)</td>
+                <td>🐉 "5 HIT! SUPER READY!"</td>
+            </tr>
+        </table>
+        <p>⚠️ Wirst du getroffen → Combo-Counter auf 0! Specials & Super müssen <strong>verdient</strong> werden.</p>
+    </div>
+
+    <div class="box">
+        <h2>🔥 MOVE-LISTE (KEANO)</h2>
+        <table>
+            <tr>
+                <th>Move</th>
+                <th>Input</th>
+                <th>Beschreibung</th>
+            </tr>
+            <tr>
+                <td>Jab</td>
+                <td><span class="key">P</span></td>
+                <td>Schneller Faustschlag</td>
+            </tr>
+            <tr>
+                <td>Roundhouse Kick</td>
+                <td><span class="key">K</span></td>
+                <td>Kraftvoller Hoch-Tritt</td>
+            </tr>
+            <tr>
+                <td>Lichtblitz</td>
+                <td><span class="key">F</span> (3+ Combo)</td>
+                <td>Energie-Projektil</td>
+            </tr>
+            <tr>
+                <td>Block</td>
+                <td>↓ / <span class="key">S</span></td>
+                <td>Blockt 85% Schaden</td>
+            </tr>
+            <tr>
+                <td>Sprung-Angriff</td>
+                <td>↑ dann <span class="key">P</span>/<span class="key">K</span></td>
+                <td>Luftangriff beim Springen</td>
+            </tr>
+            <tr>
+                <td class="hl">HADOU-KEANO!</td>
+                <td><span class="key">S</span> (5+ Combo, Super voll)</td>
+                <td>⚡ Verheerender Finisher mit Lichtexplosion</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>👤 DIE 14 GEGNER</h2>
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Spezial</th>
+                <th>Stil</th>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>🇯🇵 RYU</td>
+                <td>🔥 Feuer</td>
+                <td>Allrounder</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>🇧🇷 BLANKA</td>
+                <td>⚡ Elektro</td>
+                <td>Blitzschnell</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>🇷🇺 ZANGIEF</td>
+                <td>💀 Dunkel</td>
+                <td>Tank, langsam aber stark</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>🇹🇭 SAGAT</td>
+                <td>🔥 Feuer</td>
+                <td>Feuerball-Spammer</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>🇺🇸 GUILE</td>
+                <td>🌪️ Wind</td>
+                <td>Windangriffe</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>🇬🇧 SID</td>
+                <td>💀 Dunkel</td>
+                <td>Dunkelangriffe</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>🇫🇷 PIERRE</td>
+                <td>🌪️ Wind</td>
+                <td>Springer, extrem schnell</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td>🇨🇳 WANG</td>
+                <td>🐉 Super</td>
+                <td>Balanced</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td>🇪🇬 ANUBIS</td>
+                <td>🐉 Super</td>
+                <td>Fernkampf-Spezialist</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td>🇪🇸 CARLOS</td>
+                <td>🔥 Feuer</td>
+                <td>Feuer-Kicks</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td>🇮🇳 DHALSIM</td>
+                <td>🔥 Feuer</td>
+                <td>Reichweite, langsam</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td>🇨🇦 JACQUES</td>
+                <td>❄️ Eis</td>
+                <td>Eispanzer, viel HP</td>
+            </tr>
+            <tr>
+                <td>13</td>
+                <td>🇯🇲 DEE JAY</td>
+                <td>⚡ Elektro</td>
+                <td>Blitz-Tempo</td>
+            </tr>
+            <tr>
+                <td>14</td>
+                <td>🇮🇹 M. DISON</td>
+                <td>🐉 Super</td>
+                <td>BOSS — Alle Moves!</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h2>🔊 AUDIO-EINSTELLUNGEN</h2>
+        <p>Im Menü (☰) findest du Regler für:</p>
+        <ul>
+            <li>🎵 <strong>MUSIC</strong> — Pro Level eine einzigartige Arcade-Melodie</li>
+            <li>💥 <strong>SFX</strong> — Schlag-, Tritt-, Block- und Spezial-Effekte</li>
+            <li>🎤 <strong>VOICE</strong> — Papa's Stimme am Ende</li>
+        </ul>
+    </div>
+
+    <div style="text-align:center; margin-top:40px;">
+        <button onclick="window.print()"
+            style="background:#00ffff; color:#000; font-weight:bold; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-size:1rem;">📄
+            Als PDF drucken</button>
+    </div>
+</body>
+
+</html>

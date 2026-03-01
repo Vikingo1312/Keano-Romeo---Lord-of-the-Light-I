@@ -1,0 +1,46 @@
+{
+  "name": "keano-romeo-lord-of-the-light",
+  "version": "1.0.0",
+  "description": "Lord of the Light I",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": [],
+  "author": "Prod By Caesar",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1"
+  },
+  "productName": "Keano Romeo",
+  "build": {
+    "appId": "com.caesar.keano",
+    "mac": {
+      "category": "public.app-category.action-games",
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/keano.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/keano.png"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "package.json",
+      "assets/**/*"
+    ]
+  }
+}

@@ -1,0 +1,4252 @@
+===== index.html =====
+
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <title>KEANO ROMEO — LORD OF THE LIGHT I ⚔️</title>
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap"
+    rel="stylesheet">
+  <style>
+    /* =========================================================================
+       1. V3: CORE RESET & FONTS
+       ========================================================================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Press Start 2P', monospace;
+      color: white;
+      touch-action: none;
+    }
+
+    /* Fullscreen Game Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    /* Core Rendering Canvas */
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      /* Image Rendering crisp for pixel art, but we use high res AI art, so normal is fine */
+      /* image-rendering: pixelated; */
+    }
+
+    /* Global Helper Classes */
+    .hidden {
+      display: none !important;
+    }
+
+    .neon-text {
+      text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+
+    /* =========================================================================
+       2. UI SCREENS (OVERLAYS)
+       ========================================================================= */
+    /* 2.1 MAIN MENU (State 1) */
+    #main-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: url('assets/UX_Cosmic_Shimmer.png') center/cover no-repeat;
+    }
+
+    @keyframes thunder-shake {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      10% {
+        transform: translate(-8px, 6px) scale(1.02);
+        filter: brightness(2) contrast(1.5);
+      }
+
+      15% {
+        transform: translate(6px, -6px) scale(1.03);
+        filter: brightness(3.5) contrast(2) saturate(0.5);
+      }
+
+      25% {
+        transform: translate(-10px, 5px) scale(1.02);
+        filter: brightness(1.8) contrast(1.5);
+      }
+
+      35% {
+        transform: translate(5px, -4px) scale(1.02);
+        filter: brightness(1.2);
+      }
+
+      45% {
+        transform: translate(-4px, 6px) scale(1.01);
+        filter: brightness(1);
+      }
+
+      60% {
+        transform: translate(3px, -2px) scale(1.01);
+      }
+
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
+    .lightning-active {
+      animation: thunder-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+    }
+
+    /* ===== LIGHTNING CANVAS ===== */
+    #lightning-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .caesar-branding-logo {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 180px;
+      height: auto;
+      filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5));
+      z-index: 101;
+      opacity: 0.8;
+    }
+
+    .main-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 8vw, 6rem);
+      letter-spacing: 5px;
+      margin-bottom: -10px;
+      text-transform: uppercase;
+      background: repeating-linear-gradient(0deg, #00ffff 0px, #00ffff 4px, #0088cc 4px, #0088cc 6px);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+      filter: drop-shadow(0px 0px 10px rgba(0, 255, 255, 0.8));
+      line-height: 1.1;
+      animation: pulsate-title 3s infinite alternate;
+      text-align: center;
+    }
+
+    .sub-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.2rem, 3vw, 2.2rem);
+      color: #fff;
+      -webkit-text-stroke: 1px #000;
+      letter-spacing: 12px;
+      text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    /* Capcom Style Arcade Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 102;
+    }
+
+    .capcom-btn {
+      background: rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+      padding: 15px 40px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #fff;
+      border: 4px solid #fff;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5), 0 0 15px rgba(255, 255, 255, 0.5);
+      transition: all 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .capcom-btn:hover:not(:disabled) {
+      background: #fff;
+      color: #000;
+      transform: scale(1.05);
+      box-shadow: 0 0 30px #fff;
+    }
+
+    .capcom-btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .capcom-btn:disabled {
+      border-color: #444;
+      color: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Padlock for locked modes */
+    .btn-lock {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+      font-size: 1.2rem;
+    }
+
+    @keyframes pulsate-title {
+      0% {
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+      }
+
+      100% {
+        text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+      }
+    }
+
+    /* 2.2 CHARACTER SELECT (State 3) */
+    #char-select {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 90;
+      background: linear-gradient(135deg, #0a001a 0%, #000033 100%);
+      display: flex;
+      flex-direction: row;
+      padding: 20px;
+    }
+
+    /* Keep bottom area free for virtual pads on mobile */
+    @media (max-width: 800px) {
+      #char-select {
+        flex-direction: column;
+        padding-bottom: 30vh;
+      }
+    }
+
+    .cs-left {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cs-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: rgba(0, 10, 30, 0.6);
+      backdrop-filter: blur(10px);
+      border-left: 2px solid #00ffff;
+      box-shadow: -10px 0 30px rgba(0, 255, 255, 0.1);
+      padding: 5px 0 0 0;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    #cs-title {
+      font-size: 2rem;
+      color: #ffcc00;
+      text-align: center;
+      text-shadow: 0 0 10px #ffcc00;
+      margin-bottom: 20px;
+    }
+
+    .cs-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      padding: 12px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .cs-portrait {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 3px solid #333;
+      background: #111;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cs-portrait img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .cs-portrait.selected {
+      border-color: #00ffff;
+      box-shadow: 0 0 15px #00ffff;
+      transform: scale(1.1);
+      z-index: 2;
+    }
+
+    /* Highlight the boss/Keano specifically */
+    .cs-portrait.boss {
+      border-color: #ff0000;
+    }
+
+    .cs-portrait.boss.selected {
+      box-shadow: 0 0 20px #ff0000;
+    }
+
+    .cs-portrait.variant {
+      border-color: #ffcc00;
+    }
+
+    .cs-portrait.variant.selected {
+      border-color: #ffcc00;
+      box-shadow: 0 0 20px #ffcc00;
+    }
+
+    .cs-portrait-name {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-size: 0.5rem;
+      text-align: center;
+      padding: 2px 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .cs-info-panel {
+      padding: 5px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-grow: 0;
+    }
+
+    /* Character Display */
+    #cs-preview-img {
+      width: 100%;
+      max-height: 45vh;
+      object-fit: contain;
+      object-position: top center;
+      margin: 0;
+      padding: 5px;
+      filter: drop-shadow(0 0 25px rgba(0, 255, 255, 0.4));
+      border-bottom: 1px solid rgba(0, 255, 255, 0.4);
+      background: linear-gradient(to top, rgba(0, 200, 255, 0.1), transparent);
+    }
+
+    #cs-name {
+      font-size: 1.3rem;
+      color: #fff;
+      text-shadow: 0 0 10px #fff;
+      margin: 3px 0 2px;
+      text-align: center;
+    }
+
+    #cs-title-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      color: #00ffff;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+
+    .cs-desc {
+      font-size: 0.7rem;
+      color: #aaa;
+      text-align: center;
+      margin: 5px 0 10px;
+    }
+
+    .cs-stats {
+      width: 100%;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+    }
+
+    .cs-stat-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .cs-stat-label {
+      width: 50px;
+      color: #ccc;
+    }
+
+    .cs-stat-bar-bg {
+      flex: 1;
+      height: 12px;
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .cs-stat-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease-out;
+      border-radius: 3px;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    .btn-select-confirm {
+      margin-top: auto;
+      width: 90%;
+      margin-bottom: 20px;
+      padding: 20px;
+      font-size: 2rem;
+      background: linear-gradient(90deg, #00ffff, #0055ff);
+      color: #000;
+      border: 3px solid #fff;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      animation: pulsate-title 1s infinite alternate;
+      text-transform: uppercase;
+      font-weight: 900;
+      box-shadow: 0 0 20px #00ffff;
+      transition: all 0.2s;
+    }
+
+    .btn-select-confirm:hover {
+      background: #fff;
+      box-shadow: 0 0 40px #fff, inset 0 0 15px #00ffff;
+      transform: scale(1.05);
+    }
+
+    /* 2.3 OPTIONS & HUD/PAUSE MENU */
+    #pause-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 150;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .options-panel {
+      background: rgba(0, 20, 40, 0.9);
+      border: 2px solid #00ffff;
+      padding: 30px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+      max-width: 600px;
+      width: 90%;
+    }
+
+    .opt-title {
+      color: #00ffff;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 0.8rem;
+    }
+
+    input[type=range] {
+      width: 60%;
+      accent-color: #00ffff;
+    }
+
+    /* Controls Tutorial Section */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      border-top: 1px solid #444;
+      padding-top: 15px;
+    }
+
+    .ctrl-key {
+      color: #ffcc00;
+      font-weight: bold;
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #555;
+    }
+
+    /* Hamburger Button (Always visible during gameplay) */
+    /* === INSERT COIN / CREDITS SYSTEM === */
+    .insert-coin-bar {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      z-index: 20;
+    }
+
+    .coin-icon {
+      font-size: 2rem;
+      animation: coinSpin 1.5s ease-in-out infinite;
+      filter: drop-shadow(0 0 8px #ffcc00);
+    }
+
+    @keyframes coinSpin {
+
+      0%,
+      100% {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scaleX(0.1);
+        opacity: 0.7;
+      }
+    }
+
+    .insert-coin-text {
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 1rem;
+      color: #ffcc00;
+      text-shadow: 0 0 10px #ffcc00, 0 0 20px #ff8800;
+      letter-spacing: 3px;
+    }
+
+    @keyframes insertBlink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.2;
+      }
+    }
+
+    .credit-counter {
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 0.85rem;
+      color: #00ffff;
+      text-shadow: 0 0 8px #00ffff;
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      z-index: 20;
+    }
+
+    /* When credits are empty: blink red + clickable */
+    .insert-coin-bar.empty {
+      cursor: pointer;
+    }
+
+    .insert-coin-bar.empty .insert-coin-text {
+      color: #ff0033;
+      text-shadow: 0 0 10px #ff0033, 0 0 20px #ff0000;
+      animation: insertBlink 0.4s ease-in-out infinite;
+    }
+
+    .insert-coin-bar.empty .coin-icon {
+      filter: drop-shadow(0 0 8px #ff0033) hue-rotate(180deg);
+    }
+
+    /* SKIP BUTTON (Voice Sequences) */
+    #btn-skip-sequence {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid #ffcc00;
+      color: #ffcc00;
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 0.85rem;
+      padding: 12px 30px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px #ffcc00;
+      animation: insertBlink 1s ease-in-out infinite;
+      transition: all 0.2s;
+    }
+
+    #btn-skip-sequence:hover {
+      background: rgba(255, 200, 0, 0.15);
+      border-color: #fff;
+      color: #fff;
+    }
+
+    #btn-hamburger {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 80;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 1.5rem;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 2.4 VIRTUAL GAMEPAD (Mobile Only) */
+    #mobile-controls {
+      position: absolute;
+      bottom: 5vh;
+      left: 0;
+      width: 100%;
+      height: auto;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      pointer-events: none;
+      touch-action: none;
+    }
+
+    .mc-zone {
+      pointer-events: auto;
+      display: flex;
+      align-items: flex-end;
+      touch-action: none;
+    }
+
+    #joystick-base {
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle at center, rgba(30, 30, 40, 0.8), rgba(10, 10, 15, 0.9));
+      border: 3px solid rgba(0, 255, 255, 0.5);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 0, 0, 0.8);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    #joystick-knob {
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle at 30% 30%, #666, #111);
+      border: 2px solid #00ffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 45px;
+      left: 45px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    }
+
+    .action-btn-group {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .action-btn {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      font-size: 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255, 255, 255, 0.2);
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    #btn-punch {
+      top: 0;
+      left: 55px;
+      background: radial-gradient(circle, #0088ff, #004488);
+      border-color: #00aaff;
+    }
+
+    #btn-kick {
+      bottom: 0;
+      left: 55px;
+      background: radial-gradient(circle, #ff3300, #881100);
+      border-color: #ff5533;
+    }
+
+    #btn-block {
+      left: 0;
+      top: 55px;
+      background: radial-gradient(circle, #888, #444);
+      border-color: #aaa;
+      color: #ddd;
+    }
+
+    #btn-special {
+      right: 0;
+      top: 55px;
+      background: radial-gradient(circle, #ffcc00, #886600);
+      border-color: #ffee33;
+      color: #fff;
+    }
+
+    @media (min-width: 1025px) {
+      #mobile-controls {
+        display: none !important;
+      }
+    }
+
+    /* =========================================================================
+       V3: Scene Manager & Transitions
+       ========================================================================= */
+    #scene-fader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center,
+          rgba(0, 0, 0, 1) 40%,
+          rgba(0, 30, 60, 0.98) 60%,
+          rgba(0, 180, 255, 0.15) 80%,
+          rgba(120, 0, 255, 0.1) 100%);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #scene-fader.fade-in {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="game-container">
+    <!-- Scene Manager Overlay -->
+    <div id="scene-fader"></div>
+    <!-- V7 QA DEBUG LOGGER -->
+    <div id="qa-logger"
+      style="position:fixed; top:10px; left:10px; width:40%; max-height:30%; overflow-y:auto; background:rgba(0,0,0,0.8); color:#ff5555; font-family:monospace; font-size:12px; z-index:9999; pointer-events:none; padding:10px; border:1px solid #ff0000; border-radius:5px; display:none;">
+      <strong>V7 QA ERROR LOG:</strong><br>
+    </div>
+
+    <div id="crt-overlay"></div>
+
+    <!-- Main Render Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Initial Audio Interactor -->
+    <div id="audio-unlock-overlay"
+      style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white;">
+      <h1
+        style="font-family: 'Press Start 2P', monospace; font-size: 2rem; color: #ffeb3b; text-shadow: 2px 2px #ff0000; animation: pulsate-title 1.5s infinite alternate;">
+        CLICK ANYWHERE TO START</h1>
+      <p style="font-family: 'Orbitron', sans-serif; font-size: 1rem; margin-top: 15px;">Initializing Arcade Engine...
+      </p>
+    </div>
+
+    <button id="btn-skip-sequence" class="hidden">⏭ SKIP</button>
+
+    <!-- STATE 1: Main Menu -->
+    <div id="main-menu">
+      <canvas id="lightning-canvas"></canvas>
+      <div class="menu-logo-container">
+        <h1 class="main-title">KEANO ROMEO</h1>
+        <h2 class="sub-title">LORD OF THE LIGHT 1</h2>
+      </div>
+
+      <div class="btn-group">
+        <button class="capcom-btn" id="btn-story">STORY MODUS</button>
+        <button class="capcom-btn" id="btn-arcade" disabled
+          style="color:#ff0033; border-color:#ff0033; cursor:not-allowed; opacity:0.6;">🔒 ARCADE MODUS</button>
+        <button class="capcom-btn" id="btn-versus" disabled
+          style="color:#ff0033; border-color:#ff0033; cursor:not-allowed; opacity:0.6;">🔒 VERSUS MODUS</button>
+        <button class="capcom-btn" id="btn-options-menu">OPTIONEN</button>
+      </div>
+    </div>
+    <script>
+      // =========================================================================
+      // V7 QA GLOBAL ERROR CATCHER
+      // =========================================================================
+      const qaLogger = document.getElementById('qa-logger');
+      let hasErrors = false;
+
+      // V9 QA Metrics Tracker
+      const QATracker = {
+        active: window.location.search.includes('qa=true'),
+        matches: 0,
+        hits: 0,
+        misses: 0, // attacks that didn't hit
+        specials: 0,
+        glowTriggers: 0,
+        kos: 0,
+        frameDrops: 0,
+        print() {
+          return `
+                <div style="background:#000; color:#0f0; border:2px solid #0f0; padding:20px; text-align:left; font-family:monospace; font-size:16px;">
+                  <h3>✅ QA AUTOMATION COMPLETE</h3>
+                  <hr>
+                  Matches Played: ${this.matches}<br>
+                  Total Hits Connected: ${this.hits}<br>
+                  Attacks Missed: ${this.misses}<br>
+                  Special Attacks Fired: ${this.specials}<br>
+                  Glow FX Triggers: ${this.glowTriggers}<br>
+                  Total KOs: ${this.kos}<br>
+                  Severe Frame Drops: ${this.frameDrops}<br>
+                  Memory Errors: ${hasErrors ? 'YES' : 'NONE'}
+                </div>
+              `;
+        }
+      };
+      window.onerror = function (msg, url, lineNo, columnNo, error) {
+        if (!hasErrors) { qaLogger.style.display = 'block'; hasErrors = true; }
+        const errStr = `[ERR] ${msg} <br> <span style="color:#aaa;">Line ${lineNo}:${columnNo}</span><br>`;
+        qaLogger.innerHTML += errStr;
+        console.error("QA CAUGHT ERROR:", msg, url, lineNo, columnNo, error);
+        return false;
+      };
+      window.onunhandledrejection = function (event) {
+        if (!hasErrors) { qaLogger.style.display = 'block'; hasErrors = true; }
+        qaLogger.innerHTML += `[PROMISE] ${event.reason}<br>`;
+        console.error("QA UNHANDLED PROMISE:", event.reason);
+      };
+
+      // Boot check: unlock if Story was already completed on this device
+      if (localStorage.getItem('arcadeUnlocked') === 'true') {
+        ['btn-arcade', 'btn-versus'].forEach(id => {
+          const b = document.getElementById(id);
+          b.disabled = false; b.style.color = '#00ffff'; b.style.borderColor = '#00ffff'; b.style.cursor = 'pointer'; b.style.opacity = '1';
+        });
+        document.getElementById('btn-arcade').textContent = 'ARCADE MODUS';
+        document.getElementById('btn-versus').textContent = 'VERSUS MODUS';
+      }
+
+      // iOS Audio Unlock
+      document.getElementById('audio-unlock-overlay').addEventListener('click', () => {
+        // 1. Resume global Audio Engine Context (Music & SFX)
+        if (typeof AC !== 'undefined' && AC.state === 'suspended') {
+          AC.resume();
+        }
+
+        // 2. Initialize Voice Audio Context inside user gesture explicitly
+        if (typeof initVoiceEffects === 'function') {
+          initVoiceEffects();
+        }
+        if (typeof voiceAudioCtx !== 'undefined' && voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+          voiceAudioCtx.resume();
+        }
+
+        // 3. Force load HTML5 Audio Elements so iOS grants playback permission later
+        ['audio-prologue', 'audio-reflexion', 'audio-epilogue', 'audio-outro', 'bgm-player', 'voice-player'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.load();
+            // Create media element source now within the gesture to avoid later pipeline blocks
+            if (id.startsWith('audio-') && typeof voiceAudioCtx !== 'undefined' && voiceAudioCtx && typeof voiceSources !== 'undefined' && !voiceSources[id.split('-')[1]]) {
+              try {
+                voiceSources[id.split('-')[1]] = voiceAudioCtx.createMediaElementSource(el);
+                if (typeof voiceFilter !== 'undefined') voiceSources[id.split('-')[1]].connect(voiceFilter);
+              } catch (e) { console.warn("Pre-Connect fail:", e); }
+            }
+          }
+        });
+
+        // Hide the overlay after interaction
+        document.getElementById('audio-unlock-overlay').style.display = 'none';
+      }, { once: true });
+    </script>
+
+    <!-- INSERT COIN & CREDITS -->
+    <div class="insert-coin-bar" id="insert-coin-bar">
+      <span class="coin-icon">🪙</span>
+      <span class="insert-coin-text" id="insert-coin-text">INSERT COIN</span>
+      <span class="coin-icon">🪙</span>
+    </div>
+
+    <div class="credit-counter" id="credit-counter">CREDIT(S): 3</div>
+  </div>
+
+  <!-- STATE 3: Character Select -->
+  <div id="char-select" class="hidden">
+    <div class="cs-left">
+      <div id="cs-title">SELECT YOUR FIGHTER</div>
+      <div class="cs-grid" id="cs-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="cs-right">
+      <img id="cs-preview-img" src="" alt="">
+      <div class="cs-info-panel">
+        <div id="cs-flag" style="font-size:2rem;">🌍</div>
+        <div id="cs-name">???</div>
+        <div id="cs-title-label">...</div>
+        <div id="cs-desc" style="font-size:0.7rem; color:#aaa; text-align:center; margin:5px 0 10px;">Wähle deinen
+          Kämpfer</div>
+        <button class="btn-select-confirm" id="btn-confirm-fighter">FIGHT!</button>
+        <div class="cs-stats">
+          <div class="cs-stat-row"><span class="cs-stat-label">SPD</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-spd" style="background: linear-gradient(90deg, #00ff88, #00ffcc);">
+              </div>
+            </div>
+          </div>
+          <div class="cs-stat-row"><span class="cs-stat-label">POW</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-pow" style="background: linear-gradient(90deg, #ff4400, #ffcc00);">
+              </div>
+            </div>
+          </div>
+          <div class="cs-stat-row"><span class="cs-stat-label">DEF</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-def" style="background: linear-gradient(90deg, #0055ff, #00ccff);">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONS / PAUSE MENU -->
+  <button id="btn-hamburger" class="hidden">☰</button>
+  <div id="pause-menu" class="hidden">
+    <div class="options-panel">
+      <h2 class="opt-title">⚙ Optionen</h2>
+
+
+      <div class="slider-row">
+        <span>🗣 Voice:</span>
+        <input type="range" id="vol-voice" min="0" max="1" step="0.1" value="0.9">
+      </div>
+      <div class="slider-row">
+        <span>⚔ Difficulty:</span>
+        <select id="sel-difficulty"
+          style="background:#000; color:#0ff; border:1px solid #0ff; font-family:'Orbitron'; padding:2px;">
+          <option value="easy">Easy</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="slider-row">
+        <span>⏳ Time:</span>
+        <select id="sel-round-time"
+          style="background:#222; color:#fff; border:1px solid #00ffff; padding:5px; font-family:'Orbitron', sans-serif;">
+          <option value="99">99 Sec</option>
+          <option value="66">66 Sec</option>
+        </select>
+      </div>
+      <div class="slider-row">
+        <span>⚡ Speed:</span>
+        <select id="sel-game-speed"
+          style="background:#222; color:#fff; border:1px solid #00ff00; padding:5px; font-family:'Orbitron', sans-serif;">
+          <option value="1.0">Normal (1.0x)</option>
+          <option value="1.25">Schnell (1.25x)</option>
+          <option value="1.5">Turbo Arcade (1.5x)</option>
+        </select>
+      </div>
+
+      <div class="controls-grid">
+        <div><span class="ctrl-key">W/A/S/D</span> Bewegung</div>
+        <div><span class="ctrl-key">J</span> Punch</div>
+        <div><span class="ctrl-key">K</span> Kick</div>
+        <div><span class="ctrl-key">L</span> Special</div>
+        <div><span class="ctrl-key">U</span> Block</div>
+        <div><span class="ctrl-key">SPACE</span> Pause/Skip</div>
+      </div>
+
+      <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+        <button class="capcom-btn" id="btn-resume">RESUME</button>
+        <button class="capcom-btn" id="btn-quit" style="border-color:#ff0033; color:#ff0033;">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOUCH CONTROLS -->
+  <div id="mobile-controls" class="hidden">
+    <div class="mc-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+    <div class="mc-zone">
+      <div class="action-btn-group">
+        <div class="action-btn" id="btn-block">BLK (U)</div>
+        <div class="action-btn" id="btn-punch">PUN (J)</div>
+        <div class="action-btn" id="btn-special">SPC (L)</div>
+        <div class="action-btn" id="btn-kick">KCK (K)</div>
+        <!-- Jump is mapped to up on joystick, but can provide dedicated button -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Container (Web Audio API sources) -->
+  <div id="audio-container" style="display:none;">
+    <audio id="audio-prologue" src="assets/audio/voice/prologue.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-reflexion" src="assets/audio/voice/reflexion.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-epilogue" src="assets/audio/voice/epilogue.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-outro" src="assets/audio/voice/outro.mp3" crossorigin="anonymous" preload="auto"></audio>
+
+    <!-- Permanent runtime players for iOS -->
+    <audio id="bgm-player" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="voice-player" crossorigin="anonymous" preload="auto"></audio>
+  </div>
+
+  <!-- V10 MODULAR ARCHITECTURE: Ordered Script Loading -->
+  <script src="js/globals.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/fighter.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+
+</html>
+
+===== js/assets.js =====
+
+// =========================================================================
+// 3. ASSET LOADER (PROMISE-BASED PRELOADER)
+// =========================================================================
+const rawImgs = {};
+const processedSprites = {}; // For holding transparency-cleaned versions
+let assetsLoaded = 0;
+let isGameLoaded = false;
+
+function removeWhiteBackground(imgObj, src) {
+  // Never touch gameplay fighting sprites, stages or UX to preserve their original vibrant colors and alpha!
+  if (src.includes('_left.png') || src.includes('_right.png') || src.includes('simba') || src.includes('stage') || src.includes('UX_') || src.includes('base_jayden.png') || src.includes('Supreme') || src.includes('dark_jayden.png') || src.includes('hyper_') || src.includes('keano.png')) {
+    processedSprites[src] = imgObj;
+    return;
+  }
+
+  const cvs = document.createElement('canvas'); const ctx = cvs.getContext('2d', { willReadFrequently: true });
+  cvs.width = imgObj.naturalWidth || imgObj.width || 1024;
+  cvs.height = imgObj.naturalHeight || imgObj.height || 1024;
+  if (cvs.width === 0 || cvs.height === 0) return; // safety
+
+  ctx.drawImage(imgObj, 0, 0, cvs.width, cvs.height);
+  const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height); const data = imgData.data;
+  // Strict white to alpha. We use >230 to catch very slightly off-white pixels too.
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] > 230 && data[i + 1] > 230 && data[i + 2] > 230) { data[i + 3] = 0; }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  processedSprites[src] = cvs;
+}
+
+// Force load strictly _front.png, _left.png, _right.png for EVERY character
+const allSrcs = new Set();
+[KEANO, ...LEVELS].forEach(l => {
+  allSrcs.add(l.fighterDir + '/_front.png');
+  allSrcs.add(l.fighterDir + '/_left.png');
+  allSrcs.add(l.fighterDir + '/_right.png');
+  if (l.stage) allSrcs.add(l.stage);
+  if (l.portrait) allSrcs.add(l.portrait);
+});
+// Global UI & VFX
+allSrcs.add('assets/UX_Main_Menu_Nexus.png');
+allSrcs.add('assets/UX_End_Screen_Earth.png');
+allSrcs.add('assets/clean_#simba_cane_corso_solo_1772218185461.png');
+
+const totalAssets = allSrcs.size;
+
+// Load Engine Synchronously via Promises to prevent race conditions
+Promise.all(Array.from(allSrcs).map(s => {
+  return new Promise(resolve => {
+    const i = new Image();
+    i.crossOrigin = "Anonymous";
+    i.onload = () => {
+      // Tunnel the loaded image directly into the global object so Canvas can find it instantly
+      rawImgs[s] = i;
+      if (s.includes('_left.png') || s.includes('_right.png') || s.includes('_front.png') || s.includes('simba')) {
+        removeWhiteBackground(i, s);
+      }
+      assetsLoaded++;
+      resolve();
+    };
+    i.onerror = () => {
+      console.warn("Asset failed to load:", s);
+      rawImgs[s] = i; // Save the broken ref anyway so the engine doesn't crash reading 'undefined'
+      assetsLoaded++;
+      resolve();
+    };
+    i.src = s;
+  });
+})).then(() => {
+  isGameLoaded = true;
+  console.log("All Sprite Assets strictly loaded into RAM!");
+});
+
+// =========================================================================
+// 4. CAPCOM STYLE INPUT BUFFER
+// =========================================================================
+const keys = {};
+const inputHistory = [];
+
+function logInput(keyName) {
+  if (inputHistory.length > 0 && inputHistory[inputHistory.length - 1].key === keyName && (Date.now() - inputHistory[inputHistory.length - 1].time) < 100) return;
+  inputHistory.push({ key: keyName, time: Date.now() });
+  if (inputHistory.length > 20) inputHistory.shift();
+}
+
+// Detect mobile touch device to hide/show screen gamepad
+const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (!isMobile) {
+  document.getElementById('mobile-controls').classList.add('hidden');
+}
+
+// Bind HTML Action Buttons (Touch Overlay)
+['f', 'g', 'h', 'space'].forEach(k => {
+  const btn = document.getElementById('btn-' + k);
+  if (!btn) return;
+  const actualKey = k === 'space' ? ' ' : k;
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[actualKey] = true; });
+  btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[actualKey] = false; });
+});
+
+C.addEventListener('pointerdown', e => {
+  if (gameState === 'continue' || gameState === 'gameOver') {
+    keys[' '] = true; setTimeout(() => keys[' '] = false, 100);
+  }
+});
+
+// ===== VIRTUAL ANALOG JOYSTICK =====
+const joyArea = document.getElementById('joystick-area');
+const joyKnob = document.getElementById('joystick-knob');
+if (joyArea && joyKnob) {
+  let isDragging = false;
+  const center = 70; // Half of 140px
+
+  const handleJoy = (ex, ey) => {
+    const rect = joyArea.getBoundingClientRect();
+    const cx = rect.left + center;
+    const cy = rect.top + center;
+    const dx = ex - cx;
+    const dy = ey - cy;
+    const maxDist = 55; // Max knob travel
+    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
+    const angle = Math.atan2(dy, dx);
+
+    const nx = Math.cos(angle) * dist;
+    const ny = Math.sin(angle) * dist;
+
+    joyKnob.style.transform = `translate(${nx}px, ${ny}px)`;
+
+    // Reset inputs
+    keys['arrowup'] = keys['arrowleft'] = keys['arrowdown'] = keys['arrowright'] = false;
+    keys['w'] = keys['a'] = keys['s'] = keys['d'] = false;
+
+    // Deadzone of 15px
+    if (dist > 15) {
+      if (nx < -20) { keys['a'] = true; keys['arrowleft'] = true; }
+      if (nx > 20) { keys['d'] = true; keys['arrowright'] = true; }
+      if (ny < -20) { keys['w'] = true; keys['arrowup'] = true; }
+      if (ny > 20) { keys['s'] = true; keys['arrowdown'] = true; }
+    }
+  };
+
+  const resetJoy = () => {
+    isDragging = false;
+    joyKnob.style.transform = `translate(0px, 0px)`;
+    keys['arrowup'] = keys['arrowleft'] = keys['arrowdown'] = keys['arrowright'] = false;
+    keys['w'] = keys['a'] = keys['s'] = keys['d'] = false;
+  };
+
+  joyArea.addEventListener('touchstart', e => { e.preventDefault(); isDragging = true; handleJoy(e.touches[0].clientX, e.touches[0].clientY); });
+  joyArea.addEventListener('touchmove', e => { e.preventDefault(); if (isDragging) handleJoy(e.touches[0].clientX, e.touches[0].clientY); });
+  joyArea.addEventListener('touchend', e => { e.preventDefault(); resetJoy(); });
+
+  joyArea.addEventListener('mousedown', e => { isDragging = true; handleJoy(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e => { if (isDragging) handleJoy(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', resetJoy);
+}
+
+// ===== TOUCH ACTION BUTTONS (Punch, Kick, Special, Block) =====
+const touchMap = { 'btn-punch': 'j', 'btn-kick': 'k', 'btn-special': 'l', 'btn-block': 'u' };
+Object.entries(touchMap).forEach(([btnId, key]) => {
+  const btn = document.getElementById(btnId);
+  if (btn) {
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); keys[key] = true; });
+    btn.addEventListener('pointerup', e => { e.preventDefault(); keys[key] = false; });
+    btn.addEventListener('pointerleave', e => { keys[key] = false; });
+  }
+});
+
+
+
+===== js/audio.js =====
+
+// =========================================================================
+// 1. AUDIO ENGINE (Synthesizer & Background Tracks)
+// =========================================================================
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+const SFX = {
+  _musicGain: null,
+  _sfxGain: null,
+
+  // V4 AUDIO MANAGER PROPERTIES
+  bgmNode: null,        // Currently playing background music Audio element
+  voiceNode: null,      // Currently playing voice line Audio element
+  activeBGMUrl: null,
+
+  init() {
+    this._musicGain = AC.createGain(); this._musicGain.gain.value = 0.5; this._musicGain.connect(AC.destination);
+    this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.8; this._sfxGain.connect(AC.destination);
+  },
+
+  setMusicVol(v) {
+    if (this._musicGain) this._musicGain.gain.value = v;
+    if (this.bgmNode) this.bgmNode.volume = v;
+  },
+  setSFXVol(v) { if (this._sfxGain) this._sfxGain.gain.value = v; },
+
+  setVoiceVol(v) {
+    if (this.voiceNode) this.voiceNode.volume = v;
+  },
+
+  duckBGM(targetVol = 0.15, durationMs = 500) {
+    if (this._musicGain) {
+      this._musicGain.gain.cancelScheduledValues(AC.currentTime);
+      this._musicGain.gain.linearRampToValueAtTime(targetVol, AC.currentTime + (durationMs / 1000));
+    }
+  },
+  restoreBGM(durationMs = 800) {
+    if (this._musicGain) {
+      const userVol = document.getElementById('vol-music') ? parseFloat(document.getElementById('vol-music').value) : 0.5;
+      this._musicGain.gain.cancelScheduledValues(AC.currentTime);
+      this._musicGain.gain.linearRampToValueAtTime(userVol, AC.currentTime + (durationMs / 1000));
+    }
+  },
+
+  // --- ASSET-BASED AUDIO (V4) ---
+
+  playBGM(url, loop = true, fadeTime = 0.5) {
+    if (this.activeBGMUrl === url) {
+      this.restoreBGM(); // Always ensure it's un-ducked if re-requested
+      return;
+    }
+
+    const userVol = document.getElementById('vol-music') ? parseFloat(document.getElementById('vol-music').value) : 0.5;
+
+    const bgmEl = document.getElementById('bgm-player');
+    if (!bgmEl) return;
+
+    // Stop procedural stuff if any
+    this.stopMusic();
+
+    // Music disabled per user request
+    return;
+  },
+
+  playVoice(url) {
+    const voiceEl = document.getElementById('voice-player');
+    if (!voiceEl || !url) return;
+
+    voiceEl.pause();
+    voiceEl.src = url;
+
+    // Default to max voice volume or what's set in options
+    const voiceVol = document.getElementById('vol-voice') ? parseFloat(document.getElementById('vol-voice').value) : 0.9;
+    voiceEl.volume = voiceVol;
+
+    this.duckBGM();
+    voiceEl.onended = () => {
+      this.restoreBGM();
+    };
+
+    voiceEl.play().catch(e => console.warn("Voice Playblock:", e));
+  },
+
+  playSound(url) {
+    // Generic sound disabled
+    return;
+  },
+
+  // --- LEGACY PROCEDURAL SFX (Kept for compatibility until assets are mapped) ---
+
+  _noiseLayer(dur, vol, filterFreq) {
+    if (AC.state === 'suspended') AC.resume();
+    const bufferSize = AC.sampleRate * dur;
+    const buffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = AC.createBufferSource(); noise.buffer = buffer;
+    const speed = (typeof gameSpeedMult !== 'undefined') ? gameSpeedMult : 1;
+    noise.playbackRate.value = speed;
+
+    const filter = AC.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = filterFreq;
+    const env = AC.createGain(); env.gain.setValueAtTime(vol, AC.currentTime); env.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + dur / speed);
+
+    noise.connect(filter); filter.connect(env); env.connect(this._sfxGain);
+    noise.start(); noise.stop(AC.currentTime + dur / speed);
+  },
+
+  _tone(freq, dur, type = 'sine', vol = 1.0) {
+    return;
+  },
+
+  hitBlock() { },
+  hitLight() { },
+  hitHeavy() { },
+  hitCritical() { },
+  blockImpact() { },
+  swing() { },
+  dash() { },
+  jump() { },
+  ko() { },
+  uiHover() { },
+  uiSelect() { },
+  uiSelectB() { },
+  round() { },
+  fight() { },
+
+  // ==========================================
+  // V13 "SEGA GENESIS RETROWAVE" PROCEDURAL THEME (Golden Axe X Conan)
+  // ==========================================
+  waveThemeActive: false,
+  _playLordOfTheLightTheme() {
+    return; // Procedural theme disabled as per user request
+  },
+
+  stopLordOfTheLightTheme() {
+    this.waveThemeActive = false;
+  },
+
+  // ==========================================
+  // V14 "STORY AMBIENT" PROCEDURAL THEME (Hans Zimmer Underscore)
+  // ==========================================
+  storyThemeActive: false,
+  _playStoryAmbientTheme() {
+    return; // Procedural theme disabled as per user request
+  },
+
+  stopStoryAmbientTheme() {
+    return; // Procedural theme disabled as per user request
+  },
+
+  // Legacy Hooks (Will be routed to BGM loader later)
+  playTitleMusic() {
+    // Handled by playBGM('main_menu.mp3') which intercepts to _playLordOfTheLightTheme
+  },
+  playArenaMusic(bpm) { },
+  stopMusic() {
+    this.stopLordOfTheLightTheme();
+    this.stopStoryAmbientTheme();
+  }
+};
+SFX.init();
+
+
+===== js/data.js =====
+
+// =========================================================================
+// 2. DATA (ROSTER & LEVELS)
+// =========================================================================
+const LEVELS = [
+  {
+    id: 'hattori', name: 'HATTORI', flag: '🇯🇵', fighterDir: 'assets/CHARACTERS/1.Hattori_Japan', stage: 'assets/1_Japan.png', special: 'fire',
+    bgm: 'assets/audio/music/1_Japan.mp3', voice: { intro: 'assets/audio/voice/hattori_intro.mp3', win: 'assets/audio/voice/hattori_win.mp3' },
+    title: 'Ninja-Erbe', desc: 'Die Schatten sind sein Zuhause.', speedMult: 1.1, hitPow: 1.0, str: { spd: 5, pow: 3, def: 2 },
+    portrait: 'assets/CHARACTERS/1.Hattori_Japan/_front.png'
+  },
+  {
+    id: 'raheel', name: 'RAHEEL', flag: '🇮🇳', fighterDir: 'assets/CHARACTERS/2.Raheel', stage: 'assets/2_India.png', special: 'fire',
+    bgm: 'assets/audio/music/2_India.mp3', voice: { intro: 'assets/audio/voice/raheel_intro.mp3', win: 'assets/audio/voice/raheel_win.mp3' },
+    title: 'Der Guru', desc: 'Spirituelle Kraft & Yoga-Griffe.', speedMult: 1.0, hitPow: 1.0, str: { spd: 2, pow: 3, def: 3 },
+    portrait: 'assets/2.Raheel fighter_india_fullbody_1772216021163.png'
+  },
+  {
+    id: 'pablo', name: 'PABLO', flag: '🇧🇷', fighterDir: 'assets/CHARACTERS/3.Pablo', stage: 'assets/3_Brazil.png', special: 'electric',
+    bgm: 'assets/audio/music/3_Brazil.mp3', voice: { intro: 'assets/audio/voice/pablo_intro.mp3', win: 'assets/audio/voice/pablo_win.mp3' },
+    title: 'Capoeira-Meister', desc: 'Akrobatik und rohe Gewalt.', speedMult: 1.2, hitPow: 0.9, str: { spd: 5, pow: 3, def: 1 },
+    portrait: 'assets/3.Pablo_Brazil.png'
+  },
+  {
+    id: 'tzubaza', name: 'TZUBAZA', flag: '🇨🇳', fighterDir: 'assets/CHARACTERS/4.Tzubaza', stage: 'assets/4_China.png', special: 'wind',
+    bgm: 'assets/audio/music/4_China.mp3', voice: { intro: 'assets/audio/voice/tzubaza_intro.mp3', win: 'assets/audio/voice/tzubaza_win.mp3' },
+    title: 'Meister des Windes', desc: 'Traditionelles Kung-Fu.', speedMult: 1.1, hitPow: 1.0, str: { spd: 3, pow: 3, def: 3 },
+    portrait: 'assets/4.Tzubaza fighter_china_fullbody_1772216008435.png'
+  },
+  {
+    id: 'alcapone', name: 'AL CAPONE', flag: '🇮🇹', fighterDir: 'assets/CHARACTERS/5.Al_Capone', stage: 'assets/5_Italy.png', special: 'super',
+    bgm: 'assets/audio/music/5_Italy.mp3', voice: { intro: 'assets/audio/voice/alcapone_intro.mp3', win: 'assets/audio/voice/alcapone_win.mp3' },
+    title: 'Der Pate', desc: 'Kaltblütige Exekutionen.', speedMult: 0.9, hitPow: 1.3, str: { spd: 2, pow: 5, def: 3 },
+    portrait: 'assets/5.Al_Capone_Italy.png'
+  },
+  {
+    id: 'gargamel', name: 'C. GARGAMEL', flag: '🌑', fighterDir: 'assets/CHARACTERS/6.C_Gargamel_Techwear', stage: 'assets/6_Germany.png', special: 'super',
+    bgm: 'assets/audio/music/6_Germany.mp3', voice: { intro: 'assets/audio/voice/gargamel_intro.mp3', win: 'assets/audio/voice/gargamel_win.mp3' },
+    title: 'Cyber-Sorcerer', desc: 'Technologie & dunkle Magie.', speedMult: 1.0, hitPow: 1.1, str: { spd: 3, pow: 3, def: 3 },
+    portrait: 'assets/6.C_Gargamel_Techwear.png'
+  },
+  {
+    id: 'marley', name: 'MARLEY', flag: '🇯🇲', fighterDir: 'assets/CHARACTERS/7.Marley_Jamaica', stage: 'assets/7_Jamaica.png', special: 'electric',
+    bgm: 'assets/audio/music/7_Jamaica.mp3', voice: { intro: 'assets/audio/voice/marley_intro.mp3', win: 'assets/audio/voice/marley_win.mp3' },
+    title: 'Karibik-Blitz', desc: 'One Love — One Knockout.', speedMult: 1.3, hitPow: 0.8, str: { spd: 4, pow: 2, def: 2 },
+    portrait: 'assets/7.Marley_Jamaica.png'
+  },
+  {
+    id: 'kowalski', name: 'KOWALSKI', flag: '🇵🇱', fighterDir: 'assets/CHARACTERS/8.Kowalski_Poland', stage: 'assets/8_Poland.png', special: 'super',
+    bgm: 'assets/audio/music/8_Poland.mp3', voice: { intro: 'assets/audio/voice/kowalski_intro.mp3', win: 'assets/audio/voice/kowalski_win.mp3' },
+    title: 'Stahl-Panzer', desc: 'Massive Kybernetik-Schläge.', speedMult: 0.8, hitPow: 1.25, str: { spd: 1, pow: 5, def: 3 },
+    portrait: 'assets/8.Kowalski_Poland.png'
+  },
+  {
+    id: 'paco', name: 'PACO EL TACO', flag: '🇲🇽', fighterDir: 'assets/CHARACTERS/9.Paco_el_Taco', stage: 'assets/9_Mexico.png', special: 'wind',
+    bgm: 'assets/audio/music/9_Mexico.mp3', voice: { intro: 'assets/audio/voice/paco_intro.mp3', win: 'assets/audio/voice/paco_win.mp3' },
+    title: 'El Luchador', desc: 'Fliegend und vernichtend.', speedMult: 1.4, hitPow: 0.9, str: { spd: 5, pow: 3, def: 1 },
+    portrait: 'assets/9.Paco el Taco fighter_mexico_fullbody_1772216033577.png'
+  },
+  {
+    id: 'juan', name: 'JUAN', flag: '🇪🇸', fighterDir: 'assets/CHARACTERS/10.Juan', stage: 'assets/10_Spain.png', special: 'fire',
+    bgm: 'assets/audio/music/10_Spain.mp3', voice: { intro: 'assets/audio/voice/juan_intro.mp3', win: 'assets/audio/voice/juan_win.mp3' },
+    title: 'El Matador', desc: 'Elegant und tödlich.', speedMult: 1.1, hitPow: 1.0, str: { spd: 3, pow: 3, def: 3 },
+    portrait: 'assets/10.Juan fighter_spain_fullbody_1772215943315.png'
+  },
+  {
+    id: 'lee', name: 'LEE', flag: '🇯🇵', fighterDir: 'assets/CHARACTERS/11.Lee', stage: 'assets/11_Japan_Night.png', special: 'electric',
+    bgm: 'assets/audio/music/11_Japan_Night.mp3', voice: { intro: 'assets/audio/voice/lee_intro.mp3', win: 'assets/audio/voice/lee_win.mp3' },
+    title: 'Yakuza Boss', desc: 'Neon-Tokyo gehört ihm.', speedMult: 1.2, hitPow: 1.1, str: { spd: 4, pow: 3, def: 2 },
+    portrait: 'assets/11.Lee fighter_japan_fullbody_1772215814623.png'
+  },
+  {
+    id: 'jayden', name: 'JAYDEN', flag: '🇩🇪', fighterDir: 'assets/CHARACTERS/12.JJ_Dark', stage: 'assets/12_Dojo_Dark.png', special: 'dark',
+    bgm: 'assets/audio/music/12_Dojo_Dark.mp3', voice: { intro: 'assets/audio/voice/jayden_intro.mp3', win: 'assets/audio/voice/jayden_win.mp3' },
+    title: 'Anti-Hero', desc: 'Verschlingt alles Licht.', speedMult: 1.1, hitPow: 1.2, str: { spd: 4, pow: 4, def: 4 },
+    portrait: 'assets/CHARACTERS/12.JJ_Dark/_front.png'
+  },
+  {
+    id: 'putin', name: 'PUTIN', flag: '🇷🇺', fighterDir: 'assets/CHARACTERS/13.Putin', stage: 'assets/13_Russia_Ice.png', special: 'dark',
+    bgm: 'assets/audio/music/13_Russia_Ice.mp3', voice: { intro: 'assets/audio/voice/putin_intro.mp3', win: 'assets/audio/voice/putin_win.mp3' },
+    title: 'Sibirische Kälte', desc: 'Unaufhaltbarer Frost.', speedMult: 0.75, hitPow: 1.8, str: { spd: 1, pow: 5, def: 5 },
+    portrait: 'assets/13.Putin fighter_russia_fullbody_1772215831383.png'
+  },
+  {
+    id: 'dark_vikingo', name: 'DARK VIKINGO', flag: '💀', fighterDir: 'assets/CHARACTERS/14.1.vikingo_shirtless', stage: 'assets/14_Valhalla_Boss.png', special: 'super',
+    bgm: 'assets/audio/music/14_Valhalla_Boss.mp3', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
+    title: 'Entfesselte Urgewalt', desc: 'Ohne Limit. Kein Erbarmen.', speedMult: 1.5, hitPow: 2.5, str: { spd: 6, pow: 7, def: 4 },
+    portrait: 'assets/14.1.vikingo_shirtless_solo_1772218100612.png'
+  },
+  {
+    id: 'supreme_keano', name: 'SUPREME KEANO', flag: '🌌', fighterDir: 'assets/CHARACTERS/0.1.Supreme_Keano', stage: 'assets/UX_Main_Menu_Nexus.png', special: 'super',
+    bgm: 'assets/audio/music/0_Keano_Theme.mp3', voice: { intro: 'assets/audio/voice/keano_intro.mp3', win: 'assets/audio/voice/keano_win.mp3' },
+    title: 'Herrscher des Lichts', desc: 'Erwachte Form.', speedMult: 1.5, hitPow: 2.0, str: { spd: 6, pow: 6, def: 4 },
+    portrait: 'assets/clean_supreme_keano.png'
+  },
+  {
+    id: 'hyper_keano', name: 'HYPER KEANO', flag: '⚡', fighterDir: 'assets/CHARACTERS/0.2.Hyper_Keano', stage: 'assets/UX_Main_Menu_Nexus.png', special: 'electric',
+    bgm: 'assets/audio/music/0_Keano_Theme.mp3', voice: { intro: 'assets/audio/voice/keano_intro.mp3', win: 'assets/audio/voice/keano_win.mp3' },
+    title: 'Lichtgeschwindigkeit', desc: 'Zusammengeschmolzen.', speedMult: 2.5, hitPow: 1.2, str: { spd: 7, pow: 5, def: 2 },
+    portrait: 'assets/clean_hyper_keano.png'
+  },
+  {
+    id: 'jay_x', name: 'JAY X', flag: '🧬', fighterDir: 'assets/CHARACTERS/12.1.Jay_X', stage: 'assets/12_Dojo_Dark.png', special: 'dark',
+    bgm: 'assets/audio/music/12_Dojo_Dark.mp3', voice: { intro: 'assets/audio/voice/jayden_intro.mp3', win: 'assets/audio/voice/jayden_win.mp3' },
+    title: 'Mutierte DNS', desc: 'Unzerstörbar.', speedMult: 1.4, hitPow: 1.5, str: { spd: 5, pow: 5, def: 5 },
+    portrait: 'assets/base_jayden.png'
+  },
+  {
+    id: 'vikingo_coat', name: 'VIKINGO', flag: 'ᛣ', fighterDir: 'assets/CHARACTERS/14.vikingo_coat', stage: 'assets/14_Valhalla_Boss.png', special: 'super',
+    bgm: 'assets/audio/music/14_Valhalla_Boss.mp3', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
+    title: 'Der Imperator', desc: 'Meister aller Dimensionen.', speedMult: 1.3, hitPow: 1.4, str: { spd: 5, pow: 5, def: 5 },
+    portrait: 'assets/14.vikingo_coat_solo_1772218116323.png'
+  },
+  {
+    id: 'gargamel_hoodie', name: 'DARK GARGAMEL', flag: '🕷️', fighterDir: 'assets/CHARACTERS/6.1.C_Gargamel_Hoodie', stage: 'assets/6_Germany.png', special: 'dark',
+    bgm: 'assets/audio/music/6_Germany.mp3', voice: { intro: 'assets/audio/voice/gargamel_intro.mp3', win: 'assets/audio/voice/gargamel_win.mp3' },
+    title: 'Schatten-Wächter', desc: 'Verborgene Klinge.', speedMult: 1.3, hitPow: 1.2, str: { spd: 4, pow: 4, def: 2 },
+    portrait: 'assets/6.1.C_Gargamel_Hoodie.png'
+  }
+];
+
+const KEANO = {
+  id: 'keano', name: 'KEANO', flag: '🇩🇪', fighterDir: 'assets/CHARACTERS/0.Keano', special: 'electric',
+  bgm: 'assets/audio/music/0_Keano_Theme.mp3', voice: { intro: 'assets/audio/voice/keano_intro.mp3', win: 'assets/audio/voice/keano_win.mp3' },
+  title: 'Krieger des Lichts', desc: 'Der Auserwählte.', speedMult: 1.0, hitPow: 1.0, str: { spd: 4, pow: 4, def: 3 },
+  portrait: 'assets/Keano_Fighter.png'
+};
+
+LEVELS.forEach(l => {
+  if (['hattori', 'tzubaza', 'lee', 'dark_vikingo', 'supreme_keano', 'hyper_keano', 'vikingo_coat'].includes(l.id)) l.objType = 'lantern';
+  else if (['raheel', 'paco'].includes(l.id)) l.objType = 'vase';
+  else l.objType = 'crate';
+});
+KEANO.objType = 'crate';
+
+
+===== js/engine.js =====
+
+// ===== GAME STATE =====
+let player, enemy, currentLevel = 0, fwTimer = 0;
+window._caesarWhiteImg = new Image(); window._caesarWhiteImg.src = 'assets/logo_white.png';
+let roundNum = 1, p1Wins = 0, p2Wins = 0, roundTimerNum = defaultRoundTime;
+let p1WonLast = false;
+let seenMidpoint = false, playingOutro = false, playingHappyBirthday = false;
+
+function startLevel(idx, forceEpilogue = false) {
+  if (gameMode === 'story' && idx === 7 && !seenMidpoint) {
+    seenMidpoint = true;
+    gameState = 'midpoint_reflexion';
+    stateTimer = 0;
+    playEpicVoice(reflexionLines, 'reflexion');
+    return;
+  }
+
+  currentLevel = idx; p1Wins = 0; p2Wins = 0; roundNum = 1;
+  if (QATracker.active) QATracker.matches++;
+  const ld = LEVELS[currentLevel];
+
+  if (gameMode === 'story' && ld.name === 'VIKINGO') {
+    ld.activeFighter = ld.altProfile?.fighter || ld.fighterDir;
+    ld.activeName = ld.altProfile?.name || ld.name;
+    ld.activeFlag = ld.altProfile?.flag || ld.flag;
+  } else if (gameMode === 'story' && ld.name === 'C. GARGAMEL') {
+    ld.activeFighter = ld.altProfile?.fighter || ld.fighterDir;
+    ld.activeName = ld.altProfile?.name || ld.name;
+    ld.activeFlag = ld.altProfile?.flag || ld.flag;
+  } else if (ld.altProfile && Math.random() > 0.5) {
+    ld.activeFighter = ld.altProfile?.fighter || ld.fighterDir;
+    ld.activeName = ld.altProfile?.name || ld.name;
+    ld.activeFlag = ld.altProfile?.flag || ld.flag;
+  } else {
+    ld.activeFighter = ld.fighterDir;
+    ld.activeName = ld.name;
+    ld.activeFlag = ld.flag;
+  }
+
+  // Safety mapping to ensure clean loading logic gets passed successfully down into fighter class
+  ld.fighterDir = ld.activeFighter;
+
+  gameState = 'vs_screen';
+  stateTimer = 4.5; // Auto VS transition after 4.5s matches master plan!
+
+  let pData;
+  if (gameMode === 'story') {
+    pData = KEANO;
+  } else {
+    pData = [KEANO, ...LEVELS].find(l => l.name === arcadeSelectedName) || KEANO;
+  }
+  const eData = ld;
+
+  player = new HybridFighter(C.width * 0.22, GROUND(), true, pData.col, pData);
+  enemy = new HybridFighter(C.width * 0.78, GROUND(), false, eData.col, eData);
+
+  // Reset
+  enemy.facingRight = false;
+  enemy.isBackTurned = false;
+}
+
+function startRound() {
+  const ld = LEVELS[currentLevel];
+  player.x = C.width * 0.22; player.y = GROUND(); player.hp = player.maxHP; player.state = 'idle';
+  enemy.x = C.width * 0.78; enemy.y = GROUND(); enemy.hp = enemy.maxHP; enemy.state = 'idle';
+
+  projectiles = [];
+  // stageObjects removed because we use matchReferee now
+
+  gameState = 'intro'; stateTimer = 3.0;
+  roundTimerNum = defaultRoundTime;
+  comboCount = 0; comboTimer = 0;
+
+  // V4 AUDIO MANAGER: Play the stage specific BGM!
+  if (ld && ld.bgm) {
+    SFX.playBGM(ld.bgm);
+  }
+
+  // V4 AUDIO MANAGER: Pre-Match Intro Trash Talk!
+  if (Math.random() > 0.5 && player.voice && player.voice.intro) {
+    SFX.playVoice(player.voice.intro);
+  } else if (enemy.voice && enemy.voice.intro) {
+    setTimeout(() => SFX.playVoice(enemy.voice.intro), 800); // slight delay for dramatic effect
+  }
+}
+
+// ===== GAME LOOP =====
+function gameLoop(ts) {
+  requestAnimationFrame(gameLoop);
+  try {
+    updateSkipButton();
+    pollGamepad();
+    let dtMult = 1.0;
+
+    if ((player && player.hitStop > 0) || (enemy && enemy.hitStop > 0)) {
+      dtMult = 0;
+      if (player && player.hitStop > 0) player.hitStop -= 0.016;
+      if (enemy && enemy.hitStop > 0) enemy.hitStop -= 0.016;
+    }
+
+    const dtRaw = (ts - lastTime) / 1000;
+    if (QATracker.active && dtRaw > 0.035) QATracker.frameDrops++;
+    const dt = Math.min(dtRaw, 0.05) * dtMult;
+    lastTime = ts;
+    time += dt;
+
+    // --- Main Menu Lightning Effect ---
+    if (gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
+      if (time > nextLightning) {
+        document.getElementById('main-menu').classList.add('lightning-active');
+        SFX.hitHeavy(); // Using a heavy hit sound to simulate thunder rumble
+        setTimeout(() => {
+          const menuDiv = document.getElementById('main-menu');
+          if (menuDiv) menuDiv.classList.remove('lightning-active');
+        }, 500);
+        nextLightning = time + 4000 + Math.random() * 8000;
+      }
+    }
+
+    X.clearRect(0, 0, C.width, C.height);
+    X.save();
+    if (screenShake > 0) {
+      X.translate((Math.random() - 0.5) * screenShake * 3, (Math.random() - 0.5) * screenShake * 3);
+      screenShake *= 0.85; if (screenShake < 0.5) screenShake = 0;
+    }
+    const ld = LEVELS[currentLevel || 0]; const si = rawImgs[ld.stage];
+    if (si && si.complete && si.naturalWidth !== 0) X.drawImage(si, 0, 0, C.width, C.height);
+    else { const g = X.createLinearGradient(0, 0, 0, C.height); g.addColorStop(0, '#1a0030'); g.addColorStop(1, '#0a0015'); X.fillStyle = g; X.fillRect(0, 0, C.width, C.height); }
+
+    if (finisherTint > 0) {
+      X.fillStyle = `rgba(0,0,0,${finisherTint * 0.8})`;
+      X.fillRect(0, 0, C.width, C.height);
+      finisherTint -= dt * 0.8 * gameSpeedMult;
+    }
+
+    // State Machine
+    if (gameState === 'splash') {
+      stateTimer += dtRaw;
+
+      // Draw Black Background
+      X.fillStyle = '#000000'; X.fillRect(0, 0, C.width, C.height);
+
+      // Draw CAESAR logo with fade in and slight scale
+      if (window._caesarDarkImg && window._caesarDarkImg.complete) {
+        const cx = C.width / 2;
+        const cy = C.height / 2;
+        const targetWidth = C.width * 0.4;
+        const targetHeight = targetWidth * (window._caesarDarkImg.height / window._caesarDarkImg.width);
+
+        let alpha = Math.min(1.0, stateTimer / 0.8);
+        let scale = 1.0 + (stateTimer * 0.05); // Slight slowly growing scale
+
+        if (stateTimer > 2.0) {
+          alpha = Math.max(0.0, 1.0 - ((stateTimer - 2.0) / 0.5)); // Fade out
+        }
+
+        X.save();
+        X.globalAlpha = alpha;
+        X.translate(cx, cy);
+        X.scale(scale, scale);
+        // glowing effect
+        X.shadowBlur = 40; X.shadowColor = 'rgba(0, 255, 255, 0.5)';
+        X.drawImage(window._caesarDarkImg, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+        X.restore();
+      }
+
+      if (stateTimer > 2.8 || keys[' ']) {
+        gameState = 'menu';
+        document.getElementById('main-menu').classList.remove('hidden');
+        SFX.playBGM('assets/audio/music/main_menu.mp3');
+      }
+    }
+    else if (gameState === 'init') {
+      X.fillStyle = '#0a0022'; X.fillRect(0, 0, C.width, C.height);
+      if (!isGameLoaded) {
+        const pct = totalAssets > 0 ? Math.floor((assetsLoaded / totalAssets) * 100) : 0;
+        drawBigText(`LOADING DATA... ${pct}%`, '#00ffff', 0.8);
+      } else {
+        drawBigText('CLICK TO START ENGINE', '#ff00ff', 1.0);
+      }
+    }
+    else if (gameState === 'prologue') {
+      stateTimer += dt;
+      const cosmicG = X.createRadialGradient(C.width / 2, C.height / 2, 0, C.width / 2, C.height / 2, C.width);
+      cosmicG.addColorStop(0, '#00001a'); cosmicG.addColorStop(1, '#000000');
+      X.fillStyle = cosmicG; X.fillRect(0, 0, C.width, C.height);
+
+      // === SHIMMER EFFECTS (subtle, behind text) ===
+      // Drifting nebula bands
+      for (let n = 0; n < 3; n++) {
+        X.save();
+        X.globalAlpha = 0.04 + Math.sin(stateTimer * 0.3 + n * 2) * 0.02;
+        const nebGrad = X.createLinearGradient(0, 0, C.width, C.height);
+        const hue1 = (180 + n * 40 + stateTimer * 5) % 360;
+        nebGrad.addColorStop(0, `hsla(${hue1}, 80%, 50%, 0.3)`);
+        nebGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
+        nebGrad.addColorStop(1, `hsla(${(hue1 + 60) % 360}, 80%, 40%, 0.2)`);
+        X.fillStyle = nebGrad;
+        X.fillRect(0, 0, C.width, C.height);
+        X.restore();
+      }
+
+      // Center light beam (divine pillar)
+      X.save();
+      X.globalAlpha = 0.06 + Math.sin(stateTimer * 0.8) * 0.03;
+      const beamGrad = X.createLinearGradient(C.width * 0.45, 0, C.width * 0.55, 0);
+      beamGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      beamGrad.addColorStop(0.4, 'rgba(0,255,255,0.3)');
+      beamGrad.addColorStop(0.5, 'rgba(150,0,255,0.2)');
+      beamGrad.addColorStop(0.6, 'rgba(0,255,255,0.3)');
+      beamGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      X.fillStyle = beamGrad;
+      X.fillRect(0, 0, C.width, C.height);
+      X.restore();
+
+      // Stars with twinkle
+      for (let i = 0; i < 60; i++) {
+        const sx = ((i * 173.7 + stateTimer * 4) % C.width);
+        const sy = ((i * 97.3 + stateTimer * (1 + i % 3)) % C.height);
+        const twinkle = 0.2 + 0.8 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
+        X.globalAlpha = twinkle;
+        X.fillStyle = i % 5 === 0 ? '#aaddff' : (i % 7 === 0 ? '#ccaaff' : '#ffffff');
+        X.beginPath(); X.arc(sx, sy, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2); X.fill();
+      } X.globalAlpha = 1;
+
+      const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
+      X.save(); X.textAlign = 'center'; const lineHeight = fs(0.04);
+
+      // Default duration to 40 seconds if audio fails to load or duration is buggy (Infinity)
+      let scrollSpeed = 30;
+      let safeDuration = 40;
+
+      if (currentAudioTrack && currentAudioTrack.duration > 0 && currentAudioTrack.duration < Infinity) {
+        safeDuration = currentAudioTrack.duration;
+      }
+
+      const totalHeight = Array.from(prologueLines).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+
+      // Audio Calibration: Perfect Sync Multiplier
+      scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
+
+      // Accumulate the scrolling position using either audio time or state timer
+      let currentPlaybackTime = stateTimer;
+      if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
+        currentPlaybackTime = currentAudioTrack.currentTime;
+      }
+      const scrollOff = currentPlaybackTime * (scrollSpeed * 0.72); // Reduced speed for better audio sync
+
+      // startY anchors the first line block. Start slightly higher than mid-screen.
+      const startY = C.height * 0.55 - scrollOff;
+
+      let yPos = startY;
+      for (const line of prologueLines) {
+        if (!line.text) { yPos += lineHeight * 0.6; continue; }
+        if (line.text.startsWith('(')) { yPos += lineHeight * 0.5; continue; }
+
+        if (yPos > -50 && yPos < C.height + 50) {
+          const distFromCenter = Math.abs(yPos - C.height * 0.5);
+          const maxDist = C.height * 0.55;
+          X.globalAlpha = Math.max(0.05, 1 - (distFromCenter / maxDist));
+          X.shadowBlur = 6; X.shadowColor = 'rgba(0,0,0,0.9)';
+
+          if (line.style === 'title') { X.font = `bold ${fs(0.05)}px "Orbitron"`; X.fillStyle = line.color; }
+          else if (line.style === 'bold') { X.font = `bold ${fs(0.024)}px "Orbitron"`; X.fillStyle = line.color || '#ffffff'; X.shadowBlur = 15; X.shadowColor = line.color || '#00ffff'; }
+          else if (line.style === 'instruction') { X.font = `${fs(0.02)}px "Orbitron"`; X.fillStyle = line.color; }
+          else if (line.style === 'italic') { X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#aaddff'; }
+          else { X.font = `${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#cccccc'; }
+          X.fillText(line.text, cx, yPos);
+        }
+        yPos += lineHeight;
+      }
+      X.restore();
+
+      const audioEnded = currentAudioTrack && currentAudioTrack.ended;
+      if (audioEnded || (keys[' '] && stateTimer > 2)) {
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        if (currentAudioTrack) currentAudioTrack.pause();
+        TransitionManager.fadeScreen(600, 200, 600, () => { startLevel(0); });
+      }
+    }
+    else if (gameState === 'midpoint_reflexion') {
+      stateTimer += dt;
+      const cosmicG = X.createRadialGradient(C.width / 2, C.height / 2, 0, C.width / 2, C.height / 2, C.width);
+      cosmicG.addColorStop(0, '#1a0033'); cosmicG.addColorStop(1, '#000000');
+      X.fillStyle = cosmicG; X.fillRect(0, 0, C.width, C.height);
+
+      // Shimmer: drifting purple nebula bands
+      for (let n = 0; n < 3; n++) {
+        X.save();
+        X.globalAlpha = 0.04 + Math.sin(stateTimer * 0.4 + n * 1.5) * 0.02;
+        const nebGrad = X.createLinearGradient(0, 0, C.width, C.height);
+        const hue1 = (280 + n * 30 + stateTimer * 4) % 360;
+        nebGrad.addColorStop(0, `hsla(${hue1}, 70%, 40%, 0.3)`);
+        nebGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
+        nebGrad.addColorStop(1, `hsla(${(hue1 + 50) % 360}, 80%, 35%, 0.2)`);
+        X.fillStyle = nebGrad;
+        X.fillRect(0, 0, C.width, C.height);
+        X.restore();
+      }
+
+      // Center light beam (purple)
+      X.save();
+      X.globalAlpha = 0.05 + Math.sin(stateTimer * 0.6) * 0.025;
+      const beamG = X.createLinearGradient(C.width * 0.42, 0, C.width * 0.58, 0);
+      beamG.addColorStop(0, 'rgba(0,0,0,0)');
+      beamG.addColorStop(0.4, 'rgba(180,0,255,0.25)');
+      beamG.addColorStop(0.5, 'rgba(255,0,200,0.15)');
+      beamG.addColorStop(0.6, 'rgba(180,0,255,0.25)');
+      beamG.addColorStop(1, 'rgba(0,0,0,0)');
+      X.fillStyle = beamG;
+      X.fillRect(0, 0, C.width, C.height);
+      X.restore();
+
+      // Stars with purple/pink twinkle
+      for (let i = 0; i < 60; i++) {
+        const sx = ((i * 173.7 + stateTimer * 4) % C.width);
+        const sy = ((i * 97.3 + stateTimer * (1 + i % 3)) % C.height);
+        const twinkle = 0.2 + 0.8 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
+        X.globalAlpha = twinkle;
+        X.fillStyle = i % 4 === 0 ? '#ffaaff' : (i % 6 === 0 ? '#ccaaff' : '#ff88ff');
+        X.beginPath(); X.arc(sx, sy, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2); X.fill();
+      } X.globalAlpha = 1;
+
+      const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
+      X.save(); X.textAlign = 'center'; const lineHeight = fs(0.04);
+      let scrollSpeed = 30;
+      let safeDuration = 40;
+      if (currentAudioTrack && currentAudioTrack.duration > 0 && currentAudioTrack.duration < Infinity) {
+        safeDuration = currentAudioTrack.duration;
+      }
+
+      const totalHeight = Array.from(reflexionLines).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+      scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
+
+      let currentPlaybackTime = stateTimer;
+      if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
+        currentPlaybackTime = currentAudioTrack.currentTime;
+      }
+      const scrollOff = currentPlaybackTime * (scrollSpeed * 0.85); // 15% reduction for audio sync
+      const startY = C.height * 0.75 - scrollOff;
+
+      let yPos = startY;
+      for (const line of reflexionLines) {
+        if (!line.text) { yPos += lineHeight * 0.6; continue; }
+        if (line.text.startsWith('(')) { yPos += lineHeight * 0.5; continue; }
+
+        if (yPos > -50 && yPos < C.height + 50) {
+          const distFromCenter = Math.abs(yPos - C.height * 0.5);
+          const maxDist = C.height * 0.55;
+          X.globalAlpha = Math.max(0.05, 1 - (distFromCenter / maxDist));
+          X.shadowBlur = 6; X.shadowColor = 'rgba(0,0,0,0.9)';
+
+          if (line.style === 'title') { X.font = `bold ${fs(0.05)}px "Orbitron"`; X.fillStyle = line.color; }
+          else if (line.style === 'bold') { X.font = `bold ${fs(0.024)}px "Orbitron"`; X.fillStyle = line.color || '#ffffff'; X.shadowBlur = 15; X.shadowColor = line.color || '#00ffff'; }
+          else if (line.style === 'instruction') { X.font = `${fs(0.02)}px "Orbitron"`; X.fillStyle = line.color; }
+          else if (line.style === 'italic') { X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#aaddff'; }
+          else { X.font = `${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#cccccc'; }
+
+          X.fillText(line.text, cx, yPos);
+        } yPos += lineHeight;
+      } X.restore();
+
+      const audioEnded2 = currentAudioTrack ? currentAudioTrack.ended : (stateTimer > 20); // Fallback length
+      if (audioEnded2 || (keys[' '] && stateTimer > 2)) {
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        if (currentAudioTrack) currentAudioTrack.pause();
+        TransitionManager.fadeScreen(600, 200, 600, () => { startLevel(7); });
+      }
+    }
+    else if (gameState === 'vs_screen') {
+      const vsBg = rawImgs['assets/UX_Main_Menu_Nexus.png'];
+      if (vsBg && vsBg.complete) {
+        if (vsBg.complete && vsBg.naturalWidth !== 0) {
+          X.drawImage(vsBg, 0, 0, C.width, C.height);
+        }
+      } else {
+        X.fillStyle = '#0a0022'; X.fillRect(0, 0, C.width, C.height);
+      }
+
+      if (stateTimer > 4.5) {
+        startRound();
+      }
+
+      const slideIn1 = Math.max(0, (stateTimer - 2.5) * C.width);
+      const slideIn2 = Math.max(0, (stateTimer - 2.5) * C.width);
+
+      X.save(); X.translate(-slideIn1 + C.width * 0.25, C.height * 0.55);
+      const p1ImgSrc = player.ld?.portrait || player.fighterDir + '/_front.png';
+      const kCanv = processedSprites[p1ImgSrc] || rawImgs[p1ImgSrc];
+      if (kCanv && kCanv.complete !== false && (kCanv.naturalWidth !== 0 || kCanv.width > 0)) {
+        const scale = (C.height * 0.7) / kCanv.height;
+        X.scale(scale, scale);
+        X.drawImage(kCanv, -kCanv.width / 2, -kCanv.height / 2, kCanv.width, kCanv.height);
+      }
+      X.restore();
+
+      X.save(); X.translate(C.width + slideIn2 - C.width * 0.25, C.height * 0.55);
+      const eImgSrc = enemy.ld?.portrait || enemy.fighterDir + '/_front.png';
+      const eCanv = processedSprites[eImgSrc] || rawImgs[eImgSrc];
+      if (eCanv && eCanv.complete !== false && (eCanv.naturalWidth !== 0 || eCanv.width > 0)) {
+        const scale = (C.height * 0.7) / eCanv.height;
+        X.scale(-scale, scale); // Flipped horizontally
+        X.drawImage(eCanv, -eCanv.width / 2, -eCanv.height / 2, eCanv.width, eCanv.height);
+      }
+      X.restore();
+
+      X.save(); X.translate(C.width / 2, C.height / 2); X.rotate(Math.PI / 8);
+      X.fillStyle = '#fff'; X.shadowBlur = 40; X.shadowColor = '#00ffff';
+      X.fillRect(-10, -C.height, 20, C.height * 2); X.restore();
+
+      X.font = `italic 900 ${Math.min(120, C.width * 0.15)}px "Orbitron"`;
+      X.fillStyle = '#00ffff'; X.textAlign = 'center'; X.shadowBlur = 30; X.shadowColor = '#aa00ff';
+      X.strokeStyle = '#fff'; X.lineWidth = 10;
+      X.strokeText('VS', C.width / 2, C.height * 0.55); X.fillText('VS', C.width / 2, C.height * 0.55);
+
+      const barH = 50; const barY = C.height - barH - 20;
+
+      X.fillStyle = 'rgba(0, 50, 150, 0.8)'; X.fillRect(0, barY, C.width * 0.45, barH);
+      X.fillStyle = '#00ffff'; X.fillRect(C.width * 0.45 - 5, barY, 5, barH);
+      X.fillStyle = 'rgba(150, 0, 150, 0.8)'; X.fillRect(C.width * 0.55, barY, C.width * 0.45, barH);
+      X.fillStyle = '#ff00ff'; X.fillRect(C.width * 0.55, barY, 5, barH);
+
+      X.shadowBlur = 10; X.shadowColor = '#000';
+      X.font = `bold ${Math.min(24, C.width * 0.035)}px "Orbitron"`;
+
+      X.textAlign = 'left'; X.fillStyle = '#fff';
+      if (gameMode === 'story') {
+        X.fillText('🇩🇪 KEANO ROMEO', 20, barY + 35);
+      } else {
+        X.fillText(`${arcadeSelectedName || 'PLAYER 1'}`, 20, barY + 35);
+      }
+      X.textAlign = 'right';
+      X.fillText(`${ld.activeName} ${ld.activeFlag || ''}`, C.width - 20, barY + 35);
+
+      stateTimer -= dt;
+      if (stateTimer <= 0) {
+        startRound();
+      }
+    }
+    else if (gameState === 'intro') {
+      player.draw(); enemy.draw(); drawHUD(player, enemy, ld);
+      stateTimer -= dt;
+
+      if (stateTimer > 2.0) {
+        X.fillStyle = `rgba(0,0,0,${Math.min(1, stateTimer - 2.0)})`; X.fillRect(0, 0, C.width, C.height);
+      }
+
+      const txt = roundNum >= 3 ? 'FINAL ROUND' : `ROUND ${roundNum}`;
+      if (stateTimer > 1.5) {
+        drawBigText(txt, '#ffcc00', 1.0);
+      } else if (stateTimer > 0.5) {
+        drawBigText('READY...', '#ffffff', 0.8);
+      } else if (stateTimer > 0) {
+        drawBigText('FIGHT!', '#ff0055', 1.3);
+      }
+      if (stateTimer <= 0) {
+        gameState = 'fighting';
+        document.getElementById('btn-hamburger').classList.remove('hidden');
+        if (isMobile) document.getElementById('mobile-controls').classList.remove('hidden');
+      }
+    }
+    else if (gameState === 'fighting') {
+      const simDt = dt * gameSpeedMult;
+
+      if (gameTimerStyle !== 'infinite') {
+        roundTimerNum -= simDt;
+        if (roundTimerNum <= 0) roundTimerNum = 0;
+      }
+
+      player.update(simDt, enemy); enemy.update(simDt, player);
+
+      projectiles = projectiles.filter(p => {
+        const alive = p.update(simDt);
+        if (p.fromPlayer && p.checkHit(enemy)) return false;
+        if (!p.fromPlayer && p.checkHit(player)) return false;
+        return alive;
+      });
+
+      if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
+      else { player.draw(); enemy.draw(); }
+
+      projectiles.forEach(p => p.draw());
+      drawHUD(player, enemy, ld);
+
+      const timeOver = gameTimerStyle !== 'infinite' && roundTimerNum <= 0;
+      if (enemy.hp <= 0 || player.hp <= 0 || timeOver) {
+        gameState = 'ko'; stateTimer = 3.5;
+        let winner = 'draw';
+        if (player.hp > enemy.hp) winner = 'p1';
+        else if (enemy.hp > player.hp) winner = 'p2';
+
+        if (winner === 'p1') {
+          p1Wins++; p1WonLast = true;
+          enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = 0.15; // Slo-Mo
+          player.timeScale = 1.0; player.state = 'idle'; // Sieger bleibt stehen
+          player.shout("Das Licht fließt weiter.", 3.0);
+          if (player.voice && player.voice.win) SFX.playVoice(player.voice.win);
+        }
+        else if (winner === 'p2') {
+          p2Wins++; p1WonLast = false;
+          player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15; // Slo-Mo
+          enemy.timeScale = 1.0; enemy.state = 'idle'; // Sieger bleibt stehen
+          enemy.shout("Zu schwach!", 3.0);
+          if (enemy.voice && enemy.voice.win) SFX.playVoice(enemy.voice.win);
+        }
+        if (winner === 'draw') {
+          player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15;
+          enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = 0.15;
+        }
+
+        // Massive KO Impact Vibration
+        screenShake = 25;
+      }
+    }
+    else if (gameState === 'ko') {
+      // Allow independent updates for post-KO cinematic slow-motion logic
+      player.update(dt, enemy); enemy.update(dt, player);
+
+      player.draw(); enemy.draw(); drawHUD(player, enemy, ld);
+
+      let tStr = 'K.O.!'; let tc = '#ff0055';
+      if (gameTimerStyle !== 'infinite' && roundTimerNum <= 0 && player.hp > 0 && enemy.hp > 0) {
+        tStr = 'TIME OVER'; tc = '#ffcc00';
+      } else if (p1WonLast && player.hp >= 100 && enemy.hp <= 0) {
+        tStr = 'PERFECT!'; tc = '#00ff88';
+      }
+      drawBigText(tStr, tc, 1.5); stateTimer -= dt;
+
+      if (stateTimer <= 0) {
+        let roundsToWin = 2;
+        if (gameMode === 'story') roundsToWin = 1;
+        // else defaults to 2 (Best of 3)
+
+        if (p1Wins >= roundsToWin) {
+          if (currentLevel >= LEVELS.length - 1) {
+            if (gameMode === 'story') {
+              localStorage.setItem('arcadeUnlocked', 'true');
+              ['btn-arcade', 'btn-versus'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) { b.disabled = false; b.style.color = '#00ffff'; b.style.borderColor = '#00ffff'; b.style.cursor = 'pointer'; b.style.opacity = '1'; }
+              });
+              document.getElementById('btn-arcade').textContent = 'ARCADE MODUS';
+              document.getElementById('btn-versus').textContent = 'VERSUS MODUS';
+            }
+            TransitionManager.fadeScreen(800, 300, 600, () => {
+              gameState = 'victory'; stateTimer = 0;
+              SFX.stopMusic();
+              document.getElementById('btn-hamburger').classList.add('hidden');
+              if (isMobile) document.getElementById('mobile-controls').classList.add('hidden');
+              playingOutro = false; playingHappyBirthday = false;
+              playEpicVoice(epilogLines, 'epilogue');
+            });
+          } else {
+            TransitionManager.fadeScreen(400, 150, 400, () => {
+              gameState = 'nextLevel'; stateTimer = 1.5;
+            });
+          }
+        } else if (p2Wins >= roundsToWin) {
+          gameState = 'continue'; stateTimer = 9.99;
+        } else {
+          roundNum++; startRound();
+        }
+      }
+    }
+    else if (gameState === 'nextLevel') {
+      drawBigText(`STAGE ${LEVELS[currentLevel + 1]?._lvl || currentLevel + 2}`, '#00ffff', 1.2);
+      X.save(); X.font = 'bold 22px "Orbitron"'; X.textAlign = 'center'; X.fillStyle = '#fff';
+      X.fillText(LEVELS[currentLevel + 1].flag + ' ' + LEVELS[currentLevel + 1].name, C.width / 2, C.height * 0.58); X.restore();
+      stateTimer -= dt; if (stateTimer <= 0) {
+        TransitionManager.fadeScreen(400, 150, 400, () => { startLevel(currentLevel + 1); });
+      }
+    }
+    else if (gameState === 'continue') {
+      X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
+      drawBigText('CONTINUE?', '#ffcc00', 1.2);
+      X.save(); X.font = 'bold 120px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
+      X.fillText(Math.ceil(stateTimer), C.width / 2, C.height * 0.65);
+      stateTimer -= dt;
+      if (stateTimer <= 0) { useCredit(); gameState = 'gameOver'; stateTimer = 3; }
+      X.font = '20px "Orbitron"'; X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
+      X.fillText('PRESS SPACE OR TAP TO CONTINUE', C.width / 2, C.height * 0.85);
+      // Show remaining credits
+      X.globalAlpha = 1; X.font = '16px "Orbitron"'; X.fillStyle = '#00ffff';
+      X.fillText(`🪙 CREDITS: ${arcadeCredits}`, C.width / 2, C.height * 0.92);
+
+      if (keys[' '] && stateTimer < 9.5) {
+        keys[' '] = false;
+        if (arcadeCredits > 0) {
+          useCredit();
+          p1Wins = 0; p2Wins = 0; roundNum = 1;
+          startLevel(currentLevel);
+        } else {
+          SFX.hitBlock(); // Error sound if no credits
+        }
+      }
+      X.restore();
+    }
+    else if (gameState === 'gameOver') {
+      X.fillStyle = 'rgba(0,0,0,0.9)'; X.fillRect(0, 0, C.width, C.height);
+      drawBigText('GAME OVER', '#ff0033', 1.5);
+      X.save(); X.font = '20px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
+      X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
+      X.fillText('TAP TO RETURN TO MENU', C.width / 2, C.height * 0.7);
+      // Show credit status
+      X.globalAlpha = 1; X.font = '16px "Orbitron"';
+      X.fillStyle = arcadeCredits > 0 ? '#00ffff' : '#ff0033';
+      X.fillText(arcadeCredits > 0 ? `🪙 CREDITS: ${arcadeCredits}` : '🪙 NO CREDITS!', C.width / 2, C.height * 0.78);
+
+      if (keys[' '] && stateTimer <= 2.5) {
+        keys[' '] = false;
+        quitToMenu();
+      }
+
+      stateTimer -= dt; // Ensure this ticks down if we want the 3s delay
+      if (stateTimer <= 0 && !keys[' ']) {
+        quitToMenu();
+      }
+
+      X.restore();
+    }
+    else if (gameState === 'victory') {
+      stateTimer += dt; fwTimer -= dt;
+      if (fwTimer <= 0) {
+        fireworks.push(new Firework(C.width * 0.2 + Math.random() * C.width * 0.6, C.height * 0.1 + Math.random() * C.height * 0.4));
+        fwTimer = 0.5 + Math.random() * 1.5;
+      }
+      fireworks.forEach(f => { f.update(); f.draw(); });
+
+      let linesToUse = epilogLines;
+      let scrollSpeedMultiplier = 0.85; // Calibrated reduction
+
+      if (!playingHappyBirthday) {
+        X.save();
+        const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
+        X.textAlign = 'center';
+        X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
+
+        // Shimmer: golden/cyan nebula for victory
+        for (let n = 0; n < 3; n++) {
+          X.save();
+          X.globalAlpha = 0.03 + Math.sin(stateTimer * 0.25 + n * 2) * 0.015;
+          const vGrad = X.createLinearGradient(0, 0, C.width, C.height);
+          const hue1 = (40 + n * 50 + stateTimer * 3) % 360;
+          vGrad.addColorStop(0, `hsla(${hue1}, 80%, 55%, 0.3)`);
+          vGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
+          vGrad.addColorStop(1, `hsla(${(hue1 + 80) % 360}, 70%, 45%, 0.2)`);
+          X.fillStyle = vGrad;
+          X.fillRect(0, 0, C.width, C.height);
+          X.restore();
+        }
+        // Golden light beam
+        X.save();
+        X.globalAlpha = 0.05 + Math.sin(stateTimer * 0.5) * 0.025;
+        const vBeam = X.createLinearGradient(C.width * 0.43, 0, C.width * 0.57, 0);
+        vBeam.addColorStop(0, 'rgba(0,0,0,0)');
+        vBeam.addColorStop(0.35, 'rgba(255,200,50,0.2)');
+        vBeam.addColorStop(0.5, 'rgba(0,255,255,0.15)');
+        vBeam.addColorStop(0.65, 'rgba(255,200,50,0.2)');
+        vBeam.addColorStop(1, 'rgba(0,0,0,0)');
+        X.fillStyle = vBeam;
+        X.fillRect(0, 0, C.width, C.height);
+        X.restore();
+
+        const lineHeight = fs(0.04);
+
+        if (playingOutro) { linesToUse = outroLines; scrollSpeedMultiplier = 0.80; } // slightly slower for Outro
+
+        let scrollSpeed = 35;
+        let safeDuration = 45;
+        if (currentAudioTrack && currentAudioTrack.duration > 0 && currentAudioTrack.duration < Infinity) {
+          safeDuration = currentAudioTrack.duration;
+        }
+
+        const totalHeight = Array.from(linesToUse).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+        scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
+
+        let currentPlaybackTime = stateTimer;
+        if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
+          currentPlaybackTime = currentAudioTrack.currentTime;
+        }
+        const scrollOff = currentPlaybackTime * (scrollSpeed * scrollSpeedMultiplier);
+        const startY = C.height * 0.75 - scrollOff; // Start lower down
+        let yPos = startY;
+
+        for (const line of linesToUse) {
+          if (!line.text) { yPos += lineHeight * 0.6; continue; }
+          if (line.text.startsWith('(')) { yPos += lineHeight * 0.5; continue; }
+
+          if (yPos > -50 && yPos < C.height + 50) {
+            const distFromCenter = Math.abs(yPos - C.height * 0.5); const maxDist = C.height * 0.55;
+            X.globalAlpha = Math.max(0.05, 1 - (distFromCenter / maxDist));
+            X.shadowBlur = 6; X.shadowColor = 'rgba(0,0,0,0.9)';
+
+            if (line.style === 'producer') {
+              if (window._caesarWhiteImg && window._caesarWhiteImg.complete) {
+                const iw = C.width * 0.45;
+                const ih = iw * (window._caesarWhiteImg.height / window._caesarWhiteImg.width);
+                X.shadowBlur = 20; X.shadowColor = 'rgba(255,255,255,0.4)';
+                X.drawImage(window._caesarWhiteImg, cx - iw / 2, yPos - ih / 2, iw, ih);
+                yPos += ih * 0.6;
+              } else {
+                X.font = `bold ${fs(0.035)}px "Orbitron"`; X.fillStyle = '#ffffff'; X.shadowColor = '#ffffff'; X.shadowBlur = 15;
+                X.fillText(line.text, cx, yPos);
+              }
+            } else {
+              if (line.style === 'title') { X.font = `bold ${fs(0.05)}px "Orbitron"`; X.fillStyle = line.color; }
+              else if (line.style === 'bold') { X.font = `bold ${fs(0.024)}px "Orbitron"`; X.fillStyle = line.color || '#ffffff'; X.shadowBlur = 15; X.shadowColor = line.color || '#00ffff'; }
+              else if (line.style === 'instruction') { X.font = `${fs(0.02)}px "Orbitron"`; X.fillStyle = line.color; }
+              else if (line.style === 'italic') { X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#aaddff'; }
+              else { X.font = `${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#cccccc'; }
+              X.fillText(line.text, cx, yPos);
+            }
+          } yPos += lineHeight;
+        } X.restore();
+
+        const audioEnded3 = currentAudioTrack ? currentAudioTrack.ended : (stateTimer > 25);
+        if (audioEnded3 || (keys[' '] && stateTimer > 2)) {
+          if (window.speechSynthesis) speechSynthesis.cancel();
+          if (currentAudioTrack) currentAudioTrack.pause();
+          if (!playingOutro) {
+            playingOutro = true; stateTimer = 0; playEpicVoice(outroLines, 'outro'); keys[' '] = false;
+          } else {
+            playingHappyBirthday = true; keys[' '] = false;
+          }
+        }
+      }
+    }
+
+    if (flashTimer > 0) { X.save(); X.globalAlpha = flashTimer * 2; X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore(); flashTimer -= dt; }
+    X.restore();
+
+  } catch (err) {
+    if (!window._loopErrLogged) {
+      window._loopErrLogged = true; console.error('GAMELOOP ERROR:', err.message, err.stack);
+    }
+  }
+}
+
+// ===== MENU LOGIC =====
+
+
+===== js/entities.js =====
+
+// ===== PROJECTILES =====
+let projectiles = [];
+class Projectile {
+  constructor(x, y, dir, type, fromPlayer) {
+    this.x = x; this.y = y; this.dir = dir; this.type = type; this.fromPlayer = fromPlayer;
+    this.speed = type === 'super' ? 14 : 9;
+    this.life = 1; this.size = type === 'super' ? 45 : 25;
+    this.trail = [];
+  }
+  update(dt) {
+    this.x += this.dir * this.speed;
+    this.life -= dt * 0.7;
+    this.trail.push({ x: this.x, y: this.y, life: 0.3 });
+    this.trail = this.trail.filter(t => { t.life -= dt * 2.5; return t.life > 0; });
+    return this.x > -100 && this.x < C.width + 100 && this.life > 0;
+  }
+  draw() {
+    const cols = {
+      fire: ['#ff4400', '#ffaa00'], ice: ['#88ddff', '#ffffff'], electric: ['#ffff00', '#ffffff'],
+      wind: ['#44ff88', '#ccffcc'], dark: ['#aa00ff', '#ff00ff'], super: ['#00ffff', '#ffffff']
+    };
+    const c = cols[this.type] || cols.fire;
+
+    // Draw trailing particles first
+    this.trail.forEach((t, idx) => {
+      X.save(); X.globalAlpha = t.life * 0.6;
+      X.fillStyle = idx % 2 === 0 ? c[0] : c[1];
+      X.shadowBlur = 15; X.shadowColor = c[0];
+      X.beginPath(); X.arc(t.x, t.y, this.size * 0.9 * t.life, 0, Math.PI * 2); X.fill();
+      X.restore();
+    });
+
+    // Massive energy core
+    X.save(); X.globalAlpha = this.life;
+    X.translate(this.x, this.y);
+    X.rotate(performance.now() / 150); // Fast spinning aura
+
+    // Outer glow
+    const grad = X.createRadialGradient(0, 0, 0, 0, 0, this.size * 1.5);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, c[1]);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    X.fillStyle = grad;
+    X.beginPath(); X.arc(0, 0, this.size * 1.5, 0, Math.PI * 2); X.fill();
+
+    // Inner dense core
+    X.fillStyle = '#ffffff'; X.shadowBlur = 30; X.shadowColor = c[0];
+    X.beginPath(); X.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); X.fill();
+
+    X.restore();
+  }
+  checkHit(fighter) {
+    if (Math.abs(this.x - fighter.x) < fighter.w * 0.25 && Math.abs(this.y - (fighter.y - fighter.h * 0.4)) < fighter.h * 0.5) {
+      const dmg = this.type === 'super' ? 25 : 12;
+      fighter.takeHit(dmg, this.dir);
+      screenShake = this.type === 'super' ? 18 : 8;
+      return true;
+    }
+    return false;
+  }
+}
+
+
+
+// ============================================================
+// COMPANION SYSTEM (Simba for Vikingo)
+// ============================================================
+const GROUND = () => C.height * 0.85;
+const FW = () => Math.min(270, C.height * 0.35);
+const FH = () => Math.min(370, C.height * 0.50);
+const GRAV = 0.65;
+
+class Companion {
+  constructor(owner) {
+    this.owner = owner;
+    this.x = owner.x;
+    this.y = GROUND();
+    this.vy = 0;
+    this.w = owner.w * 0.6;
+    this.h = owner.h * 0.45;
+    this.state = 'hidden';
+    this.stateTimer = 0;
+    this.facingRight = owner.facingRight;
+    this.imgSrc = 'assets/clean_#simba_cane_corso_solo_1772218185461.png';
+    const img = new Image(); img.src = this.imgSrc;
+    this.img = img;
+    this.alpha = 0;
+  }
+
+  triggerBite() {
+    if (this.state !== 'hidden') return;
+    this.state = 'leap';
+    this.facingRight = this.owner.facingRight;
+    const fdir = this.facingRight ? 1 : -1;
+    this.x = this.owner.x - fdir * 100;
+    this.y = GROUND();
+    this.vy = -18;
+    this.alpha = 1;
+    this.stateTimer = 1.0;
+    if (QATracker.active) QATracker.specials++;
+    SFX.hitHeavy(); // Bark proxy
+  }
+
+  update(dt, opponent) {
+    if (this.state === 'hidden') return;
+
+    if (this.state === 'leap') {
+      const fdir = this.facingRight ? 1 : -1;
+      this.x += fdir * 16 * gameSpeedMult;
+      this.y += this.vy * gameSpeedMult;
+      this.vy += GRAV * 1.5 * gameSpeedMult;
+
+      if (this.y > GROUND()) {
+        this.y = GROUND();
+        this.state = 'bite';
+        this.stateTimer = 0.5;
+      }
+    } else if (this.state === 'bite') {
+      this.stateTimer -= dt * gameSpeedMult;
+      if (this.stateTimer <= 0) {
+        this.state = 'fade';
+      }
+    } else if (this.state === 'fade') {
+      this.alpha -= dt * 2.5 * gameSpeedMult;
+      if (this.alpha <= 0) {
+        this.state = 'hidden';
+        this.alpha = 0;
+      }
+    }
+  }
+
+  draw() {
+    if (this.state === 'hidden' || this.alpha <= 0) return;
+    X.save();
+    X.globalAlpha = this.alpha;
+    X.translate(Math.round(this.x), Math.round(this.y));
+    const faceScale = this.facingRight ? 1 : -1;
+    X.scale(faceScale, 1);
+
+    const imgCanvas = processedSprites[this.imgSrc] || rawImgs[this.imgSrc] || this.img;
+    if (imgCanvas && imgCanvas.complete && imgCanvas.naturalWidth !== 0) {
+      let rot = 0;
+      if (this.state === 'leap') rot = this.vy > 0 ? 0.2 : -0.2;
+      if (this.state === 'bite') rot = Math.sin(performance.now() / 20) * 0.1; // fast shaking bite
+
+      X.rotate(rot);
+      X.drawImage(imgCanvas, -this.w / 2, -this.h, this.w, this.h);
+
+      // Speed kinetics
+      if (this.state === 'leap') {
+        X.strokeStyle = 'rgba(255,255,255,0.6)'; X.lineWidth = 3;
+        X.beginPath(); X.moveTo(-this.w / 2, -this.h / 2); X.lineTo(-this.w - 60, -this.h / 2); X.stroke();
+      }
+    }
+    X.restore();
+  }
+}
+
+// Referee feature removed by user request
+
+
+===== js/fighter.js =====
+
+// ============================================================
+// FIGHTER CLASS (V3 Clean Rendering)
+// ============================================================
+let screenShake = 0, flashTimer = 0, finisherTint = 0;
+let comboCount = 0, comboTimer = 0;
+let gameTimerStyle = 'normal';
+let defaultRoundTime = 99;
+let gameDifficulty = 'normal';
+let gameSpeedMult = 1.0;
+
+// =========================================================================
+// V3 Scene / Transition Manager
+// Inspired by Unity SceneManager / Godot Tween Fades
+// =========================================================================
+const TransitionManager = {
+  isTransitioning: false,
+  fadeScreen: function (fadeInDuration, waitDuration, fadeOutDuration, onMidpoint) {
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
+    const fader = document.getElementById('scene-fader');
+
+    // 1. Fade Into Black
+    fader.style.transition = `opacity ${fadeInDuration}ms ease-in-out`;
+    fader.classList.add('fade-in');
+
+    setTimeout(() => {
+      // 2. Midpoint (Screen is fully black) -> Swap States!
+      if (onMidpoint) onMidpoint();
+
+      setTimeout(() => {
+        // 3. Fade Out of Black into new Scene
+        fader.style.transition = `opacity ${fadeOutDuration}ms ease-in-out`;
+        fader.classList.remove('fade-in');
+
+        setTimeout(() => {
+          this.isTransitioning = false;
+        }, fadeOutDuration);
+      }, waitDuration);
+    }, fadeInDuration);
+  },
+
+  switchState: function (newStateConfig) {
+    this.fadeScreen(
+      newStateConfig.fadeIn || 400,
+      newStateConfig.wait || 100,
+      newStateConfig.fadeOut || 400,
+      () => {
+        if (newStateConfig.hideDOM) {
+          newStateConfig.hideDOM.forEach(id => document.getElementById(id).classList.add('hidden'));
+        }
+        if (newStateConfig.showDOM) {
+          newStateConfig.showDOM.forEach(id => document.getElementById(id).classList.remove('hidden'));
+        }
+        if (newStateConfig.setGameState) {
+          gameState = newStateConfig.setGameState;
+        }
+        if (newStateConfig.onSwap) {
+          newStateConfig.onSwap();
+        }
+      }
+    );
+  }
+};
+
+// Hadouken motion parser
+function checkMotion(sequence) {
+  if (inputHistory.length < sequence.length) return false;
+  const recent = inputHistory.slice(-sequence.length);
+  // Give a generous 500ms window for the sequence to complete correctly
+  if (Date.now() - recent[0].time > 500) return false;
+  for (let i = 0; i < sequence.length; i++) {
+    if (recent[i].key !== sequence[i]) return false;
+  }
+  return true;
+}
+
+class HybridFighter {
+  constructor(startX, startY, isPlayer, color, ld = null) {
+    this.x = startX;
+    this.y = startY || GROUND();
+    this.vy = 0;
+
+    this.isPlayer = isPlayer;
+    this.facingRight = isPlayer;
+
+    // Force strictly the preloaded images from Asset Loader rule
+    this.fighterDir = ld?.fighterDir || '';
+    this.cleanImgSrc = this.fighterDir + (this.facingRight ? '/_right.png' : '/_left.png');
+
+    this.ld = ld;
+    this.wasFacingRight = this.facingRight;
+    this.isBackTurned = false;
+
+    this.color = ld?.col || '#00aaff';
+    this.maxHP = 100 * (ld?.hpMult || 1) * (isPlayer ? 1 : (typeof getDiff === 'function' ? getDiff().hpScale : 1));
+    this.hp = this.maxHP;
+    this.super = isPlayer ? 0 : 0;
+    this.state = 'idle';
+    this.stateTimer = 0;
+    this.knockVX = 0;
+    this.specialCD = 0;
+    this.t = Math.random() * Math.PI * 2;
+    this.hitFlash = 0;
+    this.hitStop = 0;
+
+    // Voicelines
+    this.shoutTimer = 0;
+    this.shoutText = "";
+
+    this.inputBuffer = [];
+    this.inputTimer = 0;
+    this.timeScale = 1.0;
+    this.companion = null;
+    if (this.fighterDir.includes('vikingo_') || (ld && ld.level === 14)) {
+      this.companion = new Companion(this);
+    }
+  }
+
+  get w() { return FW(); }
+  get h() { return FH(); }
+
+  shout(text, duration = 2.0) {
+    this.shoutText = text;
+    this.shoutTimer = duration;
+    // Simple Text-to-Speech fallback if no MP3 exists for this line
+    if (window.speechSynthesis && !SFX.muted) {
+      speechSynthesis.cancel();
+      let u = new SpeechSynthesisUtterance(text);
+      u.lang = 'de-DE'; u.rate = 1.1; u.pitch = this.isPlayer ? 1.0 : 0.8;
+      speechSynthesis.speak(u);
+    }
+  }
+
+  takeHit(dmg, dir, isHeavy = false) {
+    if (this.state === 'block') {
+      this.hp -= dmg * 0.15; // Chip damage
+      this.knockVX = dir * (isHeavy ? 12 : 6);
+      this.hitStop = isHeavy ? 0.15 : 0.08;
+      SFX.hitBlock();
+    } else {
+      const wasAlive = this.hp > 0;
+      this.hp -= dmg;
+      this.state = 'hit';
+      this.stateTimer = isHeavy ? 0.65 : 0.40;
+      this.knockVX = dir * (isHeavy ? 20 : 12);
+      this.hitFlash = 1;
+      this.hitStop = isHeavy ? 0.22 : 0.12;
+      screenShake = isHeavy ? 15 : 8;
+      SFX.hitHeavy();
+      if (wasAlive && this.hp <= 0 && isHeavy) {
+        finisherTint = 1.0;
+        screenShake = 35;
+        this.hitStop = 0.5; // Massive hitstop
+      }
+      if (this.isPlayer) { comboCount = 0; comboTimer = 0; }
+    }
+    this.hp = Math.max(0, this.hp);
+  }
+
+  update(dt, opponent) {
+    dt = dt * this.timeScale;
+    if (this.hitStop > 0) {
+      this.hitStop -= dt;
+      return;
+    }
+
+    this.y += this.vy * this.timeScale;
+    this.vy += GRAV * 1.35 * this.timeScale;
+
+    if (this.y > GROUND()) {
+      this.y = GROUND();
+      this.vy = 0;
+
+      if (this.state === 'roll' || this.state === 'hit' || this.state === 'ko') {
+        if (this.isPlayer && this.hp > 0 && (keys['control'] || keys['alt']) && this.state !== 'ko') {
+          // Tech
+          this.state = 'roll';
+          this.stateTimer = 0.4;
+          this.knockVX = this.facingRight ? -15 : 15;
+          SFX.dash();
+        } else if (this.state === 'roll') {
+          this.state = 'idle';
+          this.knockVX = 0;
+        }
+      }
+    }
+
+    this.x += this.knockVX * this.timeScale;
+    if (this.y === GROUND()) {
+      if (Math.abs(this.knockVX) > 0.5) {
+        let friction = (this.state === 'dash') ? 0.92 : 0.82;
+        // Adjust friction scale slightly for slow mo so they don't slide forever
+        if (this.timeScale < 1.0) friction = 0.95;
+        this.knockVX *= friction;
+      } else {
+        this.knockVX = 0;
+      }
+    } else {
+      this.knockVX *= 0.98;
+    }
+
+    this.x = Math.max(this.w * 0.5, Math.min(C.width - this.w * 0.5, this.x));
+
+    if (opponent && this.state !== 'roll' && this.state !== 'evade_back' && this.state !== 'roll_forward') {
+      this.wasFacingRight = this.facingRight;
+      if (Math.abs(this.x - opponent.x) > 10) {
+        this.facingRight = this.x < opponent.x;
+      }
+    }
+
+    // Apply strict left/right sprite rules dynamically based on direction
+    this.cleanImgSrc = this.fighterDir + (this.facingRight ? '/_right.png' : '/_left.png');
+    if (this.isPlayer && !this.facingRight) this.isBackTurned = true;
+    else if (this.isPlayer && this.facingRight) this.isBackTurned = false;
+
+    if (this.companion && this.hp > 0) {
+      this.companion.update(dt, opponent);
+    }
+
+    if (this.stateTimer > 0) {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0) {
+        if (this.y < GROUND()) this.state = 'jump';
+        else this.state = 'idle';
+      }
+    }
+    if (this.specialCD > 0) this.specialCD -= dt;
+    if (this.hitFlash > 0) this.hitFlash -= dt * 3;
+    if (this.shoutTimer > 0) this.shoutTimer -= dt;
+    this.t += dt * 8;
+
+    if (opponent && (this.state === 'special_roll' || this.state === 'special_flip')) {
+      const dist = Math.abs(this.x - opponent.x);
+      const range = this.w * (this.state === 'special_roll' ? 0.9 : 1.2);
+      const isOppInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
+      if (dist < range && Math.sin(this.t * 5) > 0.8 && !isOppInvincible) {
+        const baseDmg = this.state === 'special_roll' ? 6 : 8;
+        const dir = this.facingRight ? 1 : -1;
+        opponent.takeHit(baseDmg, dir, false);
+        this.hitStop = 0.03;
+        if (this.isPlayer) {
+          comboCount++; comboTimer = 1.0;
+        }
+      }
+    }
+
+    // Gamepad polling is global (works in menus too)
+    pollGamepad();
+
+
+    if (this.isPlayer && this.hp > 0 && this.state !== 'ko') {
+      const inLeft = keys['arrowleft'] || keys['a'];
+      const inRight = keys['arrowright'] || keys['d'];
+      const inUp = keys['arrowup'] || keys['w'];
+      const inDown = keys['arrowdown'] || keys['s'];
+      const inPunch = keys['j'] || keys['f'];
+      const inKick = keys['k'] || keys['g'];
+
+      if (this.inputTimer > 0) this.inputTimer -= dt;
+      else if (this.inputBuffer.length > 0) this.inputBuffer.shift();
+
+      let currentDir = 'N';
+      if (inRight) currentDir = 'R';
+      else if (inLeft) currentDir = 'L';
+
+      if (this.inputBuffer[this.inputBuffer.length - 1] !== currentDir) {
+        this.inputBuffer.push(currentDir);
+        this.inputTimer = 0.25;
+        if (this.inputBuffer.length > 4) this.inputBuffer.shift();
+      }
+
+      let dashTriggered = false;
+      if (this.state === 'idle' || this.state === 'walk') {
+        const bufStr = this.inputBuffer.join('');
+        if (bufStr.includes('RNR')) {
+          this.state = 'dash'; this.stateTimer = 0.4;
+          this.knockVX = 20;
+          this.inputBuffer = [];
+          dashTriggered = true;
+          SFX.dash();
+        } else if (bufStr.includes('LNL')) {
+          this.state = 'dash'; this.stateTimer = 0.4;
+          this.knockVX = -20;
+          this.inputBuffer = [];
+          dashTriggered = true;
+          SFX.dash();
+        }
+      }
+
+      if (!dashTriggered && (this.state === 'idle' || this.state === 'walk')) {
+        let moving = false;
+        if (inLeft) { this.x -= 10; moving = true; }
+        if (inRight) { this.x += 10; moving = true; }
+
+        if (moving && this.state === 'idle') this.state = 'walk';
+        if (!moving && this.state === 'walk') this.state = 'idle';
+
+        if (inUp && this.y === GROUND()) {
+          this.vy = -26;
+          if ((this.facingRight && inRight) || (!this.facingRight && inLeft)) {
+            this.state = 'roll';
+            this.stateTimer = 0.8;
+            this.knockVX = this.facingRight ? 14 : -14;
+            this.vy = -14;
+          } else {
+            this.state = 'jump';
+            this.stateTimer = 0.5;
+          }
+        }
+      }
+
+      if (this.state === 'idle' || this.state === 'walk' || this.state === 'jump') {
+        if (inPunch && this.stateTimer <= 0) this.doAttack('punch', opponent);
+        if (inKick && this.stateTimer <= 0) {
+          if (checkMotion([inDown, inRight, inKick]) && this.facingRight && this.super > 10) {
+            this.doSuper(opponent);
+          } else {
+            this.doAttack('kick', opponent);
+          }
+        }
+      }
+      if (keys['u'] || inDown) { this.state = 'block'; this.stateTimer = 0.3; }
+
+      const fw = this.facingRight ? 'd' : 'a';
+      const bk = this.facingRight ? 'a' : 'd';
+
+      if (this.specialCD <= 0) {
+        if (checkMotion(['s', fw, 'l'])) this.fireProj();
+        else if (checkMotion([bk, fw, 'k'])) this.doSpecialRoll(opponent);
+        else if (checkMotion(['s', bk, 'k'])) this.doSpecialFlip(opponent);
+        else if (keys['l']) this.fireProj();
+      }
+
+      if (keys[' '] && this.super >= 100) this.doSuper(opponent);
+    }
+
+    // --- Utility AI Core ---
+    if (!this.isPlayer && opponent) {
+      this.updateAI(dt, opponent);
+    }
+  }
+
+  updateAI(dt, opponent) {
+    if (this.state !== 'idle' && this.state !== 'walk') return;
+
+    const dist = Math.abs(this.x - opponent.x);
+    const diffMult = gameDifficulty === 'hard' ? 1.8 : (gameDifficulty === 'easy' ? 0.7 : 1.0);
+    const spdMult = this.ld?.speedMult || 1.0;
+    const jumpFreq = this.ld?.jumpFreq || 1.0;
+    const projFreq = this.ld?.projFreq || 1.0;
+    const charType = this.ld?.special || 'fire';
+    const walkSpd = (gameDifficulty === 'easy' ? 4.0 : (gameDifficulty === 'hard' ? 6.0 : 5.0)) * spdMult;
+
+    const isOpponentAttacking = (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'proj' || opponent.state === 'special');
+    const r = Math.random();
+
+    // 1. Evade / Defense (Highest Priority Reflex)
+    if (isOpponentAttacking && dist < this.w * 1.5) {
+      if (r < 0.25 * diffMult) {
+        this.state = 'evade_back';
+        this.stateTimer = 0.4;
+        this.knockVX = (this.x > opponent.x) ? 25 : -25;
+        SFX.dash();
+        return;
+      } else if (r < 0.5 * diffMult) {
+        this.state = 'block';
+        this.stateTimer = 0.5;
+        return;
+      }
+    }
+
+    // 2. Punish / Counter (Exploit player misses)
+    if ((opponent.state === 'evade_back' || opponent.state === 'hit' || opponent.state === 'roll') && dist < this.w * 1.8) {
+      if (r < 0.3 * diffMult) {
+        this.state = 'dash';
+        this.stateTimer = 0.4;
+        this.knockVX = (this.x < opponent.x) ? 22 : -22;
+        SFX.dash();
+        return;
+      }
+    }
+
+    // 3. Tactical Retreat (Low HP Survival)
+    if (this.hp < this.maxHP * 0.25 && dist < this.w * 1.2 && r < 0.05) {
+      this.state = 'evade_back';
+      this.stateTimer = 0.4;
+      this.knockVX = (this.x > opponent.x) ? 20 : -20;
+      return;
+    }
+
+    // 4. Super Attack (Always use if full)
+    let superChance = 0.10 * diffMult;
+    if (charType === 'fire' || charType === 'lightning') superChance *= 1.5;
+    if (this.super >= 100 && dist < this.w * 2 && r < superChance) {
+      this.doSuper(opponent);
+      return;
+    }
+
+    // 5. Normal Aggression & Zoning
+    let idealZoningDist = this.w * 0.4;
+    if (charType === 'ice') idealZoningDist = this.w * 1.5;
+    else if (charType === 'dark' || charType === 'earth') idealZoningDist = this.w * 0.3;
+    if (projFreq > 1.5) idealZoningDist += this.w;
+
+    let aiMoving = false;
+    // Introduce a wider deadzone (hysteresis) to prevent AI jittering back and forth
+    const jitterDeadzone = 20;
+
+    if (dist > idealZoningDist + jitterDeadzone) {
+      this.x += (opponent.x > this.x ? walkSpd : -walkSpd);
+      if (this.state !== 'walk') { this.state = 'walk'; this.stateTimer = 0.2; }
+      aiMoving = true;
+    } else if (dist < idealZoningDist - jitterDeadzone) {
+      this.x += (opponent.x > this.x ? -walkSpd : walkSpd);
+      if (this.state !== 'walk') { this.state = 'walk'; this.stateTimer = 0.2; }
+      aiMoving = true;
+    }
+
+    if (!aiMoving && this.state === 'walk' && this.stateTimer <= 0) {
+      this.state = 'idle';
+    }
+
+    // 6. Strategic Attacks
+    if (!aiMoving) {
+      if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 0.6) {
+        if (r < 0.20 * diffMult * spdMult) {
+          this.doAttack('punch', opponent);
+          setTimeout(() => { if (this.hp > 0 && opponent.hp > 0 && this.state !== 'ko') this.doAttack('kick', opponent); }, 250);
+        } else if (r < 0.25 * diffMult * jumpFreq && this.specialCD <= 0) {
+          this.doSpecialFlip(opponent);
+        }
+      } else if (charType === 'ice' && dist > this.w * 0.8) {
+        if (r < 0.3 * diffMult * projFreq && this.specialCD <= 0) {
+          this.fireProj();
+        } else if (r < 0.4 && opponent.state === 'jump') {
+          this.doAttack('kick', opponent);
+        }
+      } else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 0.5) {
+        if (r < 0.15 * diffMult) {
+          this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
+        } else if (r < 0.2 * diffMult && this.specialCD <= 0) {
+          this.doSpecialRoll(opponent);
+        }
+      } else if (dist < this.w * 0.55 && r < 0.12 * diffMult) {
+        this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
+      }
+    }
+
+    // 7. Random Mobility (Agility injections)
+    if (r < (0.015 * jumpFreq)) {
+      if ((charType === 'dark' || charType === 'lightning') && dist > this.w * 0.8) {
+        this.state = 'roll_forward'; this.stateTimer = 0.5;
+        this.knockVX = (opponent.x > this.x) ? 18 : -18;
+        SFX.dash();
+      } else {
+        this.vy = -26; this.state = 'jump'; this.stateTimer = 0.5;
+      }
+    }
+
+    // 8. Anti-Air Reaction
+    if (opponent.y < GROUND() - 50 && dist < this.w * 0.8 && r < 0.5 * diffMult) {
+      this.doAttack('punch', opponent);
+    }
+  }
+
+  doAttack(type, opponent) {
+    this.state = type;
+    if (QATracker.active) QATracker.misses++;
+    const spdMult = this.isPlayer ? 1.2 : (this.ld?.speedMult || 1);
+    this.stateTimer = type === 'punch' ? (0.25 / spdMult) : (0.4 / spdMult);
+    this.knockVX = this.facingRight ? 4 : -4;
+
+    if (type === 'punch') SFX.dash();
+
+    this.hitStop = 0.05;
+
+    if (opponent) {
+      const dist = Math.abs(this.x - Math.max(opponent.x, this.x - this.w) - Math.min(opponent.x - this.x, 0));
+      const range = type === 'punch' ? this.w * 0.8 : this.w * 1.0;
+      const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
+      if (dist < range && !isOpponentInvincible) {
+        let baseDmg = type === 'punch' ? 8 + Math.random() * 5 : 14 + Math.random() * 6;
+        if (!this.isPlayer) baseDmg *= (this.ld?.hitPow || 1);
+
+        const dir = this.facingRight ? 1 : -1;
+        const isHeavyHit = type === 'kick';
+
+        opponent.takeHit(baseDmg, dir, isHeavyHit);
+        this.hitStop = isHeavyHit ? 0.15 : 0.08;
+
+        if (this.isPlayer) {
+          comboCount++; comboTimer = 1.2;
+          this.super = Math.min(100, this.super + 8 + comboCount * 2);
+        } else {
+          this.super = Math.min(100, this.super + 10);
+        }
+
+        if (QATracker.active) { QATracker.misses--; QATracker.hits++; }
+
+        const ptType = isHeavyHit ? 'super_spark' : 'hitspark';
+      }
+    }
+  }
+
+  fireProj() {
+    if (this.isPlayer && comboCount < 3) return;
+    if (QATracker.active) QATracker.specials++;
+    this.state = 'special'; this.stateTimer = 0.4; this.specialCD = 1.2;
+    const dir = this.facingRight ? 1 : -1;
+    const type = this.isPlayer ? 'super' : (this.ld?.special || 'fire');
+    projectiles.push(new Projectile(this.x + dir * this.w * 0.4, this.y - this.h * 0.4, dir, type, this.isPlayer));
+    screenShake = 5;
+    if (this.isPlayer) comboCount = 0;
+
+    if (this.companion) {
+      const opp = (this === player) ? enemy : player;
+      this.companion.triggerBite(opp);
+      this.shout("Fass, Simba!", 1.5);
+    } else {
+      // Char-specific Voice triggers on Special
+      if (this.fighterDir.includes('Gargamel')) this.shout("Schatten-Sog!", 1.5);
+      else if (this.fighterDir.includes('Jay_X') || this.fighterDir.includes('Jayden')) this.shout("Feuer frei!", 1.5);
+    }
+  }
+
+  doSpecialRoll(opponent) {
+    if (QATracker.active) QATracker.specials++;
+    this.state = 'special_roll'; this.stateTimer = 0.6; this.specialCD = 1.5;
+    this.knockVX = this.facingRight ? 18 : -18; this.vy = -10;
+  }
+
+  doSpecialFlip(opponent) {
+    if (QATracker.active) QATracker.specials++;
+    this.state = 'special_flip'; this.stateTimer = 0.7; this.specialCD = 1.5;
+    this.knockVX = this.facingRight ? 12 : -12; this.vy = -18;
+  }
+
+  doSuper(opponent) {
+    if (this.isPlayer && comboCount < 5) return;
+    if (QATracker.active) QATracker.specials++;
+    this.super = 0; this.state = 'super'; this.stateTimer = 0.9;
+    screenShake = 25; flashTimer = 0.4;
+    const dir = this.facingRight ? 1 : -1;
+    if (this.isPlayer) comboCount = 0;
+
+    const projType = this.isPlayer ? 'super' : (this.ld?.special || 'fire');
+    projectiles.push(new Projectile(this.x + dir * this.w * 0.3, this.y - this.h * 0.5, dir, projType, this.isPlayer));
+    if (opponent && Math.abs(this.x - opponent.x) < this.w * 1.3) {
+      opponent.takeHit(this.isPlayer ? 45 : 30, dir);
+    }
+  }
+
+  draw() {
+    const imgCanvas = processedSprites[this.cleanImgSrc] || rawImgs[this.cleanImgSrc] || this.img;
+    if (!imgCanvas) return;
+
+    if (this.companion && this.hp > 0) this.companion.draw();
+
+    const dW = this.w; const dH = this.h;
+    const fY = Math.round(this.y);
+    const cX = Math.round(this.x);
+    const st = this.stateTimer;
+
+    X.save();
+    X.save(); X.globalAlpha = 0.5; X.fillStyle = '#000';
+    X.beginPath(); X.ellipse(cX, fY + 8, dW * 0.45, 15, 0, 0, Math.PI * 2); X.fill(); X.restore();
+
+    X.translate(cX, fY);
+
+    let faceScale = this.facingRight ? 1 : -1;
+    if (this.cleanImgSrc.includes('_left.png') || this.cleanImgSrc.includes('_right.png')) faceScale = 1; // Actual sprites don't need reverse if strictly loaded
+
+    // V8 QA: Re-enabled original robust filters
+    X.filter = `saturate(1.2) contrast(1.1) drop-shadow(0 15px 15px rgba(0,0,0,0.6))`;
+    if (this.hitFlash > 0) {
+      X.filter += ` brightness(2)`;
+    }
+
+    X.scale(faceScale, 1);
+
+    // ==========================================
+    // V11 GLOW SYSTEM (Master-Prompt: Only Main Heroes)
+    // ==========================================
+    const isMainHero = this.fighterDir.includes('Keano') ||
+      this.fighterDir.includes('vikingo') ||
+      this.fighterDir.includes('Jayden') ||
+      this.fighterDir.includes('Jay_X') ||
+      this.fighterDir.includes('Gargamel');
+
+    if (isMainHero && (this.state === 'special' || this.state === 'super' || finisherTint > 0.5)) {
+      X.shadowColor = this.color;
+      // Animierbare Intensitätskurve basierend auf Zeit
+      X.shadowBlur = 15 + Math.sin(this.t * 10) * 10;
+      if (QATracker.active && this.stateTimer > 0) QATracker.glowTriggers++;
+    } else {
+      X.shadowBlur = 0;
+      X.shadowColor = 'transparent';
+    }
+    // ==========================================
+
+    let sX = 1, sY = 1, rot = 0, offX = 0, offY = 0;
+    if (!this._lerpSX) {
+      this._lerpSX = 1; this._lerpSY = 1; this._lerpRot = 0;
+      this._lerpOX = 0; this._lerpOY = 0;
+    }
+
+    switch (this.state) {
+      case 'idle': sY = 1 + Math.sin(this.t * 3) * 0.02; sX = 1 - Math.sin(this.t * 3) * 0.01; break;
+      case 'walk': offY = Math.abs(Math.sin(this.t * 12)) * 10; rot = Math.sin(this.t * 6) * 0.05; break;
+      case 'roll': offY = dH * 0.4; rot = this.t * 15; sX = 0.7; sY = 0.7; break;
+      case 'punch': offX = dW * 0.3; rot = 0.2; sX = 1.08; sY = 0.92; break;
+      case 'kick': offX = dW * 0.1; rot = -0.25; sX = 0.9; sY = 1.1; offY = -dH * 0.05; break;
+      case 'jump': sX = 0.9; sY = 1.1; rot = this.vy > 0 ? 0.1 : -0.1; break;
+      case 'hit': rot = -0.3; offX = -dW * 0.2; sX = 0.85; sY = 1.15; break;
+      case 'block': rot = -0.1; sX = 1.1; sY = 0.9; offX = -dW * 0.1; break;
+      case 'ko': rot = -Math.PI / 2; offY = -dH * 0.10; sX = 1.0; sY = 0.8; break;
+      case 'special_roll': offY = dH * 0.3; rot = this.facingRight ? this.t * 20 : -this.t * 20; sX = 0.7; sY = 0.7; break;
+      case 'special_flip': rot = this.facingRight ? this.t * 18 : -this.t * 18; sX = 0.8; sY = 0.8; break;
+      case 'evade_back': offX = -dW * 0.3; sX = 0.85; sY = 1.05; rot = -0.15; break;
+      case 'roll_forward': offX = dW * 0.3; rot = this.t * 12; sX = 0.75; sY = 0.75; break;
+      case 'dash': offX = dW * 0.25; sX = 1.15; sY = 0.9; rot = 0.1; break;
+    }
+
+    const ls = 0.25;
+    this._lerpSX += (sX - this._lerpSX) * ls; this._lerpSY += (sY - this._lerpSY) * ls;
+    this._lerpRot += (rot - this._lerpRot) * ls; this._lerpOX += (offX - this._lerpOX) * ls;
+    this._lerpOY += (offY - this._lerpOY) * ls;
+
+    X.translate(this._lerpOX, this._lerpOY); X.rotate(this._lerpRot); X.scale(this._lerpSX, this._lerpSY);
+
+    // ========== V9: CONDITIONAL SHADER GLOW ==========
+    const fId = this.ld?.id || '';
+    const isGlowChar = ['keano', 'supreme_keano', 'hyper_keano', 'vikingo', 'vikingo_god', 'c_gargamel', 'jay_x'].includes(fId);
+    const isGlowState = ['special', 'super', 'special_roll', 'special_flip', 'finisher', 'perfect'].includes(this.state);
+
+    if (isGlowChar && isGlowState) {
+      X.shadowColor = this.ld?.glowColor || '#00ffff';
+      X.shadowBlur = Math.abs(Math.sin(this.t * 6)) * 40 + 10;
+      if (QATracker.active) QATracker.glowTriggers++;
+    } else {
+      X.shadowBlur = 0;
+      X.shadowColor = 'transparent';
+    }
+
+    // Draw Character Sprite
+    if (imgCanvas && imgCanvas.complete !== false && (imgCanvas.naturalWidth !== 0 || imgCanvas.width !== 0)) {
+      X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
+
+      // --- Fine Transparent Hit Arc (Elbow/Leg Cut Slice) ---
+      if ((this.state === 'punch' || this.state === 'kick') && this.stateTimer > 0.1) {
+        X.save();
+        X.globalAlpha = 0.35 + Math.sin(this.t * 20) * 0.2;
+        X.strokeStyle = this.ld?.glowColor || '#ffffff';
+        X.lineWidth = 3;
+        X.beginPath();
+        if (this.state === 'punch') {
+          // Arc around elbow height
+          X.arc(dW * 0.3, -dH * 0.6, dW * 0.4, -0.5, 1.2);
+        } else {
+          // Arc low around leg height
+          X.arc(dW * 0.4, -dH * 0.2, dW * 0.5, 0, 1.8);
+        }
+        X.stroke();
+
+        // Add a tiny cutting line (the "tool")
+        X.lineWidth = 1;
+        X.strokeStyle = `rgba(255, 255, 255, ${0.5 + Math.sin(this.t * 15) * 0.5})`;
+        X.beginPath();
+        if (this.state === 'punch') {
+          X.moveTo(dW * 0.2, -dH * 0.6); X.lineTo(dW * 0.8, -dH * 0.5);
+        } else {
+          X.moveTo(dW * 0.1, -dH * 0.2); X.lineTo(dW * 0.9, -dH * 0.1);
+        }
+        X.stroke();
+        X.restore();
+      }
+    }
+
+    // Draw Voice / Shout Bubble globally un-rotated
+    if (this.shoutTimer > 0 && this.shoutText !== "") {
+      X.save();
+      X.translate(cX, fY - dH - 40); // Above the head
+      X.textAlign = "center";
+      X.textBaseline = "middle";
+      X.font = "bold 18px Courier New, monospace";
+
+      const txtWidth = X.measureText(this.shoutText).width;
+      const padding = 10;
+      const bw = txtWidth + padding * 2;
+      const bh = 30;
+
+      // Balloon Background
+      X.fillStyle = "rgba(0, 0, 0, 0.75)";
+      X.strokeStyle = this.color;
+      X.lineWidth = 2;
+      X.beginPath();
+      X.roundRect(-bw / 2, -bh / 2, bw, bh, 5);
+      X.fill();
+      X.stroke();
+
+      // Pointer triangle
+      X.beginPath();
+      X.moveTo(0, bh / 2);
+      X.lineTo(-8, bh / 2 + 10);
+      X.lineTo(8, bh / 2);
+      X.fill();
+      X.stroke();
+
+      // Text
+      X.fillStyle = "#ffffff";
+      X.shadowBlur = 5;
+      X.shadowColor = this.color;
+      X.fillText(this.shoutText, 0, 1); // 1px offset optical correction
+      X.restore();
+    }
+
+    X.restore();
+
+    if (this.state === 'special_roll') {
+      X.save(); X.translate(cX, fY - dH * 0.4); X.rotate(this.t * 10);
+      const srGrad = X.createRadialGradient(0, 0, dW * 0.2, 0, 0, dW * 0.8);
+      srGrad.addColorStop(0, 'rgba(255,100,0,0.8)'); srGrad.addColorStop(0.6, 'rgba(255,0,100,0.4)'); srGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      X.fillStyle = srGrad; X.globalAlpha = 0.7; X.beginPath(); X.arc(0, 0, dW * 0.8, 0, Math.PI * 2); X.fill();
+      X.strokeStyle = '#ff4400'; X.lineWidth = 4; X.shadowBlur = 20; X.shadowColor = '#ff8800'; X.beginPath(); X.arc(0, 0, dW * 0.4, 0, Math.PI * 2); X.stroke(); X.restore();
+    }
+
+    if (this.state === 'special_flip') {
+      X.save(); X.translate(cX, fY - dH * 0.5); X.globalAlpha = 0.6;
+      X.strokeStyle = '#00ffff'; X.lineWidth = 8; X.shadowBlur = 30; X.shadowColor = '#00ffff'; X.beginPath(); X.arc(0, 0, dW * 0.6, -Math.PI, this.t * 5 % (Math.PI * 2)); X.stroke();
+      X.strokeStyle = '#ff00ff'; X.lineWidth = 4; X.beginPath(); X.arc(0, 0, dW * 0.45, -Math.PI, this.t * 7 % (Math.PI * 2)); X.stroke(); X.restore();
+    }
+
+    if (this.state === 'super') {
+      X.save(); X.translate(cX, fY - dH * 0.4);
+      const pulse = 1 + Math.sin(this.t * 15) * 0.3; const superGrad = X.createRadialGradient(0, 0, 0, 0, 0, dW * 1.5 * pulse);
+      superGrad.addColorStop(0, 'rgba(255,255,255,0.9)'); superGrad.addColorStop(0.2, 'rgba(0,255,255,0.6)'); superGrad.addColorStop(0.5, 'rgba(170,0,255,0.3)'); superGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      X.fillStyle = superGrad; X.beginPath(); X.arc(0, 0, dW * 1.5 * pulse, 0, Math.PI * 2); X.fill();
+      X.strokeStyle = '#fff'; X.lineWidth = 3; X.shadowBlur = 15; X.shadowColor = '#00ffff';
+      for (let b = 0; b < 6; b++) {
+        const ang = (b / 6) * Math.PI * 2 + this.t * 3; const len = dW * 0.8 + Math.sin(this.t * 20 + b) * dW * 0.3;
+        X.beginPath(); X.moveTo(0, 0); X.lineTo(Math.cos(ang) * len * 0.5, Math.sin(ang) * len * 0.5); X.lineTo(Math.cos(ang + 0.2) * len, Math.sin(ang + 0.2) * len); X.stroke();
+      } X.restore();
+    }
+
+    if (this.state === 'dash') {
+      X.save(); X.globalAlpha = 0.25; X.translate(cX - fdir * dW * 0.4, fY);
+      if (imgCanvas && imgCanvas.complete !== false && (imgCanvas.naturalWidth !== 0 || imgCanvas.width !== 0)) {
+        X.scale(faceScale, 1); X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH); X.restore();
+      } else {
+        X.restore();
+      }
+    }
+  }
+}
+// ===== FIREWORKS =====
+let fireworks = [];
+class Firework {
+  constructor(x, y) {
+    this.sparks = []; const c = 60; const h = Math.random() * 360;
+    for (let i = 0; i < c; i++) {
+      const a = (Math.PI * 2 / c) * i; const s = 4 + Math.random() * 6;
+      this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, hue: h + Math.random() * 40, size: 2 + Math.random() * 4 })
+    }
+  }
+  update() {
+    this.sparks.forEach(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.08; s.vx *= 0.97; s.vy *= 0.97; s.life -= 0.012; });
+    this.sparks = this.sparks.filter(s => s.life > 0);
+  }
+  draw() {
+    this.sparks.forEach(s => {
+      X.save(); X.globalAlpha = s.life; X.fillStyle = `hsl(${s.hue},100%,60%)`;
+      X.shadowBlur = 12; X.shadowColor = `hsl(${s.hue},100%,60%)`; X.beginPath(); X.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2); X.fill(); X.restore();
+    });
+  }
+}
+
+
+===== js/globals.js =====
+
+// Globals
+const C = document.getElementById('gameCanvas');
+const X = C.getContext('2d', { alpha: false }); // Optimize for no transparency behind canvas
+let gameState = 'init'; // init, splash, menu, prologue, select, vs_screen, fighting, ko, reflexion, epilogue, credits
+let time = 0, lastTime = performance.now(), stateTimer = 0;
+let nextLightning = 4000; // Initialize first thunder rumble for Main Menu
+
+window._caesarDarkImg = new Image(); window._caesarDarkImg.src = 'assets/logo_dark.png';
+
+// FPS Monitor Globals
+let lastFpsTime = performance.now();
+let currentFps = 60;
+let framesThisSecond = 0;
+
+// =========================================================================
+// ARCADE CREDIT SYSTEM
+// =========================================================================
+let arcadeCredits = 3;
+
+function updateCreditDisplay() {
+  const el = document.getElementById('credit-counter');
+  if (el) el.textContent = `CREDIT(S): ${arcadeCredits}`;
+  const bar = document.getElementById('insert-coin-bar');
+  if (bar) {
+    if (arcadeCredits <= 0) {
+      bar.classList.add('empty');
+    } else {
+      bar.classList.remove('empty');
+    }
+  }
+}
+
+function useCredit() {
+  arcadeCredits = Math.max(0, arcadeCredits - 1);
+  updateCreditDisplay();
+}
+
+function insertCoin() {
+  if (arcadeCredits <= 0) {
+    arcadeCredits = 3;
+    updateCreditDisplay();
+    SFX.uiHover();
+  }
+}
+
+// Resize Handle
+function resize() { C.width = window.innerWidth; C.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+
+
+===== js/hud.js =====
+
+// ===== HUD (MODERNIZED & CAPCOM STYLE) =====
+
+function drawHUD(p1, p2, ld) {
+  const bw = C.width * 0.38; // Wider bars
+  const bh = 30; // Thicker bars
+  const by = 20;
+
+  // Draw P1 (Left) Health Bar Background (Angled Capcom style)
+  X.save();
+  X.transform(1, 0, -0.4, 1, 0, 0); // Skew it!
+  X.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  X.fillRect(20 + by * 0.4, by, bw, bh);
+
+  // P1 Health Fill (Gradient: Neon Blue to Purple to Red)
+  const p1Pct = Math.max(0, p1.hp / 100);
+  const gw1 = X.createLinearGradient(20 + by * 0.4, by, 20 + by * 0.4 + bw, by);
+  gw1.addColorStop(0, '#ff00aa');
+  gw1.addColorStop(0.5, '#7700ff');
+  gw1.addColorStop(1, '#00ffff');
+
+  X.fillStyle = p1.hp > 25 ? gw1 : '#ff0055';
+  X.shadowBlur = 15; X.shadowColor = X.fillStyle;
+  if (p1Pct > 0) X.fillRect(20 + by * 0.4, by, bw * p1Pct, bh);
+
+  // Frame and Shine
+  X.strokeStyle = '#fff'; X.lineWidth = 3;
+  X.strokeRect(20 + by * 0.4, by, bw, bh);
+  X.fillStyle = 'rgba(255,255,255,0.2)';
+  X.fillRect(20 + by * 0.4, by, bw, bh * 0.4);
+  X.restore();
+
+  // P1 Name
+  const p1Label = gameMode === 'story' ? 'KEANO' : (arcadeSelectedName || 'PLAYER 1');
+  X.font = `bold ${Math.min(26, C.width * 0.028)}px "Orbitron"`;
+  X.fillStyle = '#fff'; X.shadowBlur = 8; X.shadowColor = '#000';
+  X.fillText(p1Label, 25, by + bh + 25, bw - 10);
+
+  // P1 WINS (Golden stars)
+  for (let i = 0; i < p1Wins; i++) {
+    X.font = '18px serif'; X.fillText('★', 30 + (i * 22), by + bh + 45);
+  }
+
+  // P1 Super Meter (Bottom Left)
+  const sw = bw * 0.6;
+  const sh = 12;
+  const sY = C.height - sh - 20;
+  X.save();
+  X.transform(1, 0, -0.5, 1, 0, 0);
+  X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(40, sY, sw, sh);
+  X.fillStyle = p1.super >= 100 ? '#00ffff' : '#0055ff';
+  X.shadowBlur = p1.super >= 100 ? 15 : 0; X.shadowColor = '#00ffff';
+  X.fillRect(40, sY, sw * (p1.super / 100), sh);
+  X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(40, sY, sw, sh);
+  X.restore();
+  if (p1.super >= 100) {
+    X.fillStyle = '#00ffff'; X.font = 'bold 16px "Orbitron"';
+    X.fillText('SUPER', 20, sY - 10);
+  }
+
+  // Draw P2 (Right) Health Bar Background
+  const rx = C.width - 20 - bw;
+  X.save();
+  X.transform(1, 0, 0.4, 1, 0, 0); // Skew opposite way!
+  X.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  X.fillRect(rx - by * 0.4, by, bw, bh);
+
+  // P2 Health Fill
+  const p2Pct = Math.max(0, p2.hp / p2.maxHP);
+  const gw2 = X.createLinearGradient(rx - by * 0.4, by, rx - by * 0.4 + bw, by);
+  gw2.addColorStop(0, '#00ffff');
+  gw2.addColorStop(0.5, '#7700ff');
+  gw2.addColorStop(1, '#ff00aa');
+
+  X.fillStyle = p2.hp > (p2.maxHP * 0.25) ? gw2 : '#ff0055';
+  X.shadowBlur = 15; X.shadowColor = X.fillStyle;
+  // Right-aligned fill
+  if (p2Pct > 0) {
+    const fw = bw * p2Pct;
+    X.fillRect(rx - by * 0.4 + (bw - fw), by, fw, bh);
+  }
+
+  // Frame and Shine
+  X.strokeStyle = '#fff'; X.lineWidth = 3;
+  X.strokeRect(rx - by * 0.4, by, bw, bh);
+  X.fillStyle = 'rgba(255,255,255,0.2)';
+  X.fillRect(rx - by * 0.4, by, bw, bh * 0.4);
+  X.restore();
+
+  // P2 Name
+  X.textAlign = 'right'; X.fillStyle = '#fff'; X.font = 'bold 22px "Orbitron"';
+  X.shadowBlur = 4; X.shadowColor = '#000';
+  X.fillText(ld.name, C.width - 25, by + bh + 25, bw - 10);
+
+  // P2 WINS
+  for (let i = 0; i < p2Wins; i++) {
+    X.font = '22px serif'; X.fillText('★', C.width - 30 - (i * 24), by + bh + 50);
+  }
+
+  // P2 Super Meter (Bottom Right)
+  X.save();
+  X.transform(1, 0, 0.5, 1, 0, 0);
+  X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+  X.fillStyle = p2.super >= 100 ? '#ff00ff' : '#aa00aa';
+  X.shadowBlur = p2.super >= 100 ? 15 : 0; X.shadowColor = '#ff00ff';
+  const p2Sw = sw * (p2.super / 100);
+  X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5 + (sw - p2Sw), sY, p2Sw, sh);
+  X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+  X.restore();
+
+  // VERSUS or STAGE text in center
+  X.textAlign = 'center'; X.fillStyle = '#ff8800'; X.font = 'bold 36px "Orbitron"';
+  let stageText = gameMode === 'arcade' ? `STAGE ${currentLevel + 1}` : 'VS';
+  if (gameMode === 'story') {
+    stageText = ld.name === 'VIKINGO' ? 'FINAL STAGE' : `STAGE ${currentLevel + 1}`;
+  }
+  X.fillText(stageText, C.width / 2, by + 105);
+
+  // TIMER (Classic Big Arcade Numbers)
+  X.fillStyle = 'rgba(0,0,0,0.8)';
+  X.beginPath(); X.arc(C.width / 2, by + 30, 45, 0, Math.PI * 2); X.fill();
+  X.strokeStyle = '#00ffff'; X.lineWidth = 6; X.stroke();
+  X.strokeStyle = '#aa00ff'; X.lineWidth = 2; X.stroke();
+
+  X.fillStyle = '#fff'; X.font = 'bold 45px "Orbitron"';
+  let roundTimerNumDisplay = Math.ceil(roundTimerNum);
+  const tStr = gameTimerStyle === 'infinite' ? '∞' : roundTimerNumDisplay;
+  if (gameTimerStyle !== 'infinite' && roundTimerNumDisplay <= 15) {
+    X.fillStyle = '#ff0055'; X.shadowBlur = 20; X.shadowColor = '#ff0055';
+  }
+  X.fillText(tStr, C.width / 2, by + 45);
+  X.shadowBlur = 0;
+}
+
+function drawBigText(t, c, s = 1) {
+  const fSize = Math.min(80 * s, C.width * 0.08 * s, C.height * 0.1 * s);
+  X.save(); X.font = `italic 900 ${fSize}px "Orbitron"`;
+  X.textAlign = 'center'; X.fillStyle = c;
+  X.shadowBlur = 0; X.shadowColor = '#000';
+  X.lineWidth = 8; X.strokeStyle = '#000';
+  X.strokeText(t, C.width / 2, C.height * 0.45);
+  X.fillText(t, C.width / 2, C.height * 0.45);
+  X.restore();
+}
+
+// ===== GAME STATE =====
+
+
+===== js/main.js =====
+
+// ===== MENU LOGIC =====
+window.openCharacterSelect = function (mode) {
+  gameMode = mode;
+  document.getElementById('main-menu').classList.add('hidden');
+  const csEl = document.getElementById('char-select');
+  csEl.classList.remove('hidden');
+  // Reset background to default dark cosmic gradient
+  csEl.style.background = 'linear-gradient(135deg, #0a001a 0%, #000033 100%)';
+  csEl.style.backgroundSize = '';
+
+  const grid = document.getElementById('cs-grid');
+  grid.innerHTML = '';
+
+  // Build roster: Keano first, then story fighters (0-13), then variant slots at end
+  const storyFighters = LEVELS.slice(0, 14); // Original story roster (no Cyber-Commando)
+  const variantFighters = LEVELS.slice(14);   // Supreme, Hyper, Jay X, Vikingo Prime, Dark Gargamel
+  const roster = [KEANO, ...storyFighters, ...variantFighters];
+
+  roster.forEach((fighter, idx) => {
+    const div = document.createElement('div');
+    const isVariant = idx > 14;
+    div.className = 'cs-portrait' + (fighter.name === 'DARK VIKINGO' ? ' boss' : '') + (isVariant ? ' variant' : '');
+    const img = document.createElement('img');
+
+    // Grid thumbnails: Use clean _front.png from fighter directories
+    const frontPath = fighter.fighterDir + '/_front.png';
+    if (rawImgs[frontPath] && rawImgs[frontPath].src) {
+      img.src = rawImgs[frontPath].src;
+    } else {
+      img.src = frontPath;
+    }
+
+    // Add fighter name label below portrait
+    const label = document.createElement('span');
+    label.className = 'cs-portrait-name';
+    label.textContent = fighter.flag + ' ' + fighter.name;
+    div.appendChild(img);
+    div.appendChild(label);
+
+    div.onclick = () => {
+      SFX.uiHover();
+      document.querySelectorAll('.cs-portrait').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+
+      arcadeSelectedFighter = fighter;
+      arcadeSelectedName = fighter.name;
+      currentLevel = idx === 0 ? 0 : idx - 1;
+      if (currentLevel < 0) currentLevel = 0;
+
+      // Right preview: Use epic portrait (full wallpaper) or fallback to _front.png
+      const previewImg = document.getElementById('cs-preview-img');
+      if (fighter.portrait) {
+        previewImg.src = fighter.portrait;
+      } else {
+        previewImg.src = img.src;
+      }
+      document.getElementById('cs-flag').textContent = fighter.flag;
+      document.getElementById('cs-name').textContent = fighter.name;
+      document.getElementById('cs-title-label').textContent = fighter.title || 'STREET FIGHTER';
+      document.getElementById('cs-desc').textContent = fighter.desc || '';
+
+      // Stats: Use the `str` object (spd/pow/def on a scale of 1-7)
+      const maxStat = 7;
+      document.getElementById('stat-spd').style.width = Math.min((fighter.str?.spd || 3) / maxStat * 100, 100) + '%';
+      document.getElementById('stat-pow').style.width = Math.min((fighter.str?.pow || 3) / maxStat * 100, 100) + '%';
+      document.getElementById('stat-def').style.width = Math.min((fighter.str?.def || 3) / maxStat * 100, 100) + '%';
+
+      document.getElementById('btn-confirm-fighter').textContent = 'FIGHT!';
+
+      // Background: Hot-swap to the Arena stage (not the portrait with text)
+      if (fighter.stage) {
+        csEl.style.background = `url('${fighter.stage}') no-repeat center center`;
+        csEl.style.backgroundSize = 'cover';
+      }
+    };
+
+    grid.appendChild(div);
+  });
+
+  // Auto-select Keano (first fighter) so his card shows immediately
+  const firstPortrait = grid.querySelector('.cs-portrait');
+  if (firstPortrait) firstPortrait.click();
+};
+
+// V3: Bind FIGHT Button explicitly to use TransitionManager
+document.getElementById('btn-confirm-fighter').addEventListener('click', () => {
+  // Must have selected a fighter
+  if (!arcadeSelectedFighter) return;
+
+  if (gameMode === 'arcade') {
+    const keanoStats = KEANO.str;
+    player = new HybridFighter(100, GROUND(), true, '#00aaff', Object.assign({}, KEANO, {
+      hpScale: 1, dmgScale: 1
+    }));
+    enemy = new HybridFighter(500, GROUND(), false, '#ff4400', Object.assign({}, LEVELS[currentLevel], {
+      hpScale: gameDifficulty === 'hard' ? 1.5 : (gameDifficulty === 'easy' ? 0.7 : 1),
+      dmgScale: gameDifficulty === 'hard' ? 1.5 : (gameDifficulty === 'easy' ? 0.8 : 1)
+    }));
+    enemy.x = C.width - 150;
+  } else if (gameMode === 'versus') {
+    // Assuming P1 and P2 selection logic is handled elsewhere, the selected characters are in `player` and `enemy` variables
+    player.x = 100;
+    enemy.x = C.width - 150;
+    // Ensure they face each other
+    player.facingRight = true;
+    enemy.facingRight = false;
+  }
+
+  SFX.uiSelect();
+
+  TransitionManager.switchState({
+    hideDOM: ['char-select'],
+    setGameState: 'vs_screen',
+    fadeIn: 500, wait: 200, fadeOut: 500,
+    onSwap: () => {
+      SFX.playBGM('assets/audio/music/vs_screen.mp3');
+      stateTimer = 0;
+      // Trigger epic VS Voice or effect here if desired!
+    }
+  });
+});
+
+window.toggleOptions = function () {
+  const panel = document.getElementById('pause-menu');
+  if (!panel) return;
+  const isVisible = !panel.classList.contains('hidden');
+  if (isVisible) {
+    panel.classList.add('hidden');
+    if (gameState === 'options-paused') { gameState = 'fighting'; lastTime = performance.now(); }
+    if (gameState === 'menu-options') { gameState = 'menu'; }
+  } else {
+    panel.classList.remove('hidden');
+    if (gameState === 'fight' || gameState === 'fighting') { gameState = 'options-paused'; }
+    if (gameState === 'menu') { gameState = 'menu-options'; }
+  }
+};
+
+window.togglePause = function () {
+  const overlay = document.getElementById('pause-menu');
+  if (!overlay) return;
+  const isVisible = !overlay.classList.contains('hidden');
+  if (isVisible) {
+    overlay.classList.add('hidden');
+    if (gameState === 'paused' || gameState === 'options-paused') { gameState = 'fighting'; lastTime = performance.now(); }
+  } else {
+    if (gameState === 'fight' || gameState === 'fighting') { gameState = 'options-paused'; overlay.classList.remove('hidden'); }
+  }
+};
+
+window.quitToMenu = function () {
+  document.getElementById('pause-menu').classList.add('hidden');
+  TransitionManager.fadeScreen(400, 150, 400, () => {
+    if (document.getElementById('mobile-controls')) document.getElementById('mobile-controls').classList.add('hidden');
+    if (document.getElementById('btn-hamburger')) document.getElementById('btn-hamburger').classList.add('hidden');
+    document.getElementById('char-select').classList.add('hidden');
+    SFX.stopMusic();
+    if (typeof stopEpicVoice === 'function') stopEpicVoice(); // Force stop any running voice-overs
+    // --- V7 QA AUTORUN HARNESS ---
+    if (window.location.search.includes('qa=true')) {
+      console.log("[QA] Initializing Automated Test Run...");
+      qaLogger.style.display = 'block';
+      qaLogger.innerHTML += '<strong>[QA] AUTORUN ENGAGED.</strong><br>';
+
+      gameMode = 'arcade';
+      currentLevel = 0;
+      arcadeSelectedName = 'KEANO';
+
+      // Force instantaneous transitions for QA
+      TransitionManager.switchState({
+        hideDOM: ['main-menu', 'char-select'],
+        setGameState: 'versus', // Skip select, go straight to fight prep
+        fadeIn: 10, wait: 10, fadeOut: 10,
+        onSwap: () => {
+          player = new HybridFighter(C.width * 0.22, GROUND(), true, KEANO.col, KEANO);
+          enemy = new HybridFighter(C.width * 0.78, GROUND(), false, ld.col, ld);
+
+          startRound();
+
+          // QA Master Bot Loop - Persists across matches!
+          let fCount = 0;
+          let isFinished = false;
+          setInterval(() => {
+            if (isFinished) return;
+            fCount++;
+
+            // Track frame drops - roughly if loop missed ticks (rudimentary measure placed here for heartbeat)
+
+            if (gameState === 'fighting') {
+              if (fCount % 20 === 0) { // Every 20 ticks
+                // Simulate P1
+                const p1actions = ['punch', 'kick', 'jump', 'right', 'special', 'super', 'evade_back'];
+                handleAction(p1actions[Math.floor(Math.random() * p1actions.length)], true);
+                // Simulate P2
+                const p2actions = ['punch', 'kick', 'jump', 'left', 'special', 'super', 'roll_forward'];
+                handleAction(p2actions[Math.floor(Math.random() * p2actions.length)], false);
+              }
+            }
+            else if (gameState === 'continue' || gameState === 'gameOver' || gameState === 'prologue' || gameState === 'epilogue' || gameState === 'midpoint_reflexion') {
+              if (fCount % 30 === 0) {
+                keys[' '] = true; // Auto-skip / auto-continue
+                setTimeout(() => keys[' '] = false, 50);
+              }
+            }
+            else if (gameState === 'victory' && stateTimer > 5.0) {
+              isFinished = true;
+              qaLogger.style.display = 'block';
+              qaLogger.style.width = '80%';
+              qaLogger.style.top = '10%';
+              qaLogger.style.left = '10%';
+              qaLogger.innerHTML = QATracker.print();
+            }
+          }, 16);
+        }
+      });
+      return; // Block standard boot
+    }
+    // --- END QA HARNESS ---
+
+    document.getElementById('main-menu').classList.remove('hidden');
+    gameState = 'menu';
+    SFX.playBGM('assets/audio/music/main_menu.mp3');
+
+    // Bind UI Sounds to all interactive elements
+    document.querySelectorAll('.menu-btn, .action-btn, .slot-container, input[type="range"], input[type="checkbox"]').forEach(el => {
+      el.addEventListener('mouseenter', () => SFX.uiHover());
+      el.addEventListener('click', () => SFX.uiSelect());
+    });
+  });
+};
+
+function bootGame() {
+  const overlay = document.getElementById('audio-unlock-overlay');
+  if (overlay) overlay.style.display = 'flex';
+
+  // Strictly prevent game from starting before assets load and user interacts
+  const initClick = () => {
+    if (gameState === 'init') {
+      if (!isGameLoaded) return; // Wait for assets to finish!
+
+      // Unlock Web Audio Context
+      if (AC.state === 'suspended') AC.resume();
+
+      if (overlay) overlay.style.display = 'none';
+
+      // Start CAPCOM style intro
+      gameState = 'splash';
+      stateTimer = 0;
+
+      // Play a heavy synthesized impact for the logo
+      const osc = AC.createOscillator();
+      const gain = AC.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, AC.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(10, AC.currentTime + 1.5);
+      gain.gain.setValueAtTime(0.5, AC.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 1.5);
+      osc.connect(gain); gain.connect(AC.destination);
+      osc.start(); osc.stop(AC.currentTime + 1.5);
+
+      document.removeEventListener('click', initClick);
+      document.removeEventListener('keydown', initClick);
+    }
+  };
+
+  document.addEventListener('click', initClick);
+  document.addEventListener('keydown', initClick);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Bind story mode directly
+document.getElementById('btn-story').addEventListener('click', () => {
+  gameMode = 'story';
+  TransitionManager.switchState({
+    hideDOM: ['main-menu'],
+    setGameState: 'prologue',
+    fadeIn: 600, wait: 200, fadeOut: 800,
+    onSwap: () => {
+      SFX.playBGM('assets/audio/music/prologue.mp3');
+      stateTimer = 0;
+      playEpicVoice(prologueLines, 'prologue');
+    }
+  });
+});
+
+document.getElementById('btn-arcade').addEventListener('click', () => {
+  if (!document.getElementById('btn-arcade').disabled) {
+    SFX.playBGM('assets/audio/music/char_select.mp3');
+    TransitionManager.switchState({
+      hideDOM: ['main-menu'],
+      showDOM: ['char-select'],
+      setGameState: 'select',
+      fadeIn: 300, wait: 50, fadeOut: 300,
+      onSwap: () => {
+        openCharacterSelect('arcade');
+      }
+    });
+  }
+});
+
+document.getElementById('btn-versus').addEventListener('click', () => {
+  if (!document.getElementById('btn-versus').disabled) {
+    SFX.playBGM('assets/audio/music/char_select.mp3');
+    TransitionManager.switchState({
+      hideDOM: ['main-menu'],
+      showDOM: ['char-select'],
+      setGameState: 'select',
+      fadeIn: 300, wait: 50, fadeOut: 300,
+      onSwap: () => {
+        openCharacterSelect('versus');
+      }
+    });
+  }
+});
+
+document.getElementById('btn-options-menu').addEventListener('click', toggleOptions);
+document.getElementById('btn-hamburger').addEventListener('click', toggleOptions);
+
+// INSERT COIN: Click to refill credits when empty
+
+
+// RESUME button in pause menu
+document.getElementById('btn-resume').addEventListener('click', () => {
+  document.getElementById('pause-menu').classList.add('hidden');
+  if (gameState === 'options-paused') { gameState = 'fighting'; lastTime = performance.now(); }
+});
+
+// QUIT TO MENU button in pause menu
+document.getElementById('btn-quit').addEventListener('click', () => {
+  quitToMenu();
+});
+
+// Show hamburger button in main menu too (so OPTIONS always works)
+document.getElementById('btn-hamburger').classList.remove('hidden');
+
+// SKIP button: triggers space key to skip voice sequences
+document.getElementById('btn-skip-sequence').addEventListener('click', () => {
+  keys[' '] = true;
+  document.getElementById('btn-skip-sequence').classList.add('hidden'); // Hide immediately to prevent double triggers
+  setTimeout(() => keys[' '] = false, 200);
+});
+
+// START QA MODE DIRECTLY FROM MENU
+const btnTest = document.getElementById('btn-test-mode');
+if (btnTest) {
+  btnTest.addEventListener('click', () => {
+    // Set flag and reload basically
+    if (!window.location.search.includes('qa=true')) {
+      window.location.href = window.location.pathname + "?qa=true";
+    }
+  });
+}
+
+// Show/hide skip button based on game state
+function updateSkipButton() {
+  const skipBtn = document.getElementById('btn-skip-sequence');
+  if (!skipBtn) return;
+  const showStates = ['prologue', 'midpoint_reflexion', 'victory'];
+  if (showStates.includes(gameState) && stateTimer > 2) {
+    skipBtn.classList.remove('hidden');
+  } else {
+    skipBtn.classList.add('hidden');
+  }
+}
+if (document.getElementById('sel-round-time')) {
+  document.getElementById('sel-round-time').addEventListener('change', (e) => {
+    defaultRoundTime = parseInt(e.target.value, 10);
+  });
+}
+if (document.getElementById('sel-game-speed')) {
+  document.getElementById('sel-game-speed').addEventListener('change', (e) => {
+    gameSpeedMult = parseFloat(e.target.value);
+  });
+}
+// ===== GAMEPAD / CONTROLLER SUPPORT (Mac + Windows + Linux) =====
+// Works with: Xbox, PlayStation, Switch Pro, generic USB controllers
+// Uses standard W3C Gamepad API — no plugins needed
+let gamepadConnected = false;
+
+window.addEventListener('gamepadconnected', (e) => {
+  gamepadConnected = true;
+  console.log(`🎮 Controller connected: ${e.gamepad.id} (${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes)`);
+});
+window.addEventListener('gamepaddisconnected', (e) => {
+  gamepadConnected = false;
+  console.log(`🎮 Controller disconnected: ${e.gamepad.id}`);
+});
+
+function pollGamepad() {
+  if (!navigator.getGamepads) return;
+  const pads = navigator.getGamepads();
+  for (let i = 0; i < pads.length; i++) {
+    const pad = pads[i];
+    if (!pad || !pad.connected) continue;
+
+    const dz = 0.3; // Deadzone for analog sticks
+    // D-pad + Left stick
+    keys['arrowup'] = keys['arrowup'] || pad.buttons[12]?.pressed || pad.axes[1] < -dz;
+    keys['arrowdown'] = keys['arrowdown'] || pad.buttons[13]?.pressed || pad.axes[1] > dz;
+    keys['arrowleft'] = keys['arrowleft'] || pad.buttons[14]?.pressed || pad.axes[0] < -dz;
+    keys['arrowright'] = keys['arrowright'] || pad.buttons[15]?.pressed || pad.axes[0] > dz;
+
+    // Action buttons (standard mapping: 0=A/X, 1=B/O, 2=X/□, 3=Y/△)
+    keys['j'] = keys['j'] || pad.buttons[0]?.pressed || pad.buttons[2]?.pressed;  // Punch (A/X or X/□)
+    keys['k'] = keys['k'] || pad.buttons[1]?.pressed || pad.buttons[3]?.pressed;  // Kick (B/O or Y/△)
+    keys['l'] = keys['l'] || pad.buttons[4]?.pressed || pad.buttons[5]?.pressed;  // Special (L1/R1)
+    keys['u'] = keys['u'] || pad.buttons[8]?.pressed || pad.buttons[9]?.pressed;  // Block (Select/Start)
+    keys[' '] = keys[' '] || pad.buttons[6]?.pressed || pad.buttons[7]?.pressed;  // Pause (L2/R2)
+  }
+}
+
+// Prevent default game keys
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
+});
+
+window.addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  keys[k] = false;
+});
+
+// INITIALIZE START BUTTONS PROPERLY (No Auto-Boot to bypass browser Audio blocks)
+document.addEventListener('DOMContentLoaded', () => {
+  const btnStory = document.getElementById('btn-story');
+  const btnArcade = document.getElementById('btn-arcade');
+
+  if (btnStory) {
+    btnStory.addEventListener('click', () => {
+      gameMode = 'story';
+      bootGame();
+    });
+  }
+
+  if (btnArcade) {
+    btnArcade.addEventListener('click', () => {
+      gameMode = 'arcade';
+      bootGame();
+    });
+  }
+
+  // CHEAT: SKIP TO ENDING
+  window.forceEnding = function () {
+    const panel = document.getElementById('pause-menu');
+    if (panel) panel.classList.add('hidden');
+
+    TransitionManager.fadeScreen(400, 150, 400, () => {
+      window.gameState = 'victory';
+      window.stateTimer = 0;
+      SFX.stopMusic();
+
+      const btnHam = document.getElementById('btn-hamburger');
+      if (btnHam) btnHam.classList.add('hidden');
+
+      const mobileControls = document.getElementById('mobile-controls');
+      if (mobileControls) mobileControls.classList.add('hidden');
+
+      window.playingOutro = false;
+      window.playingHappyBirthday = false;
+
+      if (typeof playEpicVoice === 'function' && typeof epilogLines !== 'undefined') {
+        playEpicVoice(epilogLines, 'epilogue');
+      }
+    });
+  };
+
+  const btnVersus = document.getElementById('btn-versus');
+  if (btnVersus) {
+    btnVersus.addEventListener('click', () => {
+      gameMode = 'versus';
+      bootGame();
+    });
+  }
+  // Difficulty Selection
+  if (document.getElementById('sel-difficulty')) {
+    document.getElementById('sel-difficulty').addEventListener('change', (e) => {
+      window.gameDifficulty = e.target.value;
+    });
+  }
+
+  // ===== PROCEDURAL LIGHTNING BOLT RENDERER =====
+  (function initLightning() {
+    const canvas = document.getElementById('lightning-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let bolts = [];
+    let nextBoltTime = 0;
+
+    function resize() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function drawBolt(x1, y1, x2, y2, depth) {
+      if (depth <= 0) return;
+      const dx = x2 - x1, dy = y2 - y1;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 5) return;
+
+      const segments = 8 + Math.floor(Math.random() * 6);
+      const points = [{ x: x1, y: y1 }];
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        const jitter = (Math.random() - 0.5) * dist * 0.15;
+        points.push({
+          x: x1 + dx * t + jitter,
+          y: y1 + dy * t + (Math.random() - 0.5) * 10
+        });
+      }
+      points.push({ x: x2, y: y2 });
+
+      // Main bolt
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.strokeStyle = depth > 2 ? 'rgba(200,220,255,0.9)' : 'rgba(150,180,255,0.5)';
+      ctx.lineWidth = depth > 2 ? 3 : 1.5;
+      ctx.shadowBlur = depth > 2 ? 25 : 10;
+      ctx.shadowColor = '#4488ff';
+      ctx.stroke();
+
+      // Branches
+      if (depth > 1) {
+        for (let i = 2; i < points.length - 2; i++) {
+          if (Math.random() < 0.3) {
+            const branchLen = dist * 0.3 * Math.random();
+            const angle = (Math.random() - 0.5) * Math.PI * 0.8;
+            const bx = points[i].x + Math.cos(angle + Math.PI / 2) * branchLen;
+            const by = points[i].y + Math.sin(angle + Math.PI / 2) * branchLen;
+            drawBolt(points[i].x, points[i].y, bx, by, depth - 1);
+          }
+        }
+      }
+    }
+
+    function spawnBolt() {
+      const startX = Math.random() * canvas.width;
+      const endX = startX + (Math.random() - 0.5) * 300;
+      const endY = canvas.height * (0.3 + Math.random() * 0.3);
+      bolts.push({ x1: startX, y1: 0, x2: endX, y2: endY, life: 0.15 + Math.random() * 0.1 });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      // Only draw when menu is visible
+      const menu = document.getElementById('main-menu');
+      if (!menu || menu.classList.contains('hidden')) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const now = performance.now() / 1000;
+      if (now >= nextBoltTime) {
+        spawnBolt();
+        // Sometimes double-strike
+        if (Math.random() < 0.2) setTimeout(spawnBolt, 50 + Math.random() * 100);
+        nextBoltTime = now + 1.5 + Math.random() * 4; // every 1.5-5.5 seconds
+      }
+
+      // Draw active bolts
+      for (let i = bolts.length - 1; i >= 0; i--) {
+        const b = bolts[i];
+        b.life -= 0.016;
+        if (b.life <= 0) { bolts.splice(i, 1); continue; }
+        ctx.globalAlpha = Math.min(1, b.life * 8);
+        drawBolt(b.x1, b.y1, b.x2, b.y2, 4);
+
+        // Screen flash on fresh bolt
+        if (b.life > 0.1) {
+          ctx.globalAlpha = b.life * 1.5;
+          ctx.fillStyle = 'rgba(150,180,255,0.02)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    animate();
+  })();
+
+});
+
+
+===== js/story.js =====
+
+// ===== PROLOGUE & EPILOGUE (VOICE + TEXT DATA) =====
+const prologueLines = [
+  { text: '', style: 'gap' },
+  { text: 'Nicht jede Erschütterung beginnt mit einem Knall...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Manche beginnen leise...', style: 'narr' },
+  { text: 'wie ein Schatten, der über die Sterne gleitet...', style: 'italic', color: '#aaddff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Die Dimensionen drifteten auseinander.', style: 'narr' },
+  { text: 'Ideologien verhärteten sich...', style: 'narr' },
+  { text: 'Licht wurde gehortet, als sei es Besitz...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Und irgendwo zwischen Sternen und Schatten', style: 'narr' },
+  { text: 'stand ein Junge, der noch nicht wusste,', style: 'narr' },
+  { text: 'dass sein Name einmal durch Welten getragen werden würde...', style: 'italic', color: '#00ffff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Und dass wahre Stärke nicht im Beherrschen liegt —', style: 'narr' },
+  { text: 'sondern im Verbinden.', style: 'bold', color: '#ffcc00' },
+  { text: '(Längere Pause)', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+];
+
+const epilogLines = [
+  { text: '', style: 'gap' },
+  { text: 'Der letzte Gegner war kein Fremder...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Er war sein Vater.', style: 'bold', color: '#ff8866' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Vikingo — Hüter der Lichtlinie,', style: 'narr' },
+  { text: 'Vater zweier Söhne:', style: 'narr' },
+  { text: 'Keano, der das Licht trug...', style: 'italic', color: '#00ffff' },
+  { text: 'und Jayden, der das Feuer trug...', style: 'italic', color: '#ff4400' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Zu lange hatte Vikingo in den Abgrund geblickt...', style: 'narr' },
+  { text: 'und der Abgrund blickte zurück...', style: 'italic', color: '#6600ff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Doch Keano schlug nicht zu, um zu zerstören...', style: 'narr' },
+  { text: 'Er schlug zu, um zu befreien...', style: 'glow', color: '#00ffff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Jeder Schlag war ein Ruf:', style: 'narr' },
+  { text: '„Komm zurück ins Licht...“', style: 'italic', color: '#aaddff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Die Linie seiner Ahnen lehrte ihn:', style: 'narr' },
+  { text: 'Energie darf nicht blockiert werden...', style: 'narr' },
+  { text: 'Sie muss fließen.', style: 'bold', color: '#00ffff' },
+  { text: '(Längere Pause)', style: 'gap' },
+  { text: 'Keano verband das alte Feuer...', style: 'bold', color: '#ffaa00' },
+  { text: 'Und die Galaxie atmete wieder...', style: 'italic', color: '#aaddff' },
+  { text: 'Sanft.', style: 'narr' },
+  { text: 'Leise.', style: 'narr' },
+  { text: 'Und dennoch unerschütterlich.', style: 'bold', color: '#ffffff' },
+  { text: '(Lange, ruhige Pause)', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '· · · · · · ·', style: 'divider', color: '#444' },
+  { text: '', style: 'gap' },
+  { text: '=====================', style: 'gap' },
+  { text: 'PROD. BY CAESAR', style: 'producer' },
+  { text: '© 2026', style: 'narr' },
+  { text: '=====================', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+];
+
+const outroLines = [
+  { text: '', style: 'gap' },
+  { text: 'Der Kampf endete...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'nicht mit Vernichtung...', style: 'narr' },
+  { text: 'sondern mit Erinnerung...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Das Licht war nicht stärker geworden...', style: 'narr' },
+  { text: 'es war wieder im Fluss...', style: 'italic', color: '#00ffff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Und in diesem Fluss lag Hoffnung...', style: 'bold', color: '#aaddff' },
+  { text: 'leise, doch unvergänglich...', style: 'italic', color: '#ffffff' },
+  { text: '(Längere Pause)', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+];
+
+const reflexionLines = [
+  { text: '', style: 'gap' },
+  { text: 'Die Arenen sind durchschritten...', style: 'narr' },
+  { text: 'Die Vertreter gefallen —', style: 'narr' },
+  { text: 'nicht als Besiegte… sondern als Offenbarte…', style: 'italic', color: '#aaddff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Keano trat in jede Dimension als Fremder...', style: 'narr' },
+  { text: 'Er verließ sie als Spiegel...', style: 'italic', color: '#00ffff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Denn was er bekämpfte, war nie nur Dunkelheit...', style: 'narr' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Es war Angst vor Veränderung...', style: 'narr' },
+  { text: 'Furcht, Kontrolle zu verlieren...', style: 'narr' },
+  { text: 'Der Irrglaube, dass Isolation Stärke sei...', style: 'italic', color: '#ff8866' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Jede Welt trug ihr eigenes Licht...', style: 'narr' },
+  { text: 'doch sie hielten es fest, als wäre es endlich...', style: 'italic', color: '#aaddff' },
+  { text: '(Pause)', style: 'gap' },
+  { text: 'Keano verstand etwas, das nur wenige begreifen:', style: 'narr' },
+  { text: 'Licht wird schwächer, wenn man es einsperrt...', style: 'bold', color: '#00ffff' },
+  { text: '(Längere Pause)', style: 'gap' },
+  { text: 'Manche Dimensionen werden sich widersetzen...', style: 'narr' },
+  { text: 'Aber der Fluss lässt sich nicht aufhalten.', style: 'bold', color: '#aaddff' },
+  { text: '(Lange, ausklingende Pause)', style: 'gap' },
+
+  { text: '· · · · · · ·', style: 'divider', color: '#444' },
+  { text: '', style: 'gap' },
+  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+];
+
+const audioTracks = {
+  prologue: new Audio('assets/audio/voice/prologue.mp3'),
+  reflexion: new Audio('assets/audio/voice/reflexion.mp3'),
+  epilogue: new Audio('assets/audio/voice/epilogue.mp3'),
+  outro: new Audio('assets/audio/voice/outro.mp3')
+};
+let currentAudioTrack = null;
+
+let voiceAudioCtx = null;
+let voiceFilter, voiceSources = {};
+
+function initVoiceEffects() {
+  if (voiceAudioCtx) return;
+  voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Wärme (Bass Boost & Low-Mid Warmth)
+  voiceFilter = voiceAudioCtx.createBiquadFilter();
+  voiceFilter.type = 'lowshelf';
+  voiceFilter.frequency.value = 180; // Tiefer ansetzen für echte Stimmwärme
+  voiceFilter.gain.value = 8; // Deutlich mehr Wärme
+
+  // Sanfter Raum (sehr subtil, ohne Echo/Verdopplung)
+  const convolver = voiceAudioCtx.createConvolver();
+  // Anstelle eines echten Impulses nutzen wir einen extrem kurzen Delay (Haas Effekt) nur für etwas Körper, KEIN Echo
+  const delay = voiceAudioCtx.createDelay();
+  delay.delayTime.value = 0.02; // 20ms = kein hörbares Echo, nur "Körper"
+
+  const voiceGain = voiceAudioCtx.createGain();
+  voiceGain.gain.value = 0.8; // Wieder etwas lauter, da Halleffekt wegfällt
+
+  // Routing: Source -> Filter (Wärme) -> Split (Direkt + Mikro-Delay für Körper) -> Gain
+  voiceFilter.connect(voiceGain);
+
+  voiceFilter.connect(delay);
+  const delayGain = voiceAudioCtx.createGain();
+  delayGain.gain.value = 0.15; // Sehr unterschwelliger Körper
+  delay.connect(delayGain);
+  delayGain.connect(voiceGain);
+
+  voiceGain.connect(voiceAudioCtx.destination);
+}
+
+function playEpicVoice(linesArray, type) {
+  if (currentAudioTrack) currentAudioTrack.pause();
+  currentAudioTrack = audioTracks[type];
+
+  if (currentAudioTrack) {
+    if (!voiceAudioCtx) initVoiceEffects();
+    if (voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume();
+
+    if (!voiceSources[type]) {
+      try {
+        voiceSources[type] = voiceAudioCtx.createMediaElementSource(currentAudioTrack);
+        voiceSources[type].connect(voiceFilter);
+      } catch (e) { console.warn("AudioContext connect fail:", e); }
+    }
+
+    SFX.duckBGM(0.15, 1000);
+    currentAudioTrack.currentTime = 0;
+
+    currentAudioTrack.addEventListener('ended', () => { SFX.restoreBGM(); }, { once: true });
+
+    currentAudioTrack.play().catch(e => {
+      console.warn("Could not play MP3, using browser TTS fallback:", e);
+      playFallbackTTS(linesArray);
+    });
+  } else {
+    playFallbackTTS(linesArray);
+  }
+}
+
+// STOPS any currently playing voice sequence immediately
+function stopEpicVoice() {
+  if (currentAudioTrack) {
+    currentAudioTrack.pause();
+    currentAudioTrack.currentTime = 0;
+  }
+  if (window.speechSynthesis) {
+    speechSynthesis.cancel();
+  }
+  SFX.restoreBGM();
+}
+
+function playFallbackTTS(linesArray) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  let speechText = "";
+  for (let l of linesArray) {
+    if (!l.text) continue;
+    if (l.style === 'title' || l.style === 'mega' || l.style === 'instruction' || l.style === 'divider' || l.style === 'gap') continue;
+    if (l.text.includes('=')) continue;
+    let t = l.text;
+    if (t === '(Pause)') t = ' ... ';
+    else if (t === '(Längere Pause)') t = ' ... ... ';
+    else if (t === '(Lange, ruhige Pause)' || t === '(Lange, ausklingende Pause)') t = ' ... ... ... ';
+    speechText += t + ' ';
+  }
+  const u = new SpeechSynthesisUtterance(speechText);
+  u.lang = 'de-DE'; u.rate = 0.88; u.pitch = 0.9;
+  const voices = speechSynthesis.getVoices();
+  const germanVoices = voices.filter(v => v.lang.startsWith('de'));
+  const preferredVoice = germanVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google')) || germanVoices[0];
+  if (preferredVoice) u.voice = preferredVoice;
+
+  SFX.duckBGM(0.15, 1000);
+  u.onend = () => { SFX.restoreBGM(); };
+
+  speechSynthesis.speak(u);
+}
+
+// ===== HUD (MODERNIZED & CAPCOM STYLE) =====
+
+

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.venv/
+.npm-cache/
+
+# Build and Release
+release/
+dist/
+.tmp/
+build/
+*.dmg
+*.exe
+*.app/
+
+# AI Models & Temp Data
+.u2net/
+.system_generated/
+*.onnx
+
+# Misc
+.DS_Store

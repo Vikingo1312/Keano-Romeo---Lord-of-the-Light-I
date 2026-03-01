@@ -1,0 +1,4321 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="assets/keano.png">
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LICHTKRIEGER">
+  <link rel="apple-touch-icon" href="assets/keano.png">
+  <title>KEANO ROMEO — LORD OF THE LIGHT I ⚔️</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@700;900&family=Permanent+Marker&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Press Start 2P', monospace;
+      overscroll-behavior: none;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    canvas#game {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* ===== MOBILE IN-GAME HAMBURGER MENU ===== */
+    #mobile-hamburger {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      z-index: 999;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #00ffff;
+      color: #00ffff;
+      font-size: 24px;
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      display: none;
+      /* toggled via JS when game starts */
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+      padding-bottom: 4px;
+    }
+
+    #mobile-hamburger:active {
+      transform: scale(0.9);
+      background: rgba(0, 255, 255, 0.2);
+    }
+
+    #pause-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10002;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      pointer-events: none;
+      opacity: 0.03;
+      background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 255, 255, 0.05) 1px, rgba(0, 255, 255, 0.05) 2px)
+    }
+
+    /* ===== MODERN CAPCOM ARCADE MENU ===== */
+    #menu-btn {
+      display: none;
+      /* Hide old hamburger */
+    }
+
+    #arcade-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      background: radial-gradient(ellipse at 50% 30%, #1a0044 0%, #0a0022 40%, #000000 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s;
+      overflow: hidden;
+    }
+
+    #arcade-menu.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ===== LIGHTNING CANVAS ===== */
+    #lightning-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Ambient light pulse behind the logo */
+    .menu-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(100, 150, 255, 0.25) 0%, transparent 70%);
+      animation: glowPulse 3s ease-in-out infinite alternate;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    @keyframes glowPulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.4;
+      }
+
+      100% {
+        transform: scale(1.3);
+        opacity: 0.8;
+      }
+    }
+
+    .scanlines-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.2) 2px, rgba(0, 0, 0, 0.2) 4px);
+    }
+
+    #arcade-menu #logo {
+      font-family: 'Press Start 2P', monospace;
+      font-weight: 900;
+      font-size: clamp(3.8rem, 9vw, 7.5rem);
+      color: #00e5ff;
+      background: repeating-linear-gradient(0deg,
+          #00e5ff 0px,
+          #00e5ff 3px,
+          #008899 3px,
+          #008899 5px);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 15px rgba(0, 200, 255, 0.6)) drop-shadow(4px 4px 0 #000);
+      margin-bottom: 40px;
+      letter-spacing: 4px;
+      text-align: center;
+      line-height: 1.3;
+      z-index: 10;
+      position: relative;
+      transform: perspective(500px) rotateX(8deg);
+    }
+
+    #arcade-menu #logo span {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.6rem, 4vw, 3rem);
+      color: #ffffff;
+      background: repeating-linear-gradient(0deg,
+          #ffffff 0px,
+          #ffffff 2px,
+          #bbaaff 2px,
+          #bbaaff 4px);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 10px;
+      text-transform: uppercase;
+      display: block;
+      margin-top: 12px;
+      filter: drop-shadow(1px 1px 0 #6644ff) drop-shadow(2px 2px 0 #4422bb) drop-shadow(3px 3px 0 #220077) drop-shadow(4px 4px 6px rgba(0, 0, 0, 0.8));
+      transform: perspective(400px) rotateX(-5deg);
+    }
+
+    .capcom-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .capcom-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1rem, 3vw, 1.8rem);
+      cursor: pointer;
+      padding: 10px 30px;
+      position: relative;
+      transition: 0.1s;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .capcom-btn::before {
+      content: '▶';
+      position: absolute;
+      left: 0;
+      color: #ff0000;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: 0.2s;
+    }
+
+    .capcom-btn:hover,
+    .capcom-btn:active {
+      color: #ffcc00;
+      transform: scale(1.1);
+    }
+
+    .capcom-btn:hover::before,
+    .capcom-btn:active::before {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .insert-coin {
+      position: absolute;
+      bottom: 30px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      color: #ffffff;
+      font-size: 1.8rem;
+      text-shadow: 0 0 10px #00ffff, 0 0 20px #00aaff;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .insert-coin .text-blink {
+      animation: iceBlink 1.2s infinite;
+      color: #00ffff;
+    }
+
+    @keyframes iceBlink {
+
+      0%,
+      100% {
+        opacity: 1;
+        text-shadow: 0 0 10px #00ffff, 0 0 20px #00aaff, 0 0 40px #0055ff;
+      }
+
+      50% {
+        opacity: 0.3;
+        text-shadow: none;
+      }
+    }
+
+    .rotating-coin {
+      display: inline-block;
+      animation: coinSpin 1.5s linear infinite;
+      font-size: 2rem;
+    }
+
+    @keyframes coinSpin {
+      0% {
+        transform: rotateY(0deg);
+      }
+
+      100% {
+        transform: rotateY(360deg);
+      }
+    }
+
+    #options-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.90);
+      border: 3px solid #ffcc00;
+      padding: 30px;
+      border-radius: 10px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10002;
+    }
+
+    #options-panel.visible {
+      display: flex;
+    }
+
+    .diff-btn {
+      opacity: 0.5;
+      transition: 0.2s;
+    }
+
+    .diff-btn.active-diff {
+      opacity: 1;
+      border: 2px solid white !important;
+      transform: scale(1.1);
+      box-shadow: 0 0 10px white;
+    }
+
+    .vol-slider {
+      width: 200px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffcc00;
+      cursor: pointer;
+    }
+
+    .vol-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffcc00;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Mobile Orientation Lock Overlay -->
+  <div id="orientation-lock">
+    <h2>ROTATE DEVICE</h2>
+    <p>Please hold your phone horizontally (Landscape) to play.</p>
+    <div class="icon">📱</div>
+  </div>
+
+  <canvas id="game"></canvas>
+  <div id="scanlines"></div>
+  <div id="loader" style="display:none;"></div>
+
+  <audio id="beat" loop preload="auto" src="assets/beat.mp3"></audio>
+  <audio id="voice" preload="auto" src="assets/voice.m4a"></audio>
+
+  <div id="gamepad">
+    <div class="joystick-area" id="joystick-area">
+      <div class="joystick-knob" id="joystick-knob"></div>
+    </div>
+    <div class="actions">
+      <div class="row"><button class="btn act" id="btn-f"
+          style="color:#ffcc00;border-color:#ffcc00">💥<br>P</button><button class="btn act" id="btn-g"
+          style="color:#00ffff;border-color:#00ffff">⚡<br>K</button></div>
+      <div class="row"><button class="btn act" id="btn-h"
+          style="color:#ff4400;border-color:#ff4400">🔥<br>F</button><button class="btn act" id="btn-space"
+          style="color:#ff00ff;border-color:#ff00ff">🐲<br>S</button></div>
+    </div>
+  </div>
+  <style>
+    /* ===== CHARACTER SELECT SCREEN ===== */
+    #char-select {
+      position: absolute;
+      inset: 0;
+      z-index: 95;
+      background: radial-gradient(ellipse at center, #1a0040 0%, #0a0020 40%, #000005 100%);
+      display: none;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 50px;
+    }
+
+    #char-select::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 255, 0.02) 2px, rgba(0, 255, 255, 0.02) 4px);
+      pointer-events: none;
+    }
+
+    #char-select.visible {
+      display: flex;
+    }
+
+    .cs-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 30px 15px 15px 15px;
+      overflow-y: auto;
+    }
+
+    .cs-right {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 15px 20px;
+      border-left: 2px solid rgba(0, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.3);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    #cs-title {
+      font-family: 'Press Start 2P', monospace;
+      color: #ff0055;
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      text-shadow: 0 0 15px #ff0055;
+      text-transform: uppercase;
+    }
+
+    .cs-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 15px;
+      width: 100%;
+      max-width: 900px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+
+    .cs-alt-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      width: 100%;
+      max-width: 900px;
+      padding: 15px;
+      border-top: 2px dashed rgba(255, 0, 85, 0.4);
+      margin-top: auto;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+    }
+
+    .cs-alt-title {
+      width: 100%;
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      color: #7700ff;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px #7700ff;
+    }
+
+    .cs-portrait {
+      width: 100%;
+      aspect-ratio: 1/1;
+      height: auto;
+      max-width: none;
+      /* Let the grid handle the sizing so they all match */
+      border: 3px solid #333;
+      background: linear-gradient(135deg, #111 0%, #1a0030 100%);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alt-portrait {
+      width: calc((100% - 15px * 6) / 7);
+      /* Roughly match the 7-column main grid size */
+      max-width: 140px;
+    }
+
+    .cs-portrait img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .cs-portrait .cs-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      text-align: center;
+      padding: 3px 2px;
+      text-transform: uppercase;
+    }
+
+    .cs-portrait:hover,
+    .cs-portrait.selected {
+      border-color: #00ffff;
+      box-shadow: 0 0 20px #00ffff, inset 0 0 10px rgba(0, 255, 255, 0.15);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+
+    .cs-portrait.selected {
+      border-color: #ff00ff;
+      box-shadow: 0 0 25px #ff00ff, inset 0 0 10px rgba(255, 0, 255, 0.15);
+    }
+
+    /* Right panel: Preview & Stats */
+    #cs-preview-img {
+      width: 100%;
+      max-width: 250px;
+      height: auto;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      object-position: top center;
+      border: 3px solid #333;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #0a0020 0%, #000 100%);
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+    }
+
+    #cs-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 10px #00ffff;
+      margin-top: 12px;
+    }
+
+    #cs-title-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.6rem;
+      color: #ff0055;
+      margin-top: 4px;
+      text-shadow: 0 0 8px #ff0055;
+    }
+
+    #cs-desc {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      color: #aaa;
+      margin-top: 8px;
+      text-align: center;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .cs-stats {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      gap: 4px 8px;
+      margin-top: 12px;
+      width: 280px;
+    }
+
+    .cs-stat-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      color: #888;
+      text-align: right;
+    }
+
+    .cs-stat-bar {
+      height: 10px;
+      background: #222;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+
+    .cs-stat-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.3s;
+    }
+
+    .cs-moves-box {
+      margin-top: 12px;
+      text-align: center;
+      width: 300px;
+    }
+
+    .cs-move-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .cs-move-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: #00ffcc;
+      font-weight: 700;
+    }
+
+    #gamepad {
+      position: fixed;
+      bottom: 40px;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      display: none;
+      /* Hidden during menus! */
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 1000;
+      padding: 0 5vw;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #joystick-area {
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border: 2px solid rgba(0, 255, 255, 0.4);
+      border-radius: 50%;
+      position: relative;
+      touch-action: none;
+      pointer-events: auto;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    }
+
+    #joystick-knob {
+      width: 70px;
+      height: 70px;
+      background: radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, rgba(0, 150, 255, 0.5) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      position: absolute;
+      top: 36px;
+      left: 36px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      transition: transform 0.05s ease-out;
+    }
+
+    #gamepad .actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #gamepad .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      pointer-events: auto;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      transition: transform 0.1s, background 0.1s;
+    }
+
+    .btn.act {
+      font-size: 16px;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .btn:active {
+      transform: scale(0.85);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .cs-btn-back {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #ffcc00;
+      color: #ffcc00;
+      padding: 10px 15px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.7rem;
+      cursor: pointer;
+      z-index: 200;
+      box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+    }
+
+    .cs-btn-back:hover {
+      background: #ffcc00;
+      color: #000;
+    }
+
+    /* ===== MOBILE RESPONSIVE MEDIA QUERIES ===== */
+    @media (max-width: 900px) {
+      #char-select {
+        flex-direction: column;
+      }
+
+      .cs-left {
+        padding-top: 50px;
+        padding-bottom: 250px;
+        /* MEGA SPACE for mobile controls to not overlap fighters */
+        flex: none;
+      }
+
+      .cs-right {
+        width: 100%;
+        border-left: none;
+        border-top: 2px solid rgba(0, 255, 255, 0.15);
+      }
+
+      .cs-grid {
+        grid-template-columns: repeat(4, 1fr);
+        /* Exactly 4 big columns */
+        gap: 12px;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .alt-portrait {
+        width: 22vw;
+        /* Make alts bigger but fit in row */
+        max-width: 100px;
+      }
+
+      .cs-stats {
+        width: 100%;
+      }
+
+      #cs-preview-img {
+        max-width: 200px;
+      }
+    }
+
+    /* =========================================================
+       MOBILE ORIENTATION LOCK
+       ========================================================= */
+    #orientation-lock {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 999999;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      flex-direction: column;
+    }
+
+    #orientation-lock h2 {
+      color: #f0f;
+      margin-bottom: 10px;
+      font-size: 8vw;
+      font-family: 'Orbitron';
+      text-shadow: 0 0 10px #f0f;
+    }
+
+    #orientation-lock p {
+      color: #fff;
+      font-size: 4vw;
+      padding: 0 20px;
+      font-family: 'Orbitron';
+    }
+
+    #orientation-lock .icon {
+      font-size: 4rem;
+      margin-top: 20px;
+      animation: spinRotate 2s infinite ease-in-out;
+    }
+
+    @keyframes spinRotate {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      50% {
+        transform: rotate(90deg);
+      }
+
+      100% {
+        transform: rotate(90deg);
+      }
+    }
+
+    @media screen and (max-width: 950px) and (orientation: portrait) {
+      #orientation-lock {
+        display: flex !important;
+      }
+
+      body>*:not(#orientation-lock) {
+        display: none !important;
+      }
+    }
+  </style>
+
+  <script>
+    // GLOBAL ERROR HANDLER — shows errors ON SCREEN
+    window.onerror = function (msg, url, line, col, err) {
+      let d = document.getElementById('_err_overlay');
+      if (!d) { d = document.createElement('div'); d.id = '_err_overlay'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:red;color:#fff;font:bold 14px monospace;padding:10px;white-space:pre-wrap;'; document.body.appendChild(d); }
+      d.textContent += '\\nERR: ' + msg + ' @ line ' + line;
+      return false;
+    };
+    // ============================================================
+    // KEANO ROMEO - LORD OF THE LIGHT I — HYBRID AI/2D SPRITE ENGINE
+    // Preserves the beautiful AI art, correctly removes background,
+    // AND explicitly draws striking limbs (fist/boot) + back numbers!
+    // ============================================================
+    const C = document.getElementById('game');
+    const X = C.getContext('2d');
+    function resize() {
+      C.width = innerWidth;
+      C.height = innerHeight;
+
+      // Auto-fullscreen on mobile when turning to landscape
+      const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      if (isMobile && window.innerWidth > window.innerHeight) {
+        try {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
+        } catch (e) { }
+      }
+    }
+    resize(); addEventListener('resize', resize);
+
+    const GROUND = () => C.height * 0.88;
+    const GRAV = 0.9;
+    // Player drawing dimensions - Carefully tuned for perfect screen harmony
+    const FW = () => Math.min(C.width * 0.20, 220);
+    const FH = () => Math.min(C.height * 0.50, 400);
+
+    // Global Pro Settings
+    let gameDifficulty = 'normal';
+    let gameTimerStyle = '99';
+    let roundNum = 1;
+    let p1Wins = 0;
+    let p2Wins = 0;
+    let roundTimerNum = 99;
+
+    // ===== COMBO & VOLUME SETTINGS =====
+    let comboCount = 0; // consecutive hits without being hit
+    let comboTimer = 0; // visual timer for combo popup
+    let musicVol = 0.20, sfxVol = 0.35;
+
+    // ===== PRO AUDIO SYNTHESIS (CAPCOM STYLE) =====
+    const AC = new (window.AudioContext || window.webkitAudioContext)();
+    let voiceVol = 0.5; // HARDCODED TO 50% AS REQUESTED
+
+    const SFX = {
+      _master: null,
+      _musicGain: null,
+      _sfxGain: null,
+      _musicOscs: [],
+      _musicInterval: null,
+
+      init() {
+        this._master = AC.createGain(); this._master.connect(AC.destination);
+        this._musicGain = AC.createGain(); this._musicGain.connect(this._master);
+        this._sfxGain = AC.createGain(); this._sfxGain.connect(this._master);
+        this._musicGain.gain.value = musicVol;
+        this._sfxGain.gain.value = sfxVol;
+      },
+
+      setMusicVol(v) { if (this._musicGain) { this._musicGain.gain.value = v; musicVol = v; } },
+      setSfxVol(v) { if (this._sfxGain) { this._sfxGain.gain.value = v; sfxVol = v; } },
+
+      fight() {
+        if (!this._sfxGain || AC.state === 'suspended') return;
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'square'; o.frequency.setValueAtTime(400, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(100, AC.currentTime + 0.3);
+        g.gain.setValueAtTime(1.0, AC.currentTime); g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.3);
+        o.connect(g); g.connect(this._sfxGain); o.start(); o.stop(AC.currentTime + 0.4);
+      },
+
+      round() {
+        if (!this._sfxGain || AC.state === 'suspended') return;
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(600, AC.currentTime);
+        o.frequency.linearRampToValueAtTime(800, AC.currentTime + 0.1);
+        g.gain.setValueAtTime(0.5, AC.currentTime); g.gain.linearRampToValueAtTime(0.01, AC.currentTime + 0.4);
+        o.connect(g); g.connect(this._sfxGain); o.start(); o.stop(AC.currentTime + 0.5);
+      },
+
+      // CAPCOM HEAVY IMPACT SYNTHESIS
+      _heavyHit(baseFreq, sweepFreq, dur) {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator();
+        const g = AC.createGain();
+        const dist = AC.createWaveShaper(); // Add crunch!
+
+        // Distortion curve for crunch
+        const curve = new Float32Array(400);
+        for (let i = 0; i < 400; i++) {
+          const x = i * 2 / 400 - 1;
+          curve[i] = (3 + 20) * x * 20 * (Math.PI / 180) / (Math.PI + 20 * Math.abs(x));
+        }
+        dist.curve = curve;
+        dist.oversample = '4x';
+
+        o.type = 'square'; // Aggressive waveform
+        o.frequency.setValueAtTime(baseFreq, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(sweepFreq, AC.currentTime + dur);
+
+        g.gain.setValueAtTime(1.0, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + dur);
+
+        // Add white noise punch
+        const nb = AC.createBuffer(1, AC.sampleRate * dur, AC.sampleRate);
+        const nd = nb.getChannelData(0);
+        for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * Math.max(0, 1 - i / nd.length);
+        const ns = AC.createBufferSource(); ns.buffer = nb;
+        const ng = AC.createGain();
+        ng.gain.setValueAtTime(0.8, AC.currentTime);
+        ng.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + dur * 0.5);
+
+        // Routing
+        o.connect(dist); dist.connect(g); g.connect(this._sfxGain);
+        ns.connect(ng); ng.connect(this._sfxGain);
+
+        o.start(); o.stop(AC.currentTime + dur);
+        ns.start(); ns.stop(AC.currentTime + dur);
+      },
+
+      punch() { this._heavyHit(150, 40, 0.15); }, // Quick low thud
+      kick() { this._heavyHit(100, 20, 0.25); },  // Deeper, longer thud
+      hit() { this._heavyHit(300, 50, 0.2); },    // Higher pitch crack
+
+      jump() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(200, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(400, AC.currentTime + 0.15);
+        g.gain.setValueAtTime(0.3, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.15);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 0.15);
+      },
+
+      ko() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(100, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(30, AC.currentTime + 1.0);
+        g.gain.setValueAtTime(1.0, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 1.0);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 1.0);
+
+        // Add a massive impact thud for the KO
+        this._heavyHit(50, 10, 1.0);
+      },
+
+      victory() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(400, AC.currentTime);
+        o.frequency.setValueAtTime(500, AC.currentTime + 0.2);
+        o.frequency.setValueAtTime(600, AC.currentTime + 0.4);
+        o.frequency.setValueAtTime(800, AC.currentTime + 0.6);
+        g.gain.setValueAtTime(0.5, AC.currentTime);
+        g.gain.linearRampToValueAtTime(0.01, AC.currentTime + 1.5);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 1.5);
+      },
+
+      block() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(800, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(200, AC.currentTime + 0.1);
+        g.gain.setValueAtTime(0.8, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.1);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 0.1);
+      },
+
+      _noise(dur, vol) {
+        if (AC.state === 'suspended') AC.resume();
+        const nb = AC.createBuffer(1, AC.sampleRate * dur, AC.sampleRate);
+        const nd = nb.getChannelData(0);
+        for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * Math.max(0, 1 - i / nd.length);
+        const ns = AC.createBufferSource(); ns.buffer = nb;
+        const ng = AC.createGain();
+        ng.gain.setValueAtTime(vol || 0.5, AC.currentTime);
+        ng.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + dur);
+        ns.connect(ng); ng.connect(this._sfxGain);
+        ns.start(); ns.stop(AC.currentTime + dur);
+      },
+
+      _tone(freq, dur, type, vol) {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, AC.currentTime);
+        g.gain.setValueAtTime(vol || 0.5, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + dur);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + dur);
+      },
+
+      comboUp(count) {
+        this._tone(400 + (count * 50), 0.1, 'square', 0.2);
+      },
+
+      projFire() {
+        this._tone(800, 0.2, 'sine', 0.3);
+        this._noise(0.2, 0.2);
+      },
+
+      superCharge() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(100, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(800, AC.currentTime + 0.5);
+        g.gain.setValueAtTime(0.01, AC.currentTime);
+        g.gain.linearRampToValueAtTime(0.8, AC.currentTime + 0.5);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 0.5);
+      },
+
+      break() {
+        this._noise(0.4, 0.8);
+        this._heavyHit(200, 20, 0.3);
+      },
+
+      perfect() {
+        this._tone(600, 0.1, 'square', 0.3);
+        setTimeout(() => this._tone(800, 0.4, 'square', 0.3), 100);
+      },
+
+      levelUp() {
+        this._tone(400, 0.1, 'triangle', 0.3);
+        setTimeout(() => this._tone(500, 0.1, 'triangle', 0.3), 100);
+        setTimeout(() => this._tone(600, 0.4, 'triangle', 0.3), 200);
+      },
+
+      gameOver() {
+        if (AC.state === 'suspended') AC.resume();
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(200, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(50, AC.currentTime + 2.0);
+        g.gain.setValueAtTime(0.5, AC.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 2.0);
+        o.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + 2.0);
+      },
+
+      click() {
+        this._tone(800, 0.05, 'square', 0.2);
+      },
+
+      // --- 14 PROCEDURAL CHARACTER VOICES ---
+      // Voices are synthesized using Formant-like filtering on sawtooth/square waves
+      playVoice(charIdx, type) {
+        if (AC.state === 'suspended') AC.resume();
+        // Fallback for Keano or unmapped indices
+        if (typeof charIdx === 'undefined' || charIdx < 0 || charIdx > 13) charIdx = 0;
+
+        // Profiles for 14 Characters: pitch (hz), wave type, throat depth (formant freq)
+        const voiceProfiles = [
+          { pitch: 120, type: 'sawtooth', throat: 600 },  // Ryu (Standard male)
+          { pitch: 85, type: 'square', throat: 400 },  // Blanka (Beast)
+          { pitch: 60, type: 'sawtooth', throat: 300 },  // Zangief (Huge, deep)
+          { pitch: 90, type: 'sawtooth', throat: 500 },  // Sagat (Gruff)
+          { pitch: 110, type: 'square', throat: 550 },  // Guile (Sharp, military)
+          { pitch: 140, type: 'sawtooth', throat: 700 },  // Sid (Higher, punkish)
+          { pitch: 130, type: 'triangle', throat: 650 },  // Pierre (Cleaner, elegant)
+          { pitch: 150, type: 'sawtooth', throat: 800 },  // Wang (Classic kung fu yells)
+          { pitch: 70, type: 'square', throat: 350 },  // Anubis (Godly, echoing)
+          { pitch: 125, type: 'sawtooth', throat: 600 },  // Carlos (Passionate, standard)
+          { pitch: 100, type: 'triangle', throat: 450 },  // Dhalsim (Hollow, mystic)
+          { pitch: 80, type: 'sawtooth', throat: 380 },  // Jacques (Gravelly lumberjack)
+          { pitch: 135, type: 'square', throat: 700 },  // Dee Jay (Energetic)
+          { pitch: 45, type: 'sawtooth', throat: 200 }   // M. Dison (Demonic, sub-bass boss)
+        ];
+
+        const vp = voiceProfiles[charIdx];
+        const o = AC.createOscillator();
+        const g = AC.createGain();
+        const f = AC.createBiquadFilter(); // Formant filter for "human" sound
+
+        o.type = vp.type;
+        f.type = 'bandpass';
+        f.frequency.value = vp.throat;
+        f.Q.value = 2.0; // Vocal resonance
+
+        let dur = 0.2;
+        let startFreq = vp.pitch;
+        let endFreq = vp.pitch * 0.8; // Usually voices drop down at the end of a grunt
+
+        if (type === 'attack') {
+          dur = 0.15 + (Math.random() * 0.1);
+          startFreq = vp.pitch * 1.3; // Higher Yelp for attack
+          endFreq = vp.pitch * 0.9;
+          g.gain.setValueAtTime(0.001, AC.currentTime);
+          g.gain.linearRampToValueAtTime(1.5, AC.currentTime + 0.02); // BOOSTED LOUDNESS!
+          g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+        }
+        else if (type === 'hurt') {
+          dur = 0.3 + (Math.random() * 0.2);
+          startFreq = vp.pitch;
+          endFreq = vp.pitch * 0.5; // Groan
+
+          // Add heavy distortion/noise to hurt sound
+          o.detune.value = 50;
+
+          g.gain.setValueAtTime(0.001, AC.currentTime);
+          g.gain.linearRampToValueAtTime(2.0, AC.currentTime + 0.05); // EXTREME LOUDNESS!
+          g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+        }
+        else if (type === 'special') {
+          dur = 0.6;
+          startFreq = vp.pitch * 1.5; // Epic shout
+          endFreq = vp.pitch * 1.2;
+          f.frequency.value = vp.throat * 1.5; // Open mouth wider
+
+          g.gain.setValueAtTime(0.001, AC.currentTime);
+          g.gain.linearRampToValueAtTime(2.5, AC.currentTime + 0.1); // MAXIMUM LOUDNESS!
+          g.gain.linearRampToValueAtTime(1.5, AC.currentTime + dur - 0.2);
+          g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+        }
+
+        o.frequency.setValueAtTime(startFreq, AC.currentTime);
+        o.frequency.exponentialRampToValueAtTime(endFreq, AC.currentTime + dur);
+
+        // Echo for bosses/gods
+        if (charIdx === 8 || charIdx === 13) {
+          const delay = AC.createDelay(); delay.delayTime.value = 0.15;
+          const fb = AC.createGain(); fb.gain.value = 0.3;
+          g.connect(delay); delay.connect(fb); fb.connect(delay);
+          delay.connect(this._sfxGain);
+        }
+
+        o.connect(f); f.connect(g); g.connect(this._sfxGain);
+        o.start(); o.stop(AC.currentTime + dur + 0.1);
+      },
+
+      // --- PROCEDURAL LEVEL MUSIC (14 EPIC GALAXY ARCADE THEMES) ---
+      _titleMusicInterval: null,
+      _titleMusicOscs: [],
+
+      playTitleMusic() {
+        this.stopTitleMusic();
+        if (AC.state === 'suspended') AC.resume();
+        const g = this._musicGain;
+        // Epic pad chord: Cm (C3, Eb3, G3, Bb3)
+        const padFreqs = [130.81, 155.56, 196.0, 233.08];
+        padFreqs.forEach(f => {
+          const o = AC.createOscillator(); o.type = 'sine';
+          o.frequency.value = f;
+          const gn = AC.createGain(); gn.gain.value = 0.06;
+          o.connect(gn); gn.connect(g);
+          o.start(); this._titleMusicOscs.push(o);
+          // Second detuned layer for richness
+          const o2 = AC.createOscillator(); o2.type = 'triangle';
+          o2.frequency.value = f * 1.002; // slight detune = lush
+          const gn2 = AC.createGain(); gn2.gain.value = 0.03;
+          o2.connect(gn2); gn2.connect(g);
+          o2.start(); this._titleMusicOscs.push(o2);
+        });
+        // Arpeggio melody over the pad
+        const arpNotes = [261.6, 311.1, 392.0, 466.2, 523.3, 466.2, 392.0, 311.1];
+        let step = 0;
+        this._titleMusicInterval = setInterval(() => {
+          const freq = arpNotes[step % arpNotes.length];
+          const o = AC.createOscillator(); o.type = 'square';
+          o.frequency.value = freq;
+          const gn = AC.createGain(); gn.gain.value = 0.04;
+          gn.gain.setTargetAtTime(0, AC.currentTime + 0.15, 0.05);
+          const flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 2000;
+          o.connect(flt); flt.connect(gn); gn.connect(g);
+          o.start(); o.stop(AC.currentTime + 0.3);
+          step++;
+        }, 280); // ~214 bpm arpeggio
+      },
+
+      stopTitleMusic() {
+        this._titleMusicOscs.forEach(o => { try { o.stop(); } catch (e) { } });
+        this._titleMusicOscs = [];
+        if (this._titleMusicInterval) { clearInterval(this._titleMusicInterval); this._titleMusicInterval = null; }
+      },
+
+      stopMusic() {
+        this.stopTitleMusic();
+        this._musicOscs.forEach(o => { try { o.stop(); } catch (e) { } });
+        this._musicOscs = [];
+        if (this._musicInterval) { clearInterval(this._musicInterval); this._musicInterval = null; }
+      },
+      playLevelMusic(levelIdx) {
+        this.stopMusic();
+
+        // --- 14 UNIQUE THEME PROFILES ---
+        // 0: Japan (Ryu) - Koto/Shakuhachi Vibe (Pentatonic Minor, 100bpm)
+        // 1: Brazil (Blanka) - Jungle Syncopation (Dorian, 135bpm, heavy bass)
+        // 2: Russia (Zangief) - Slow, Heavy Industrial (Phrygian, 85bpm, distortion)
+        // 3: Thailand (Sagat) - Intense Muay Thai march (Harmonic Minor, 115bpm)
+        // 4: USA (Guile) - Upbeat Synthwave (Major, 125bpm)
+        // 5: UK (Sid) - Cyberpunk Punk-Rock (Mixolydian, 150bpm, square wave)
+        // 6: France (Pierre) - Elegant but tense (Harmonic Minor, 120bpm)
+        // 7: China (Wang) - Erhu/Gong epic (Pentatonic Major, 105bpm)
+        // 8: Egypt (Anubis) - Desert Mystery (Double Harmonic, 95bpm)
+        // 9: Spain (Carlos) - Flamenco Drama (Phrygian Dominant, 130bpm)
+        // 10: India (Dhalsim) - Mystical Drone (Raga Mix, 90bpm, drone bass)
+        // 11: Canada (Jacques) - Tundra Cold (Minor, 110bpm, glassy synths)
+        // 12: Jamaica (Dee Jay) - Aggressive Reggaeton/Dub (Minor, 100bpm, heavy sub)
+        // 13: Boss (M. Dison) - Apocalyptic Orchestral Synth (Locrian, 140bpm, massive noise) 
+
+        const themes = [
+          { bpm: 100, base: 220, scale: [1, 1.189, 1.334, 1.5, 1.781], pat: [0, 2, 4, 3, 0, null, 2, 1], type: 'triangle', bass: 0.5 }, // Japan
+          { bpm: 135, base: 146.8, scale: [1, 1.122, 1.189, 1.334, 1.5], pat: [0, null, 2, 0, 4, 3, null, 1], type: 'sawtooth', bass: 0.25 }, // Brazil
+          { bpm: 85, base: 65.4, scale: [1, 1.059, 1.259, 1.334, 1.498], pat: [0, 1, 0, null, 2, 1, 0, null], type: 'square', bass: 1.0 }, // Russia
+          { bpm: 115, base: 195.9, scale: [1, 1.122, 1.189, 1.334, 1.587], pat: [0, 0, 2, 4, 0, 2, 3, 1], type: 'sawtooth', bass: 0.5 }, // Thailand
+          { bpm: 125, base: 261.6, scale: [1, 1.122, 1.259, 1.334, 1.5], pat: [0, 2, 4, 2, 5, 4, 2, 0], type: 'square', bass: 0.5 }, // USA
+          { bpm: 150, base: 110.0, scale: [1, 1.122, 1.259, 1.334, 1.5], pat: [0, 0, 0, 2, 0, 4, 3, 2], type: 'square', bass: 0.5 }, // UK
+          { bpm: 120, base: 329.6, scale: [1, 1.122, 1.189, 1.334, 1.587], pat: [4, null, 3, 2, 4, null, 1, 0], type: 'sine', bass: 0.5 }, // France
+          { bpm: 105, base: 261.6, scale: [1, 1.122, 1.259, 1.5, 1.681], pat: [0, 1, 4, 3, 0, 2, 0, 4], type: 'triangle', bass: 0.25 }, // China
+          { bpm: 95, base: 130.8, scale: [1, 1.059, 1.259, 1.334, 1.498], pat: [0, 2, 1, 0, 4, 3, 2, 0], type: 'square', bass: 0.5 }, // Egypt
+          { bpm: 130, base: 164.8, scale: [1, 1.059, 1.259, 1.334, 1.5], pat: [0, 1, 3, 0, 4, 2, 1, 0], type: 'sawtooth', bass: 0.5 }, // Spain
+          { bpm: 90, base: 146.8, scale: [1, 1.122, 1.259, 1.414, 1.5], pat: [0, null, 2, null, 3, 1, 0, null], type: 'sine', bass: 1.0 }, // India (Drone)
+          { bpm: 110, base: 293.6, scale: [1, 1.122, 1.189, 1.334, 1.5], pat: [0, 2, null, 4, 2, 0, null, 3], type: 'triangle', bass: 0.5 }, // Canada
+          { bpm: 100, base: 65.4, scale: [1, 1.189, 1.334, 1.5, 1.781], pat: [0, null, 2, 0, null, 4, 2, null], type: 'square', bass: 1.0 }, // Jamaica
+          { bpm: 140, base: 55.0, scale: [1, 1.059, 1.189, 1.334, 1.414], pat: [0, 1, 0, 2, 0, 3, 0, 4], type: 'sawtooth', bass: 0.5 } // Boss
+        ];
+
+        const t = themes[levelIdx] || themes[0];
+        const beatMs = 60000 / t.bpm;
+        let step = 0;
+
+        const playBeat = () => {
+          if (AC.state === 'suspended') AC.resume();
+          const noteIdx = t.pat[step % t.pat.length];
+          const noteDur = beatMs / 1000;
+
+          // 1. LEAD SYNTH
+          if (noteIdx !== null) {
+            const freq = t.base * t.scale[noteIdx % t.scale.length];
+            const o1 = AC.createOscillator(); const g1 = AC.createGain();
+            o1.type = t.type; o1.frequency.value = freq;
+
+            // Add a little detune crunch for villains/bosses
+            if (levelIdx === 2 || levelIdx === 13) o1.detune.value = 15;
+
+            g1.gain.setValueAtTime(0.001, AC.currentTime);
+            g1.gain.linearRampToValueAtTime(0.12, AC.currentTime + 0.005);
+            g1.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + noteDur * 0.8);
+            o1.connect(g1); g1.connect(this._musicGain);
+            o1.start(); o1.stop(AC.currentTime + noteDur * 0.8 + 0.01);
+
+            // 1b. HARMONY VOICE (5th interval for richness)
+            const o3 = AC.createOscillator(); const g3 = AC.createGain();
+            o3.type = 'sine'; o3.frequency.value = freq * 1.5; // Perfect 5th
+            g3.gain.setValueAtTime(0.001, AC.currentTime);
+            g3.gain.linearRampToValueAtTime(0.06, AC.currentTime + 0.01);
+            g3.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + noteDur * 0.6);
+            o3.connect(g3); g3.connect(this._musicGain);
+            o3.start(); o3.stop(AC.currentTime + noteDur * 0.6 + 0.01);
+          }
+
+          // 2. BASS DRONE / BEAT
+          if (step % 2 === 0 || levelIdx === 10) { // India gets constant drone
+            const o2 = AC.createOscillator(); const g2 = AC.createGain();
+            o2.type = levelIdx === 12 ? 'sine' : 'sawtooth'; // Reggae gets sub bass
+            o2.frequency.value = t.base * t.bass; // Deep!
+
+            const lowpass = AC.createBiquadFilter();
+            lowpass.type = 'lowpass'; lowpass.frequency.value = 400;
+
+            g2.gain.setValueAtTime(0.001, AC.currentTime);
+            g2.gain.linearRampToValueAtTime(0.12, AC.currentTime + 0.005);
+            g2.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + noteDur * (levelIdx === 10 ? 2.0 : 0.9));
+            o2.connect(lowpass); lowpass.connect(g2); g2.connect(this._musicGain);
+            o2.start(); o2.stop(AC.currentTime + noteDur * (levelIdx === 10 ? 2.0 : 0.9) + 0.01);
+          }
+
+          // 3. HI-HAT/NOISE PERCUSSION (Arcade Crunch)
+          const nb = AC.createBuffer(1, AC.sampleRate * 0.05, AC.sampleRate);
+          const nd = nb.getChannelData(0);
+          for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
+          const ns = AC.createBufferSource(); ns.buffer = nb;
+          const ng = AC.createGain();
+
+          // Accents on 2 and 4
+          const vol = (step % 4 === 2 || step % 4 === 0) ? 0.05 : 0.02;
+
+          ng.gain.setValueAtTime(0.001, AC.currentTime);
+          ng.gain.linearRampToValueAtTime(vol, AC.currentTime + 0.002);
+          ng.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.05);
+
+          const hf = AC.createBiquadFilter(); hf.type = 'bandpass';
+          hf.frequency.value = 6000 + (Math.random() * 2000); // Sizzly
+
+          ns.connect(hf); hf.connect(ng); ng.connect(this._musicGain);
+          ns.start(); ns.stop(AC.currentTime + 0.06);
+
+          // 4. KICK DRUM (beats 1 and 3 — punchy sine sweep)
+          if (step % 4 === 0 || step % 4 === 2) {
+            const kick = AC.createOscillator(); const kg = AC.createGain();
+            kick.type = 'sine'; kick.frequency.setValueAtTime(150, AC.currentTime);
+            kick.frequency.exponentialRampToValueAtTime(40, AC.currentTime + 0.08);
+            kg.gain.setValueAtTime(0.15, AC.currentTime);
+            kg.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.15);
+            kick.connect(kg); kg.connect(this._musicGain);
+            kick.start(); kick.stop(AC.currentTime + 0.16);
+          }
+
+          step++;
+        };
+
+        // Start the engine
+        this._musicInterval = setInterval(playBeat, beatMs / 2);
+      }
+    };
+    SFX.init();
+
+    // ===== VOICE WITH REVERB (warm, broad, soft) =====
+    // This function is no longer needed as SFX.playVoice handles voice synthesis directly.
+    // Keeping it commented out for historical context if needed.
+    /*
+    function playVoiceWithReverb() {
+      const voiceEl = document.getElementById('voice');
+      if (!voiceEl._src) {
+        voiceEl._src = AC.createMediaElementSource(voiceEl);
+        const lp = AC.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 3500;
+        const hp = AC.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 80;
+        const gain = AC.createGain();
+        gain.gain.value = 0.9; // Gentle, warm, not overpowering
+        // Reverb via delay feedback
+        const delay1 = AC.createDelay(); delay1.delayTime.value = 0.07;
+        const delay2 = AC.createDelay(); delay2.delayTime.value = 0.13;
+        const fb1 = AC.createGain(); fb1.gain.value = 0.3;
+        const fb2 = AC.createGain(); fb2.gain.value = 0.25;
+        const wetGain = AC.createGain(); wetGain.gain.value = 0.4;
+        const dryGain = AC.createGain(); dryGain.gain.value = 0.7;
+        voiceEl._src.connect(hp); hp.connect(lp); lp.connect(gain);
+        gain.connect(dryGain); dryGain.connect(AC.destination);
+        gain.connect(delay1); delay1.connect(fb1); fb1.connect(delay1);
+        gain.connect(delay2); delay2.connect(fb2); fb2.connect(delay2);
+        wetGain.connect(AC.destination);
+      }
+      voiceEl.volume = voiceVol; // Apply the exact 50% requested by User
+      voiceEl.play();
+    }
+    */
+
+    let originalLevels = null;
+    let LEVELS = [
+      {
+        level: 1, name: 'HATTORI', flag: '🇯🇵', fighter: 'assets/1.1.Hattori_Japan.png', stage: 'assets/stage_japan.png', col: '#ff0000', hpMult: 1.0, spdMult: 1.1, projFreq: 1.2, jumpFreq: 1.0, special: 'fire',
+        title: 'Ninja-Erbe', desc: 'Die Schatten sind sein Zuhause. Ein stiller Killer, dessen Feuersturm niemanden verschont.', moves: 'Schnelle Kicks & Feuer-Kunai', specialName: 'Feuersturm', finisher: 'Schatten-Inferno — Tödlicher Tanz', str: { spd: 5, pow: 3, def: 2, spc: 5 }
+      },
+      {
+        level: 2, name: 'RAHEEL', flag: '🇮🇳', fighter: 'assets/2.Raheel fighter_india_fullbody_1772216021163.png', stage: 'assets/stage_india.png', col: '#ffaa55', hpMult: 1.0, spdMult: 1.0, projFreq: 1.0, jumpFreq: 1.0, special: 'fire',
+        title: 'Der Guru', desc: 'Spirituelle Kraft trifft auf tödliche Meditation. Er schwebt über dem Kampf.', moves: 'Schwebende Tritte & Yoga-Griffe', specialName: 'Meditations-Sturz', finisher: 'Drittes Auge — Lichtexplosion', str: { spd: 2, pow: 3, def: 3, spc: 4 }
+      },
+      {
+        level: 3, name: 'PABLO', flag: '🇧🇷', fighter: 'assets/3.Pablo_Brazil.png', stage: 'assets/stage_brazil.png', col: '#00ff00', hpMult: 1.0, spdMult: 1.2, projFreq: 0.8, jumpFreq: 1.2, special: 'electric',
+        title: 'Der Capoeira-Meister', desc: 'Aus den Favelas in die Arena. Akrobatik und rohe Gewalt verschmelzen.', moves: 'Capoeira-Flips & Wirbeltritte', specialName: 'Koks-Block-Schmettern', finisher: 'Favela-Blitz — Elektrischer Tornado', str: { spd: 5, pow: 3, def: 1, spc: 3 }
+      },
+      {
+        level: 4, name: 'TZUBAZA', flag: '🇨🇳', fighter: 'assets/4.Tzubaza fighter_china_fullbody_1772216008435.png', stage: 'assets/stage_china_empty.png', col: '#ffaa00', hpMult: 1.1, spdMult: 1.1, projFreq: 1.0, jumpFreq: 1.1, special: 'wind',
+        title: 'Der Meister des Windes', desc: 'Traditionelles Kung-Fu, perfektioniert über Jahrhunderte. Der Wind gehorcht ihm.', moves: 'Präzise Kung-Fu Combos', specialName: 'Licht-Frisbee', finisher: 'Sturmdrache — Windinferno', str: { spd: 3, pow: 3, def: 3, spc: 4 }
+      },
+      {
+        level: 5, name: 'AL CAPONE', flag: '🇮🇹', fighter: 'assets/5.Al_Capone_Italy.png', stage: 'assets/stage_italy.png', col: '#4444ff', hpMult: 1.2, spdMult: 0.9, projFreq: 1.5, jumpFreq: 0.8, special: 'super',
+        title: 'Der Pate', desc: 'Die Mafia hat einen neuen Boss. Kaltblütig. Kein Erbarmen, keine Gnade.', moves: 'Schwere Faustschläge & Nahkampf', specialName: 'Doppel-Schuss', finisher: 'Paten-Exekution — Dreifach-Salve', str: { spd: 2, pow: 5, def: 3, spc: 4 }
+      },
+      {
+        level: 6, name: 'C. GARGAMEL', flag: '☀️', fighter: 'assets/6.C_Gargamel_Techwear.png', stage: 'assets/stage_germany.png', col: '#00ffcc', hpMult: 1.0, spdMult: 0.9, projFreq: 1.5, jumpFreq: 1.0, special: 'super',
+        title: 'Cyber-Sorcerer', desc: 'Technologie und verbotene Magie vereint. Ein skrupelloser Taktiker.', moves: 'Cyber-Kicks & Magie-Grapples', specialName: 'Neon-Hexerei', finisher: 'Daten-Löschung — Fatal Error', str: { spd: 3, pow: 3, def: 3, spc: 5 },
+        altProfile: { name: 'CYBER GARGAMEL', flag: '☀️', fighter: 'assets/6.1.C_Gargamel_Hoodie.png', title: 'Der Verrückte Tüftler', desc: 'Im Schatten agierend. Seine Erfindungen flößen jedem Respekt ein.', moves: 'Laser-Traps & Bomben', specialName: 'Netz-Schock', finisher: 'Systemüberlastung', str: { spd: 3, pow: 2, def: 4, spc: 5 } }
+      },
+      {
+        level: 7, name: 'MARLEY', flag: '🇯🇲', fighter: 'assets/7.Marley_Jamaica.png', stage: 'assets/stage_jamaica.png', col: '#ffcc00', hpMult: 0.9, spdMult: 1.3, projFreq: 1.2, jumpFreq: 1.5, special: 'electric',
+        title: 'Der Karibik-Blitz', desc: 'Entspannt, aber tödlich. Sein Rhythmus ist seine Waffe. One Love — One Knockout.', moves: 'Rhythmische Kicks & Kopfstöße', specialName: 'Giftwolke', finisher: 'Reggae-Tsunami — Basswelle', str: { spd: 4, pow: 2, def: 2, spc: 4 }
+      },
+      {
+        level: 8, name: 'KOWALSKI', flag: '🇵🇱', fighter: 'assets/8.Kowalski_Poland.png', stage: 'assets/stage_poland.png', col: '#ffffff', hpMult: 1.3, spdMult: 0.8, projFreq: 1.0, jumpFreq: 0.5, special: 'super',
+        title: 'Die Osteuropäische Faust', desc: 'Ein Panzer aus Fleisch und Stahl. Sein Roboterarm kennt kein Erbarmen.', moves: 'Schwere Power-Schläge & Greifen', specialName: 'Arm-MG', finisher: 'Kybernetischer Zorn — Robo-Barrage', str: { spd: 1, pow: 5, def: 5, spc: 3 }
+      },
+      {
+        level: 9, name: 'PACO EL TACO', flag: '🇲🇽', fighter: 'assets/9.Paco el Taco fighter_mexico_fullbody_1772216033577.png', stage: 'assets/stage_mexico.png', col: '#009900', hpMult: 1.0, spdMult: 1.4, projFreq: 1.5, jumpFreq: 1.8, special: 'wind',
+        title: 'Der Luchador', desc: 'Maskierter Wahnsinn aus Mexiko. Fliegend, drehend, vernichtend.', moves: 'Lucha Libre Würfe & Sprünge', specialName: 'Bumerang-Wurf', finisher: 'El Tornado Supremo — Wirbelwind', str: { spd: 5, pow: 3, def: 1, spc: 4 }
+      },
+      {
+        level: 10, name: 'JUAN', flag: '🇪🇸', fighter: 'assets/10.Juan fighter_spain_fullbody_1772215943315.png', stage: 'assets/stage_spain_empty.png', col: '#ff0033', hpMult: 1.1, spdMult: 1.1, projFreq: 1.0, jumpFreq: 1.2, special: 'fire',
+        title: 'El Matador', desc: 'Der Stierkämpfer. Elegant, tödlich, unausweichlich. Olé!', moves: 'Elegante Konter & Schnelle Stiche', specialName: 'Toro Charge', finisher: 'Flammenstier — Inferno de España', str: { spd: 3, pow: 3, def: 3, spc: 4 }
+      },
+      {
+        level: 11, name: 'LEE', flag: '🇯🇵', fighter: 'assets/11.Lee fighter_japan_fullbody_1772215814623.png', stage: 'assets/stage_japan.png', col: '#ff0000', hpMult: 1.1, spdMult: 1.2, projFreq: 1.5, jumpFreq: 1.0, special: 'electric',
+        title: 'Der Yakuza-Boss', desc: 'Neon-Tokyo gehört ihm. Blitzschnell und ohne Gnade.', moves: 'Yakuza-Combos & Blitz-Kicks', specialName: 'Neon-Blitz-Schlag', finisher: 'Tokyo Neon Storm — Elektro-Eruption', str: { spd: 4, pow: 3, def: 2, spc: 5 }
+      },
+      {
+        level: 12, name: 'JAYDEN', flag: '🇩🇪', fighter: 'assets/base_jayden.png', stage: 'assets/stage_dojo.png', col: '#6600ff', hpMult: 1.4, spdMult: 1.1, projFreq: 2.0, jumpFreq: 1.3, special: 'dark',
+        title: 'Anti-Hero Archetype', desc: 'Regeln sind ihm fremd. Seine dunkle Materie verschlingt jegliches Licht in Sekunden.', moves: 'Dunkle Grapples & Kicks', specialName: 'Dark Pulse', finisher: 'Void-Käfig — Letzter Atem', str: { spd: 4, pow: 4, def: 4, spc: 4 },
+        altProfile: { name: 'JAY X', flag: '🇩🇪', fighter: 'assets/dark_jayden.png', title: 'Cheeky Demon', desc: 'Freundlich, aber brandgefährlich. Spielt mit seinen Gegnern, bevor er zuschlägt.', moves: 'Täuschende Akrobatik & Spott', specialName: 'Crimson Wave', finisher: 'Chaos-Lächeln', str: { spd: 5, pow: 3, def: 3, spc: 5 } }
+      },
+      {
+        level: 13, name: 'PUTIN', flag: '🇷🇺', fighter: 'assets/13.Putin fighter_russia_fullbody_1772215831383.png', stage: 'assets/stage_russia.png', col: '#ff0000', hpMult: 1.8, spdMult: 0.8, projFreq: 2.5, jumpFreq: 0.2, special: 'dark',
+        title: 'Die Sibirische Kälte', desc: 'Massiv. Unaufhaltbar. Der Frost hat seinen Willen gestählt.', moves: 'Eisenharte Grapple-Moves', specialName: 'Arschbombe', finisher: 'Sibirischer Winter — Eisschlag', str: { spd: 1, pow: 5, def: 5, spc: 4 }
+      },
+      {
+        level: 14, name: 'VIKINGO', flag: 'ᛣ', fighter: 'assets/14.vikingo_coat_solo_1772218116323.png', stage: 'assets/boss_arena_fire.png', col: '#ffffff', hpMult: 2.5, spdMult: 1.5, projFreq: 3.0, jumpFreq: 1.5, special: 'super',
+        title: 'Der Imperator', desc: 'Ein Meister aller Dimensionen. Sein Trenchcoat verbirgt ungeahnte Kräfte.', moves: 'Machtvolle Lichtschläge & Tritte', specialName: 'Imperiale Welle', finisher: 'Zorn des Nordens — Götterfunke', str: { spd: 5, pow: 5, def: 5, spc: 5 },
+        altProfile: { name: 'DARK VIKINGO', flag: 'ᛣ', fighter: 'assets/14.1.vikingo_shirtless_solo_1772218100612.png', title: 'Berserker des Nordens', desc: 'Entfesselt. Keine Rüstung, nur pure rohe Gewalt, Tattoos und nordische Rage.', moves: 'Brutale Schwinger & Kniebrecher', specialName: 'Blutrausch', finisher: 'Valhalla-Sturz — Knochenbrecher', str: { spd: 3, pow: 5, def: 2, spc: 5 } }
+      }
+    ];
+
+    // ===== SMART BACKGROUND REMOVAL (Flood-fill style edge detection) =====
+    const processedSprites = {};
+    function processSpriteImage(imgObj, src) {
+      if (processedSprites[src]) return;
+      const w = imgObj.width; const h = imgObj.height;
+      const tc = document.createElement('canvas'); tc.width = w + 40; tc.height = h + 40;
+      const tx = tc.getContext('2d');
+      // Draw centered with a 20px padding to allow room for the shadow
+      tx.drawImage(imgObj, 20, 20, w, h);
+
+      try {
+        // This will throw SecurityError on file:// protocol (cross-origin taint)
+        const iData = tx.getImageData(0, 0, tc.width, tc.height);
+        const data = iData.data;
+
+        const cw = tc.width; const ch = tc.height;
+
+        // PASS 1: Sample background from corners 
+        let r = 0, g = 0, b = 0, c = 0;
+        const sampleSize = Math.max(8, Math.floor(w * 0.05));
+        for (let sy = 0; sy < sampleSize; sy++) {
+          for (let sx = 0; sx < sampleSize; sx++) {
+            [[sx, sy], [w - 1 - sx, sy], [sx, h - 1 - sy], [w - 1 - sx, h - 1 - sy]].forEach(([px, py]) => {
+              // Offset logic for padding
+              const idx = ((py + 20) * cw + (px + 20)) * 4;
+              r += data[idx]; g += data[idx + 1]; b += data[idx + 2]; c++;
+            });
+          }
+        }
+        const bgR = r / c, bgG = g / c, bgB = b / c;
+
+        // PASS 2: Elliptical Mask & Smart Thresholding
+        const cx = cw / 2;
+        const cy = ch / 2;
+        const bgDistTol = 75; // Tolerance for matching corner background
+
+        for (let i = 0; i < data.length; i += 4) {
+          const py = Math.floor((i / 4) / cw);
+          const px = (i / 4) % cw;
+          if (py > ch * 0.98) { data[i + 3] = 0; continue; } // Cut bottom edge
+
+          const R = data[i], G = data[i + 1], B = data[i + 2], A = data[i + 3];
+          if (A < 10) continue;
+
+          // 1. ELLIPTICAL MASK (Destroys the rigid rectangle trading card format)
+          // Scale X more aggressively than Y to form a tight vertical bounds around a human figure
+          const nx = (px - cx) / (cw * 0.45);
+          const ny = (py - cy) / (ch * 0.48);
+          const radDist = nx * nx + ny * ny;
+
+          if (radDist > 1.0) {
+            data[i + 3] = 0; // Cut anything outside the oval!
+            continue;
+          }
+
+          // 2. SOFT FADE & TARGETED HUE KILLER (For Cyan/Magenta Auras)
+          const dr = R - bgR, dg = G - bgG, db = B - bgB;
+          const bgDist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+          // Hue detection for specifically targeting the glowing auras
+          const max = Math.max(R, G, B), min = Math.min(R, G, B), d = max - min;
+          let h = 0;
+          if (d !== 0) {
+            if (max === R) h = (G - B) / d + (G < B ? 6 : 0);
+            else if (max === G) h = (B - R) / d + 2;
+            else h = (R - G) / d + 4;
+            h /= 6;
+          }
+          const sat = max === 0 ? 0 : d / max;
+          const val = max / 255;
+
+          // Target specifically bright Cyan (Hattori's aura) and bright Magenta/Purple (Keano's aura)
+          const isCyanAura = (h > 0.45 && h < 0.6) && sat > 0.4 && val > 0.4;
+          const isPurpleAura = (h > 0.7 && h < 0.9) && sat > 0.3 && val > 0.3;
+          const isBrightFlame = (h < 0.1 || h > 0.9) && sat > 0.5 && val > 0.6 && G < 150 && B < 100;
+
+          if (bgDist < bgDistTol) {
+            data[i + 3] = 0; // Perfectly matches background
+          } else if (radDist > 0.3) { // Only protect the very tight absolute core
+            // Nuke the neon auras completely!
+            if (isCyanAura || isPurpleAura || isBrightFlame) {
+              data[i + 3] = 0;
+            } else if (radDist > 0.5) {
+              // Soft fade for whatever is left outside the core
+              const fade = 1.0 - ((radDist - 0.5) / 0.5);
+              const smoothFade = Math.pow(fade, 1.5);
+              data[i + 3] = Math.max(0, Math.floor(data[i + 3] * smoothFade));
+            }
+
+            // Hard wipe for explicitly dark space near the edges
+            if (R < 45 && G < 45 && B < 45 && radDist > 0.6) {
+              data[i + 3] = 0;
+            }
+          }
+        }
+
+        // PASS 3: Deep Edge Erosion (Eats 2 pixels deep to destroy remaining halos!)
+        for (let pass = 0; pass < 2; pass++) {
+          const alphaMap = new Uint8Array(cw * ch);
+          for (let i = 0; i < cw * ch; i++) alphaMap[i] = data[i * 4 + 3];
+
+          for (let y = 1; y < ch - 1; y++) {
+            for (let x = 1; x < cw - 1; x++) {
+              const idx = y * cw + x;
+              if (alphaMap[idx] === 0) continue;
+              let transN = 0;
+              [-cw - 1, -cw, -cw + 1, -1, 1, cw - 1, cw, cw + 1].forEach(off => {
+                if (alphaMap[idx + off] === 0) transN++;
+              });
+              // Erode if it touches 3 or more transparent pixels (aggressively smooths edges)
+              if (transN >= 3) data[idx * 4 + 3] = 0;
+            }
+          }
+        }
+
+        tx.putImageData(iData, 0, 0);
+        // PASS 4 (Inner Shadow Hack) was completely removed to fix the dark box artifact.
+
+        processedSprites[src] = tc;
+
+      } catch (secErr) {
+        // SecurityError on file:// protocol — use raw image without background removal
+        console.warn('processSpriteImage: SecurityError (file:// mode), using raw image for', src);
+        processedSprites[src] = tc; // Still usable, just won't have BG removed
+      }
+    }
+
+    // ===== IMAGE PRELOAD =====
+    const rawImgs = {};
+    // Player 1 Profile Definitions
+    const KEANO_PROFILE = {
+      name: 'KEANO', flag: '🇩🇪', fighter: 'assets/Keano_Fighter.png', col: '#00ccff', special: 'electric',
+      title: 'Krieger des Lichts', desc: 'Der Auserwählte. Das Licht fließt durch ihn. Er kämpft für die Einheit aller Dimensionen.',
+      moves: 'Kosmische Combos & Lichtschläge', specialName: 'Lichtenergie-Schockwelle', finisher: 'Supernova des Lichts',
+      str: { spd: 4, pow: 4, def: 3, spc: 5 },
+      altProfile: {
+        name: 'SUPREME KEANO', flag: '🇩🇪', fighter: 'assets/supreme_keano.png',
+        title: 'Stellarer Champion', desc: 'Die ultimative Form. Eine göttliche Aura umgibt sein einzigartiges Neo-Outfit.',
+        moves: 'Stellare High-Speed Combos', specialName: 'Gott-Blitz', finisher: 'Apex-Sturz',
+        str: { spd: 5, pow: 5, def: 4, spc: 5 }
+      }
+    };
+
+    // We add another specialized hidden profile so he has TWO alts (Supreme & Hyper)
+    const HYPER_KEANO_PROFILE = {
+      name: 'HYPER KEANO', flag: '🇩🇪', fighter: 'assets/hyper_keano.png', col: '#00ccff', special: 'electric',
+      title: 'Der Kampfkünstler', desc: 'Fokussiert. Schnell. Tödlich. Seine Aura durchbricht Schall und Raum.',
+      moves: 'Hyper-Kicks & Aura-Punches', specialName: 'Hyper-Kombination', finisher: 'Meteor-Schlag',
+      str: { spd: 5, pow: 3, def: 4, spc: 4 }
+    };
+
+    const allSrcs = new Set(['assets/keano.png', 'assets/Keano_Fighter.png', 'assets/supreme_keano.png', 'assets/hyper_keano.png', 'assets/dark_jayden.png', 'assets/#simba_cane_corso_solo_1772218185461.png']);
+    LEVELS.forEach(l => {
+      allSrcs.add(l.fighter);
+      allSrcs.add(l.stage);
+      if (l.gameFighter) allSrcs.add(l.gameFighter);
+      if (l.altProfile) {
+        allSrcs.add(l.altProfile.fighter);
+        if (l.altProfile.gameFighter) allSrcs.add(l.altProfile.gameFighter);
+      }
+    });
+
+    allSrcs.forEach(s => {
+      const i = new Image();
+      i.src = s;
+      rawImgs[s] = i;
+
+      // We no longer attempt to clean the images or load 'clean_' variants.
+    });
+
+    // ===== KEYS & INPUT BUFFERING (Capcom-Style) =====
+    const keys = {};
+    const inputHistory = [];
+    const MAX_INPUT_BUFFER = 30; // 30 frames of history
+
+    function logInput(keyName) {
+      if (inputHistory.length > 0 && inputHistory[inputHistory.length - 1].key === keyName && (Date.now() - inputHistory[inputHistory.length - 1].time) < 100) return;
+      inputHistory.push({ key: keyName, time: Date.now() });
+      if (inputHistory.length > MAX_INPUT_BUFFER) inputHistory.shift();
+    }
+
+    // Check for specific input sequences (e.g. Down, Forward, Punch)
+    function checkMotion(sequence, maxTimeMs = 500) {
+      if (inputHistory.length < sequence.length) return false;
+      let seqIdx = sequence.length - 1;
+      let histIdx = inputHistory.length - 1;
+      let timeLimit = Date.now() - maxTimeMs;
+
+      while (histIdx >= 0 && seqIdx >= 0) {
+        if (inputHistory[histIdx].time < timeLimit) return false;
+        if (inputHistory[histIdx].key === sequence[seqIdx]) {
+          seqIdx--;
+        }
+        histIdx--;
+      }
+      return seqIdx < 0; // True if we found the whole sequence
+    }
+
+    // Standard Input Array Tracking (Keyboard + Touch + Gamepad injected)
+    addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+
+      // Pause toggling via ESC key
+      if (k === 'escape') {
+        if (gameState === 'fight' || gameState === 'fighting' || gameState === 'paused') {
+          togglePause();
+        }
+      }
+
+      // Hidden Hotkeys to flip glitched AI sprites! 
+      if (k === '1') {
+        let current = localStorage.getItem('flip_assets/keano.png') === 'true';
+        localStorage.setItem('flip_assets/keano.png', !current);
+      }
+      if (k === '2' && typeof enemy !== 'undefined' && enemy) {
+        let current = localStorage.getItem('flip_' + enemy.imgSrc) === 'true';
+        localStorage.setItem('flip_' + enemy.imgSrc, !current);
+      }
+
+      keys[k] = true;
+      if (e.ctrlKey) keys['control'] = true;
+      if (e.altKey) keys['alt'] = true;
+      if (e.metaKey) keys['meta'] = true; // Mac CMD key
+
+      logInput(k);
+
+      // Arcade Continue Logic
+      if (gameState === 'continue' || gameState === 'gameOver') {
+        if (k === ' ' || k === 'enter') {
+          if (gameState === 'continue') {
+            p1Wins = 0; p2Wins = 0; roundNum = 1;
+            startRound();
+          } else {
+            document.getElementById('arcade-menu').classList.remove('hidden');
+            gameState = 'menu'; SFX.stopMusic();
+          }
+        }
+      }
+
+      // Prevent scrolling when pressing space or arrows
+      if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+
+      // CHEAT CODE / DEBUG: Press '8' to instantly win the match and see the Epilogue!
+      if (e.key === '8' && (gameState === 'fight' || gameState === 'vs_screen')) {
+        p1Wins = 99;
+        currentLevel = LEVELS.length - 1; // Force the game to think we just beat the final boss
+        enemy.hp = 0;
+        enemy.state = 'ko';
+        enemy.stateTimer = 5.0; // Needs to be > 3 so the PERFECT! voice has time to play
+        gameState = 'ko';
+        SFX.ko();
+      }
+    });
+
+    addEventListener('keyup', e => {
+      keys[e.key.toLowerCase()] = false;
+      if (!e.ctrlKey) keys['control'] = false;
+      if (!e.altKey) keys['alt'] = false;
+      if (!e.metaKey) keys['meta'] = false;
+    });
+
+    // Detect mobile touch device to hide/show screen gamepad
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (!isMobile) {
+      document.getElementById('gamepad').style.display = 'none';
+    }
+
+    // Bind HTML Action Buttons (Touch Overlay)
+    ['f', 'g', 'h', 'space'].forEach(k => {
+      const btn = document.getElementById('btn-' + k);
+      if (!btn) return;
+      const actualKey = k === 'space' ? ' ' : k;
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[actualKey] = true; });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[actualKey] = false; });
+    });
+
+    C.addEventListener('pointerdown', e => {
+      if (gameState === 'continue' || gameState === 'gameOver') {
+        keys[' '] = true; setTimeout(() => keys[' '] = false, 100);
+      }
+    });
+
+    // ===== VIRTUAL ANALOG JOYSTICK =====
+    const joyArea = document.getElementById('joystick-area');
+    const joyKnob = document.getElementById('joystick-knob');
+    if (joyArea && joyKnob) {
+      let isDragging = false;
+      const center = 70; // Half of 140px
+
+      const handleJoy = (ex, ey) => {
+        const rect = joyArea.getBoundingClientRect();
+        const cx = rect.left + center;
+        const cy = rect.top + center;
+        const dx = ex - cx;
+        const dy = ey - cy;
+        const maxDist = 55; // Max knob travel
+        const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
+        const angle = Math.atan2(dy, dx);
+
+        const nx = Math.cos(angle) * dist;
+        const ny = Math.sin(angle) * dist;
+
+        joyKnob.style.transform = `translate(${nx}px, ${ny}px)`;
+
+        // Reset inputs
+        keys['w'] = keys['a'] = keys['s'] = keys['d'] = false;
+
+        // Deadzone of 15px
+        if (dist > 15) {
+          if (nx < -20) keys['a'] = true;
+          if (nx > 20) keys['d'] = true;
+          if (ny < -20) keys['w'] = true;
+          if (ny > 20) keys['s'] = true;
+        }
+      };
+
+      const resetJoy = () => {
+        isDragging = false;
+        joyKnob.style.transform = `translate(0px, 0px)`;
+        keys['w'] = keys['a'] = keys['s'] = keys['d'] = false;
+      };
+
+      joyArea.addEventListener('touchstart', e => { e.preventDefault(); isDragging = true; handleJoy(e.touches[0].clientX, e.touches[0].clientY); });
+      joyArea.addEventListener('touchmove', e => { e.preventDefault(); if (isDragging) handleJoy(e.touches[0].clientX, e.touches[0].clientY); });
+      joyArea.addEventListener('touchend', e => { e.preventDefault(); resetJoy(); });
+
+      joyArea.addEventListener('mousedown', e => { isDragging = true; handleJoy(e.clientX, e.clientY); });
+      window.addEventListener('mousemove', e => { if (isDragging) handleJoy(e.clientX, e.clientY); });
+      window.addEventListener('mouseup', resetJoy);
+    }
+
+
+    // ===== PROJECTILES =====
+    let projectiles = [];
+    class Projectile {
+      constructor(x, y, dir, type, fromPlayer) {
+        this.x = x; this.y = y; this.dir = dir; this.type = type; this.fromPlayer = fromPlayer;
+        this.speed = type === 'super' ? 14 : 9;
+        this.life = 1; this.size = type === 'super' ? 45 : 25;
+        this.trail = [];
+      }
+      update(dt) {
+        this.x += this.dir * this.speed;
+        this.life -= dt * 0.7;
+        this.trail.push({ x: this.x, y: this.y, life: 0.3 });
+        this.trail = this.trail.filter(t => { t.life -= dt * 2.5; return t.life > 0; });
+        return this.x > -100 && this.x < C.width + 100 && this.life > 0;
+      }
+      draw() {
+        const cols = {
+          fire: ['#ff4400', '#ffaa00'], ice: ['#88ddff', '#ffffff'], electric: ['#ffff00', '#ffffff'],
+          wind: ['#44ff88', '#ccffcc'], dark: ['#aa00ff', '#ff00ff'], super: ['#00ffff', '#ffffff']
+        };
+        const c = cols[this.type] || cols.fire;
+
+        // Draw trailing particles first
+        this.trail.forEach((t, idx) => {
+          X.save(); X.globalAlpha = t.life * 0.6;
+          X.fillStyle = idx % 2 === 0 ? c[0] : c[1];
+          X.shadowBlur = 15; X.shadowColor = c[0];
+          X.beginPath(); X.arc(t.x, t.y, this.size * 0.9 * t.life, 0, Math.PI * 2); X.fill();
+          X.restore();
+        });
+
+        // Massive energy core
+        X.save(); X.globalAlpha = this.life;
+        X.translate(this.x, this.y);
+        X.rotate(performance.now() / 150); // Fast spinning aura
+
+        // Outer glow
+        const grad = X.createRadialGradient(0, 0, 0, 0, 0, this.size * 1.5);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, c[1]);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        X.fillStyle = grad;
+        X.beginPath(); X.arc(0, 0, this.size * 1.5, 0, Math.PI * 2); X.fill();
+
+        // Inner dense core
+        X.fillStyle = '#ffffff'; X.shadowBlur = 30; X.shadowColor = c[0];
+        X.beginPath(); X.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); X.fill();
+
+        X.restore();
+      }
+      checkHit(fighter) {
+        if (Math.abs(this.x - fighter.x) < fighter.w * 0.25 && Math.abs(this.y - (fighter.y - fighter.h * 0.4)) < fighter.h * 0.5) {
+          const dmg = this.type === 'super' ? 25 : 12;
+          fighter.takeHit(dmg, this.dir);
+          spawnParticles(fighter.x, fighter.y - fighter.h * 0.4, this.type);
+          screenShake = this.type === 'super' ? 18 : 8;
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // ===== PARTICLES (MASSIVE CAPCOM-STYLE VFX) =====
+    let particles = [];
+    function spawnParticles(x, y, type) {
+      const cols = { fire: '#ff4400', ice: '#88ddff', electric: '#ffff00', wind: '#44ff88', dark: '#aa00ff', hitspark: '#ffcc00', super_spark: '#00ffff' };
+      const col = cols[type] || '#ffcc00';
+      const isHeavy = type === 'super_spark' || type === 'super';
+      const count = isHeavy ? 45 : 25; // WAY more particles
+
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 5 + Math.random() * (isHeavy ? 25 : 15);
+        particles.push({
+          x: x + (Math.random() - 0.5) * 20,
+          y: y + (Math.random() - 0.5) * 20,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 3,
+          life: 0.6 + Math.random() * 0.6,
+          color: Math.random() > 0.4 ? col : (Math.random() > 0.5 ? '#fff' : '#ffaa00'),
+          size: 2 + Math.random() * (isHeavy ? 10 : 6)
+        });
+      }
+
+      // CAPCOM HIT-SPARK CORES: Multiple overlapping explosions!
+      if (type === 'hitspark' || type === 'super_spark') {
+        const coreCount = isHeavy ? 3 : 1;
+        for (let c = 0; c < coreCount; c++) {
+          particles.push({
+            x: x + (Math.random() - 0.5) * 30,
+            y: y + (Math.random() - 0.5) * 30,
+            vx: 0, vy: 0, life: 1,
+            color: isHeavy ? '#00ffff' : '#ffcc00',
+            size: isHeavy ? 80 : 55, isSpark: true
+          });
+        }
+      }
+
+      // RADIANT BURST LINES (like manga speed lines radiating from impact)
+      if (isHeavy) {
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          particles.push({
+            x, y,
+            vx: Math.cos(angle) * 30,
+            vy: Math.sin(angle) * 30,
+            life: 0.4, color: '#ffffff', size: 3, isLine: true
+          });
+        }
+      }
+    }
+
+    // ============================================================
+    // COMPANION SYSTEM (Simba for Vikingo)
+    // ============================================================
+    class Companion {
+      constructor(owner) {
+        this.owner = owner;
+        this.x = owner.facingRight ? owner.x - 150 : owner.x + 150;
+        this.y = GROUND();
+        this.vy = 0;
+        this.w = owner.w * 0.6;
+        this.h = owner.h * 0.45;
+        this.state = 'idle';
+        this.stateTimer = 0;
+        this.facingRight = owner.facingRight;
+        // The image to use; this can be updated once the new file is imported properly
+        this.imgSrc = 'assets/#simba_cane_corso_solo_1772218185461.png';
+
+        const img = new Image(); img.src = this.imgSrc;
+        this.img = img;
+      }
+
+      update(dt, opponent) {
+        this.y += this.vy; this.vy += GRAV * 1.35;
+        if (this.y > GROUND()) {
+          this.y = GROUND();
+          this.vy = 0;
+        }
+
+        if (this.stateTimer > 0) {
+          this.stateTimer -= dt;
+          if (this.stateTimer <= 0 && this.state !== 'bite') {
+            this.state = 'idle';
+          }
+        }
+
+        // Face same way as owner unless biting
+        if (this.state !== 'bite') {
+          this.facingRight = this.owner.facingRight;
+        }
+
+        const fdir = this.facingRight ? 1 : -1;
+        const targetX = this.owner.x - fdir * 180; // Follow 180px behind
+        const distToTarget = targetX - this.x;
+
+        // Biting Logic
+        if (opponent && this.state === 'idle' && this.owner.hp > 0 && opponent.hp > 0) {
+          const distToOpp = Math.abs(this.x - opponent.x);
+          // Simba attacks if enemy is close and RNG favors it
+          if (distToOpp < this.w * 1.5 && Math.random() < 0.015) {
+            this.state = 'bite';
+            this.stateTimer = 0.5;
+            this.facingRight = this.x < opponent.x;
+            this.vy = -12; // Small leap
+
+            // Deal damage
+            if (opponent.state !== 'roll') {
+              opponent.takeHit(5 + Math.random() * 5, this.facingRight ? 1 : -1, false);
+              spawnParticles(opponent.x, opponent.y - opponent.h * 0.2, 'hitspark');
+              SFX._noise(200, 60, 0.1); // Bark/Bite sound placeholder
+            }
+          }
+        }
+
+        // Movement Logic (Follow owner)
+        if (this.state !== 'bite') {
+          if (Math.abs(distToTarget) > 20) {
+            this.state = 'run';
+            this.x += distToTarget > 0 ? 5 : -5;
+          } else {
+            this.state = 'idle';
+          }
+
+          // Randomly jump if Owner jumps
+          if (this.owner.y < GROUND() - 50 && this.y === GROUND() && Math.random() < 0.05) {
+            this.vy = -20;
+          }
+        }
+      }
+
+      draw() {
+        X.save();
+        X.translate(this.x, this.y);
+
+        // Shadow
+        X.fillStyle = 'rgba(0,0,0,0.5)';
+        X.beginPath(); X.ellipse(0, 0, this.w * 0.6, 15, 0, 0, Math.PI * 2); X.fill();
+
+        if (!this.facingRight) X.scale(-1, 1);
+
+        // Simple bobbing animation when running
+        let bobY = 0;
+        if (this.state === 'run') bobY = Math.sin(performance.now() / 80) * 10;
+        if (this.y < GROUND()) bobY = -20; // Jump pose
+        if (this.state === 'bite') {
+          X.rotate(0.2); // Lunge forward
+          bobY = -15;
+        }
+
+        try {
+          // Dynamic Loading - Wait for actual raw Image Objects
+          if (!this.img) return; // Wait
+          X.drawImage(this.img, -this.w / 2, -this.h + bobY, this.w, this.h);
+        } catch (e) { }
+
+        X.restore();
+      }
+    }
+
+    // ============================================================
+    // HYBRID FIGHTER: Clean Torso Image + Synthesized Active Limbs + Back Number
+    // ============================================================
+    class HybridFighter {
+      constructor(startX, startY, isPlayer, imgOrSrc, ld = null) {
+        this.x = startX;
+        this.y = startY || GROUND();
+        this.vy = 0;
+
+        // Cache bust log
+        console.log("INIT FIGHTER imgOrSrc = ", imgOrSrc);
+
+        let safeStr = "";
+        try {
+          if (typeof imgOrSrc === 'string') safeStr = imgOrSrc;
+          else if (imgOrSrc && typeof imgOrSrc.src === 'string') safeStr = imgOrSrc.src;
+        } catch (e) {
+          console.warn("Could not parse image source properly", e);
+        }
+
+        this.imgSrc = safeStr || '';
+        let cName = 'unknown';
+        try {
+          if (this.imgSrc && typeof this.imgSrc === 'string') {
+            let fName = this.imgSrc.split('/').pop() || '';
+            cName = fName.split('.')[0] || 'unknown';
+          }
+        } catch (err) {
+          console.warn("Failed to generate cName", err);
+        }
+
+        // Ensure image object is correctly tracked
+        if (typeof imgOrSrc === 'string') {
+          this.img = rawImgs[imgOrSrc] || new Image();
+          if (!this.img.src) this.img.src = imgOrSrc;
+        } else {
+          this.img = imgOrSrc;
+        }
+
+        this.isPlayer = isPlayer;
+        this.facingRight = isPlayer;
+        this.ld = ld;
+
+        // Track previous facing to detect turning around
+        this.wasFacingRight = this.facingRight;
+        this.isBackTurned = false; // True when showing back to camera
+
+        this.color = ld?.col || '#00aaff'; // For limb coloring to match the image
+        this.maxHP = 100 * (ld?.hpMult || 1) * (isPlayer ? 1 : (typeof getDiff === 'function' ? getDiff().hpScale : 1));
+        this.hp = this.maxHP;
+        this.super = isPlayer ? 0 : 0;
+        this.state = 'idle';
+        this.stateTimer = 0;
+        this.knockVX = 0;
+        this.specialCD = 0;
+        this.t = Math.random() * Math.PI * 2;
+        this.hitFlash = 0;
+        this.hitStop = 0; // The Capcom freeze frame effect
+        this.shoutTimer = 0;
+
+        // ADVANCED MECHANICS
+        this.inputBuffer = []; // Store recent inputs for dashes (e.g., ['R', 'N', 'R'])
+        this.inputTimer = 0;
+
+        // COMPANION SYSTEM (Simba for Vikingo)
+        this.companion = null;
+        // Check if character is Vikingo (level 14, or specific image)
+        if (this.imgSrc && this.imgSrc.includes('vikingo_') || (ld && ld.level === 14)) {
+          this.companion = new Companion(this);
+        }
+      }
+
+      get w() { return FW(); }
+      get h() { return FH(); }
+
+      takeHit(dmg, dir, isHeavy = false) {
+        if (this.state === 'block') {
+          this.hp -= dmg * 0.15; // Chip damage
+          this.knockVX = dir * (isHeavy ? 12 : 6); // Increased block pushback
+          this.hitStop = isHeavy ? 0.15 : 0.08; // Heavier freeze on block
+          SFX.block();
+        } else {
+          this.hp -= dmg;
+          this.state = 'hit';
+
+          // FRAME ADVANTAGE: Heavy hits stun longer than light hits
+          this.stateTimer = isHeavy ? 0.65 : 0.40;
+
+          this.knockVX = dir * (isHeavy ? 20 : 12); // Heavier pushback, friction will slow it down
+          this.hitFlash = 1;
+          this.hitStop = isHeavy ? 0.22 : 0.12; // CAPCOM Hit-Stop (Game freezes for a split second)
+          screenShake = isHeavy ? 15 : 8; // More shake on hits
+          SFX.hit();
+
+          // Epic 14 Character Vocal System
+          const cIdx = this.ld ? (this.ld.level - 1) : 0;
+          SFX.playVoice(cIdx, 'hurt');
+
+          // Reset combo if player gets hit
+          if (this.isPlayer) { comboCount = 0; comboTimer = 0; }
+        }
+        this.hp = Math.max(0, this.hp);
+      }
+
+      update(dt, opponent) {
+        // Hit-stop logic (FREEZES animation and movement physics entirely)
+        if (this.hitStop > 0) {
+          this.hitStop -= dt;
+          return; // Skip all physics/state updates while in hit-stop!
+        }
+
+        // Apply Physics (Increased Gravity for heavier, faster arcade jumps)
+        this.y += this.vy; this.vy += GRAV * 1.35; // SF IV style gravity multiplier
+
+        // Floor Collision & Tech Rolling
+        if (this.y > GROUND()) {
+          this.y = GROUND();
+          this.vy = 0;
+
+          // Tech Roll / Wakeup mechanics
+          if (this.state === 'roll' || this.state === 'hit' || this.state === 'ko') {
+            // If player was hit/knocked down, check input buffer for a tech roll to recover faster
+            if (this.isPlayer && this.hp > 0 && (keys['control'] || keys['alt']) && this.state !== 'ko') {
+              this.state = 'roll';
+              this.stateTimer = 0.4; // Quick tech recovery
+              this.knockVX = this.facingRight ? -15 : 15; // Tech backwards safely
+              SFX.jump();
+            } else if (this.state === 'roll') {
+              this.state = 'idle'; // Finished rolling
+              this.knockVX = 0;
+            }
+          }
+        }
+
+        this.x += this.knockVX;
+
+        // Friction system (SF-style knockback deceleration)
+        if (this.y === GROUND()) {
+          if (Math.abs(this.knockVX) > 0.5) {
+            // If dashing, drag less. If just hit, drag more quickly.
+            let friction = (this.state === 'dash') ? 0.92 : 0.82;
+            this.knockVX *= friction;
+          } else {
+            this.knockVX = 0;
+          }
+        } else {
+          this.knockVX *= 0.98; // Minimum air friction
+        }
+
+        this.x = Math.max(this.w * 0.5, Math.min(C.width - this.w * 0.5, this.x));
+
+        // Dynamic Facing (Side Switch Mechanism)
+        if (opponent && this.state !== 'roll') { // Can't turn around mid-roll
+          this.wasFacingRight = this.facingRight;
+          // Apply a 25px deadzone to prevent rapid jittering ("Wackelkontakt") when too close
+          if (Math.abs(this.x - opponent.x) > 25) {
+            this.facingRight = this.x < opponent.x;
+          }
+        }
+
+        // For Keano specifically, if he crosses over to face left, his back is to the camera naturally!
+        if (this.isPlayer && !this.facingRight) this.isBackTurned = true;
+        else if (this.isPlayer && this.facingRight) this.isBackTurned = false;
+
+        // Update Companion if exists - tied securely to Vikingo's physics ticks
+        if (this.companion && this.hp > 0) {
+          this.companion.update(dt, opponent);
+        }
+
+        if (this.stateTimer > 0) {
+          this.stateTimer -= dt;
+          if (this.stateTimer <= 0) {
+            if (this.y < GROUND()) this.state = 'jump'; // Fallback if timer runs out in air
+            else this.state = 'idle';
+          }
+        }
+        if (this.specialCD > 0) this.specialCD -= dt;
+        if (this.hitFlash > 0) this.hitFlash -= dt * 3;
+        this.t += dt * 8;
+
+        // Active Special Move Hitboxes & Damage Check
+        if (opponent && (this.state === 'special_roll' || this.state === 'special_flip')) {
+          const dist = Math.abs(this.x - opponent.x);
+          const range = this.w * (this.state === 'special_roll' ? 0.9 : 1.2);
+          // Apply damage every few frames if intersecting
+          if (dist < range && Math.sin(this.t * 5) > 0.8 && opponent.state !== 'roll') {
+            const baseDmg = this.state === 'special_roll' ? 6 : 8; // Multiple rapid hits
+            const dir = this.facingRight ? 1 : -1;
+            opponent.takeHit(baseDmg, dir, false);
+
+            // Brief hitstop for attacker too
+            this.hitStop = 0.03;
+            spawnParticles(opponent.x, opponent.y - opponent.h * 0.4, 'hitspark');
+
+            if (this.isPlayer) {
+              comboCount++; comboTimer = 1.0;
+              SFX.comboUp(comboCount);
+            }
+          }
+        }
+
+        // Poll Gamepad API
+        function pollGamepad() {
+          const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+          let pad = null;
+          // Some OS/Browser combos (like macOS + PlayStation controllers) don't put the controller at index 0.
+          for (let i = 0; i < pads.length; i++) {
+            if (pads[i] && pads[i].connected) {
+              pad = pads[i];
+              break;
+            }
+          }
+          if (!pad) return;
+
+          // D-Pad + Left Stick mapping
+          keys['arrowup'] = pad.buttons[12]?.pressed || pad.axes[1] < -0.5;
+          keys['arrowdown'] = pad.buttons[13]?.pressed || pad.axes[1] > 0.5;
+          keys['arrowleft'] = pad.buttons[14]?.pressed || pad.axes[0] < -0.5;
+          keys['arrowright'] = pad.buttons[15]?.pressed || pad.axes[0] > 0.5;
+
+          // Face buttons mapping (Playstation/Xbox/Nintendo layout logic)
+          // Cross (0) or Square (2) = Punch
+          keys['control'] = pad.buttons[0]?.pressed || pad.buttons[2]?.pressed;
+          // Circle (1) or Triangle (3) = Kick
+          keys['alt'] = pad.buttons[1]?.pressed || pad.buttons[3]?.pressed;
+          // L1 (4) or R1 (5) = Special
+          keys['h'] = pad.buttons[4]?.pressed || pad.buttons[5]?.pressed;
+          // L2 (6) or R2 (7) = Super
+          keys[' '] = pad.buttons[6]?.pressed || pad.buttons[7]?.pressed;
+        }
+        pollGamepad(); // Run gamepad check every frame
+
+        // Player Input (Capcom Style Logic + Mac/Classic Keyboard layout)
+        if (this.isPlayer) {
+          // --- INPUT BUFFER SYSTEM FOR DASHES ---
+          const inLeft = keys['arrowleft'] || keys['a'];
+          const inRight = keys['arrowright'] || keys['d'];
+          const inUp = keys['arrowup'] || keys['w'];
+          const inDown = keys['arrowdown'] || keys['s'];
+          const inPunch = keys['control'] || keys['meta'] || keys['f']; // Ctrl/Cmd
+          const inKick = keys['alt'] || keys['g']; // Alt/Option
+
+          if (this.inputTimer > 0) this.inputTimer -= dt;
+          else if (this.inputBuffer.length > 0) this.inputBuffer.shift(); // decay buffer
+
+          let currentDir = 'N';
+          if (inRight) currentDir = 'R';
+          else if (inLeft) currentDir = 'L';
+
+          // Track changes in direction for double taps
+          if (this.inputBuffer[this.inputBuffer.length - 1] !== currentDir) {
+            this.inputBuffer.push(currentDir);
+            this.inputTimer = 0.25; // Window to double tap (250ms)
+            if (this.inputBuffer.length > 4) this.inputBuffer.shift();
+          }
+
+          // Checking for Dash ['R','N','R'] or ['L','N','L']
+          let dashTriggered = false;
+          if (this.state === 'idle' || this.state === 'walk') {
+            const bufStr = this.inputBuffer.join('');
+            if (bufStr.includes('RNR')) {
+              this.state = 'dash'; this.stateTimer = 0.4;
+              this.knockVX = 20; // explosive speed
+              this.inputBuffer = []; // consume
+              dashTriggered = true;
+              SFX.jump();
+            } else if (bufStr.includes('LNL')) {
+              this.state = 'dash'; this.stateTimer = 0.4;
+              this.knockVX = -20; // explosive speed backstep
+              this.inputBuffer = []; // consume
+              dashTriggered = true;
+              SFX.jump();
+            }
+          }
+
+          // --- STANDARD MOVEMENT LOGIC ---
+          if (!dashTriggered && (this.state === 'idle' || this.state === 'walk')) {
+            let moving = false;
+            // Walking
+            if (inLeft) { this.x -= 8; moving = true; }
+            if (inRight) { this.x += 8; moving = true; }
+
+            if (moving && this.state === 'idle') this.state = 'walk';
+            if (!moving && this.state === 'walk') this.state = 'idle';
+
+            // JUMP LOGIC: Weighty Arcade Jumps
+            if (inUp && this.y === GROUND()) {
+              this.vy = -26; // Much higher burst to combat the new x1.35 multiplier
+
+              // Forward Roll Check! (Up + Forward simultaneously)
+              if ((this.facingRight && inRight) || (!this.facingRight && inLeft)) {
+                this.state = 'roll';
+                this.stateTimer = 0.8;
+                this.knockVX = this.facingRight ? 14 : -14; // burst of speed
+                this.vy = -14; // Lower, faster jump arc (like a tumble)
+              } else {
+                this.state = 'jump';
+                this.stateTimer = 0.5;
+              }
+            }
+          }
+
+          // Attacks (Available while idle, walking, or occasionally jumping)
+          if (this.state === 'idle' || this.state === 'walk' || this.state === 'jump') {
+            if (inPunch && this.stateTimer <= 0) this.doAttack('punch', opponent);
+            if (inKick && this.stateTimer <= 0) {
+              // Hadouken motion check (Down -> Down-Forward -> Forward + Kick)
+              if (checkMotion([inDown, inRight, inKick]) && this.facingRight && this.super > 10) {
+                this.doSuper(opponent); // Special EX Kick!
+              } else {
+                this.doAttack('kick', opponent);
+              }
+            }
+          }
+          if (inDown) { this.state = 'block'; this.stateTimer = 0.3; } // Need to hold down to block
+
+          // Command Moves (Special Attacks)
+          const fw = this.facingRight ? 'd' : 'a';
+          const bk = this.facingRight ? 'a' : 'd';
+
+          if (this.specialCD <= 0) {
+            // FIREBALL (Down, Forward, Punch)
+            if (checkMotion(['s', fw, 'h'])) {
+              this.fireProj(); // Instant Special if motion is correct
+            }
+            // ROLLING BALL ATTACK (Back, Forward, Kick) - like Blanka
+            else if (checkMotion([bk, fw, 'g'])) {
+              this.doSpecialRoll(opponent);
+            }
+            // SPINNING KICK / TATSUMAKI (Down, Back, Kick)
+            else if (checkMotion(['s', bk, 'g'])) {
+              this.doSpecialFlip(opponent);
+            }
+            // Standard Fireball input
+            else if (keys['h']) {
+              this.fireProj();
+            }
+          }
+
+          if (keys[' '] && this.super >= 100) this.doSuper(opponent);
+        }
+
+        // AI Input with Game Difficulty — Unique fighter personalities!
+        if (!this.isPlayer && this.state === 'idle' && opponent) {
+          const dist = Math.abs(this.x - opponent.x);
+          const diffMult = gameDifficulty === 'hard' ? 1.8 : (gameDifficulty === 'easy' ? 0.7 : 1.0);
+
+          // Unpack unique character behavior traits
+          const spdMult = this.ld?.spdMult || 1.0;
+          const jumpFreq = this.ld?.jumpFreq || 1.0;
+          const projFreq = this.ld?.projFreq || 1.0;
+          const charType = this.ld?.special || 'fire'; // Determines AI Combat Style
+
+          const walkSpd = (gameDifficulty === 'easy' ? 3.0 : (gameDifficulty === 'hard' ? 4.8 : 4.0)) * spdMult;
+
+          // AI Personality Zones (Halved to account for new tight hitboxes)
+          let idealZoningDist = this.w * 0.4; // Default Rush
+          if (charType === 'ice') idealZoningDist = this.w * 1.5; // Zoners want extreme distance
+          else if (charType === 'dark' || charType === 'earth') idealZoningDist = this.w * 0.3; // Heavy hitters want to be glued to you
+
+          if (projFreq > 1.5) idealZoningDist += this.w; // Bonus distance for shooters
+
+          // Movement logic to reach ideal zone
+          let aiMoving = false;
+          if (dist > idealZoningDist) {
+            this.x += (opponent.x > this.x ? walkSpd : -walkSpd);
+            this.state = 'walk';
+            aiMoving = true;
+          } else if (dist < idealZoningDist - this.w * 0.5) {
+            this.x += (opponent.x > this.x ? -walkSpd : walkSpd); // Back up
+            this.state = 'walk';
+            aiMoving = true;
+          }
+
+          if (!aiMoving && this.state === 'walk') {
+            this.state = 'idle';
+          }
+
+          // SUPER MOVE EXECUTION
+          // AI Unleashes Super Move if full! Aggressive types do it more recklessly.
+          let superChance = 0.10 * diffMult;
+          if (charType === 'fire' || charType === 'lightning') superChance *= 1.5;
+          if (this.super >= 100 && dist < this.w * 2 && Math.random() < superChance) {
+            this.doSuper(opponent);
+            return;
+          }
+
+          // ===== CHARACTER-SPECIFIC COMBAT STYLES =====
+          const r = Math.random();
+
+          // Standard Block / Counter-attack framework
+          let isAttacked = (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'proj');
+
+          // 1. FIRE / LIGHTNING (Aggressive Rushdown, Combos, Flips)
+          if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 0.6) {
+            if (r < 0.20 * diffMult * spdMult) {
+              // 2-Hit Combo
+              this.doAttack('punch', opponent);
+              setTimeout(() => { if (this.hp > 0 && opponent.hp > 0 && this.state !== 'ko') this.doAttack('kick', opponent); }, 250);
+            } else if (r < 0.25 * diffMult * jumpFreq && this.specialCD <= 0) {
+              this.doSpecialFlip(opponent); // Tatsumaki style
+            }
+          }
+
+          // 2. ICE (Zoner, Projectiles, Keep-away)
+          else if (charType === 'ice' && dist > this.w * 0.8) {
+            if (r < 0.3 * diffMult * projFreq && this.specialCD <= 0) {
+              this.fireProj(); // Spam projectiles if far away
+            } else if (r < 0.4 && opponent.state === 'jump') {
+              this.doAttack('kick', opponent); // Anti-Air kick
+            }
+          }
+
+          // 3. DARK / EARTH (Grappler/Punisher: Block & Counter, Heavy Hits, Rolls)
+          else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 0.5) {
+            if (isAttacked && r < 0.7 * diffMult) {
+              this.state = 'block'; this.stateTimer = 0.5; // Heavy block rate
+            } else if (r < 0.15 * diffMult) {
+              this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent); // Single strong hits
+            } else if (r < 0.2 * diffMult && this.specialCD <= 0) {
+              this.doSpecialRoll(opponent); // Blanka ball style armor rush
+            }
+          }
+
+          // Generic Fallback Attack
+          else if (dist < this.w * 0.55 && r < 0.12 * diffMult) {
+            this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
+          }
+
+          // ===== MOVEMENT SKILLS (Jumping & Rolling) =====
+          if (Math.random() < (0.012 * jumpFreq) && this.y === GROUND() && this.state === 'idle') {
+            // Dark characters and Lightning prefer to Roll forward aggressively if far away
+            if ((charType === 'dark' || charType === 'lightning') && dist > this.w * 0.8) {
+              this.state = 'roll'; this.stateTimer = 0.8;
+              this.knockVX = (opponent.x > this.x) ? 14 : -14;
+              this.vy = -14; // Tuned for higher gravity
+            } else {
+              this.vy = -26; this.state = 'jump'; this.stateTimer = 0.5; // Tuned for heavier Gravity
+            }
+          }
+
+          // High Difficulty Anti-Air Reaction
+          if (opponent.y < GROUND() - 50 && dist < this.w * 0.8) {
+            if (Math.random() < 0.6 * diffMult) {
+              this.state = 'block'; this.stateTimer = 0.6;
+            } else if (Math.random() < 0.4 * diffMult) {
+              this.doAttack('punch', opponent); // Shoryuken anti-air simulation
+            }
+          }
+
+          // Standard Block
+          if (dist < this.w * 0.6 && isAttacked && Math.random() < (0.5 * diffMult)) {
+            this.state = 'block'; this.stateTimer = 0.4;
+          }
+
+          // Fireballs!
+          if (dist > this.w * 1.5 && Math.random() < (0.03 * diffMult * projFreq) && this.specialCD <= 0) {
+            this.fireProj();
+          }
+        }
+      }
+
+      doAttack(type, opponent) {
+        this.state = type;
+
+        // Character specific frame data!
+        const spdMult = this.isPlayer ? 1.2 : (this.ld?.spdMult || 1);
+
+        // Startup frames (delay before attack hits)
+        this.stateTimer = type === 'punch' ? (0.25 / spdMult) : (0.4 / spdMult);
+        this.knockVX = this.facingRight ? 4 : -4;
+
+        if (type === 'punch') SFX.punch(); else SFX.kick();
+        const cIdx = this.ld ? (this.ld.level - 1) : 0;
+        if (Math.random() > 0.3) SFX.playVoice(cIdx, 'attack');
+
+        // Hit-Stop logic for attacker (makes it feel heavy!)
+        this.hitStop = 0.05;
+
+        if (opponent) {
+          const dist = Math.abs(this.x - Math.max(opponent.x, this.x - this.w) - Math.min(opponent.x - this.x, 0));
+          // Dramatically reduced hit ranges to ignore the wide invisible auras around the characters
+          const range = type === 'punch' ? this.w * 0.45 : this.w * 0.60;
+
+          if (dist < range && opponent.state !== 'roll') { // Rolls have i-frames!
+            let baseDmg = type === 'punch' ? 8 + Math.random() * 5 : 14 + Math.random() * 6;
+            // Apply character damage modifier
+            if (!this.isPlayer) baseDmg *= (this.ld?.dmgMult || 1);
+
+            const dir = this.facingRight ? 1 : -1;
+            const isHeavyHit = type === 'kick'; // Kicks do heavier hit-stun
+
+            opponent.takeHit(baseDmg, dir, isHeavyHit);
+            this.hitStop = isHeavyHit ? 0.15 : 0.08; // Huge freeze on heavy hit!
+
+            // Combo system: only for player
+            if (this.isPlayer) {
+              comboCount++; comboTimer = 1.2;
+              SFX.comboUp(comboCount);
+              // Earn super faster with combos
+              this.super = Math.min(100, this.super + 8 + comboCount * 2);
+            } else {
+              this.super = Math.min(100, this.super + 10);
+            }
+
+            const ptType = isHeavyHit ? 'super_spark' : 'hitspark'; // Capcom style sparks!
+            spawnParticles(opponent.x, opponent.y - opponent.h * (isHeavyHit ? 0.3 : 0.5), ptType);
+          }
+        }
+      }
+
+      fireProj() {
+        // Require 3+ combo to fire projectile (player only)
+        if (this.isPlayer && comboCount < 3) return;
+        this.state = 'special'; this.stateTimer = 0.4; this.specialCD = 1.2;
+        const dir = this.facingRight ? 1 : -1;
+        const type = this.isPlayer ? 'super' : (LEVELS[currentLevel]?.special || 'fire');
+        projectiles.push(new Projectile(this.x + dir * this.w * 0.4, this.y - this.h * 0.4, dir, type, this.isPlayer));
+        screenShake = 5;
+        SFX.projFire();
+        const cIdx = this.ld ? (this.ld.level - 1) : 0;
+        SFX.playVoice(cIdx, 'special');
+        if (this.isPlayer) comboCount = 0; // Reset combo after using special
+
+        if (this.isPlayer) {
+          this.shoutText = "KEANO BLASTER!"; this.shoutTimer = 0.8;
+        }
+      }
+
+      doSpecialRoll(opponent) {
+        this.state = 'special_roll';
+        this.stateTimer = 0.6;
+        this.specialCD = 1.5;
+        this.knockVX = this.facingRight ? 18 : -18; // Increased speed
+        this.vy = -10; // Low hop adjusted for gravity
+        SFX.superCharge();
+        const cIdx = this.ld ? (this.ld.level - 1) : 0;
+        SFX.playVoice(cIdx, 'special');
+        if (this.isPlayer) { this.shoutText = "METEOR CRASH!"; this.shoutTimer = 0.8; }
+        // Damage is calculated in update loop for continuous hits
+      }
+
+      doSpecialFlip(opponent) {
+        this.state = 'special_flip';
+        this.stateTimer = 0.7;
+        this.specialCD = 1.5;
+        this.knockVX = this.facingRight ? 12 : -12; // Increased speed
+        this.vy = -18; // High jump adjusted for gravity
+        SFX.superCharge();
+        if (this.isPlayer) { this.shoutText = "GALAXY KICK!"; this.shoutTimer = 0.8; }
+        // Damage is calculated in update loop for continuous hits
+      }
+
+      doSuper(opponent) {
+        // Require 5+ combo AND full super to use (player only)
+        if (this.isPlayer && comboCount < 5) return;
+        this.super = 0; this.state = 'super'; this.stateTimer = 0.9;
+        screenShake = 25; flashTimer = 0.4;
+        SFX.superCharge();
+        const dir = this.facingRight ? 1 : -1;
+        if (this.isPlayer) comboCount = 0; // Reset combo after super
+
+        // Dynamic Shouts based on character config!
+        const shouts = {
+          'fire': 'INFERNO STRIKE!',
+          'ice': 'GLACIER CRUSH!',
+          'electric': 'THUNDER SPARK!',
+          'wind': 'HURRICANE KICK!',
+          'dark': 'SHADOW DROP!',
+          'super': 'OMEGA BUSTER!'
+        };
+        const projType = this.isPlayer ? 'super' : (LEVELS[currentLevel]?.special || 'fire');
+        this.shoutText = this.isPlayer ? "HADOU-KEANO!" : (shouts[projType] || "SPECIAL ATTACK!");
+        this.shoutTimer = 1.2;
+
+        projectiles.push(new Projectile(this.x + dir * this.w * 0.3, this.y - this.h * 0.5, dir, projType, this.isPlayer));
+        if (opponent && Math.abs(this.x - opponent.x) < this.w * 1.3) {
+          opponent.takeHit(this.isPlayer ? 45 : 30, dir); // Keano's super is devastating!
+          spawnParticles(opponent.x, opponent.y - opponent.h * 0.4, projType);
+        }
+      }
+
+      draw() {
+        if (!processedSprites[this.imgSrc]) return;
+        const imgCanvas = processedSprites[this.imgSrc];
+
+        // Draw Companion first so it can be behind or in front depending on pacing
+        if (this.companion && this.hp > 0) {
+          this.companion.draw();
+        }
+
+        const dW = this.w; const dH = this.h;
+        const fY = Math.round(this.y);
+        const cX = Math.round(this.x);
+        const st = this.stateTimer;
+
+        X.save();
+
+        // Shadow
+        X.save(); X.globalAlpha = 0.5; X.fillStyle = '#000';
+        X.beginPath(); X.ellipse(cX, fY + 8, dW * 0.45, 15, 0, 0, Math.PI * 2); X.fill(); X.restore();
+
+        X.translate(cX, fY);
+        // Base vibrance boost - the AI images lost some punch after BG removal
+        X.filter = `saturate(1.8) contrast(1.1) brightness(1.1)`;
+        if (this.hitFlash > 0) X.filter = `brightness(2) contrast(1.5)`;
+
+        // Remove cosmic glow aura from gameplay (only show on cards)
+        // No more super aura glow effect around fighters
+        // We are using raw images again per user request, so auras remain.
+
+        // Logic: AI Sprites may face inconsistent directions so we allow manual flips
+        let needsManualFlip = localStorage.getItem('flip_' + this.imgSrc) === 'true';
+        let baseFaceScale = needsManualFlip ? -1 : 1;
+        let faceScale = this.facingRight ? baseFaceScale : -baseFaceScale;
+        X.scale(faceScale, 1);
+
+        let sX = 1, sY = 1, rot = 0, offX = 0, offY = 0;
+
+        // SYNTHESIZED LIMBS (PUPPET METHOD)
+        let drawFistX = null, drawFistY = null, fistRot = 0, fistStretch = 1;
+        let drawBootX = null, drawBootY = null, bootRot = 0, bootStretch = 1;
+
+        // Initialize lerp state if not present
+        if (!this._lerpSX) {
+          this._lerpSX = 1; this._lerpSY = 1; this._lerpRot = 0;
+          this._lerpOX = 0; this._lerpOY = 0;
+        }
+
+        switch (this.state) {
+          case 'idle':
+            // Huge breathing effect
+            sY = 1 + Math.sin(this.t * 3) * 0.04; sX = 1 - Math.sin(this.t * 3) * 0.02;
+            break;
+          case 'walk':
+            offY = Math.abs(Math.sin(this.t * 12)) * 25; rot = Math.sin(this.t * 6) * 0.15;
+            break;
+          case 'roll':
+            offY = dH * 0.4; rot = this.t * 15; sX = 0.7; sY = 0.7;
+            break;
+          case 'punch':
+            const pP = 1 - Math.max(0, st / 0.25);
+            offX = dW * 0.2; rot = 0.25; sX = 1.15; sY = 0.9;
+            if (pP > 0.1) {
+              drawFistX = dW * 0.1 + dW * 0.6 * Math.sin(pP * Math.PI);
+              drawFistY = -dH * 0.55; fistRot = -0.2; fistStretch = 1 + Math.sin(pP * Math.PI) * 2.5;
+            }
+            break;
+          case 'kick':
+            const kP = 1 - Math.max(0, st / 0.4);
+            offX = -dW * 0.15; rot = -0.3; sX = 0.9; sY = 1.15;
+            if (kP > 0.1) {
+              drawBootX = dW * 0.2 + dW * 0.8 * Math.sin(kP * Math.PI);
+              drawBootY = -dH * 0.2 - dH * 0.5 * Math.sin(kP * Math.PI);
+              bootRot = -Math.PI / 4; bootStretch = 1 + Math.sin(kP * Math.PI) * 2.5;
+            }
+            break;
+          case 'jump':
+            sX = 0.8; sY = 1.25; rot = this.vy > 0 ? 0.2 : -0.2;
+            break;
+          case 'hit':
+            rot = -0.4; offX = -dW * 0.25; sX = 0.8; sY = 1.2;
+            break;
+          case 'block':
+            rot = -0.1; sX = 1.1; sY = 0.85; offX = -dW * 0.1;
+            break;
+          case 'ko':
+            rot = -Math.PI / 2; offY = -dH * 0.15; sX = 1.2; sY = 0.7;
+            break;
+          case 'special_roll':
+            offY = dH * 0.3; rot = this.facingRight ? this.t * 20 : -this.t * 20; sX = 0.7; sY = 0.7;
+            break;
+          case 'special_flip':
+            rot = this.facingRight ? this.t * 18 : -this.t * 18; sX = 0.8; sY = 0.8;
+            drawBootX = dW * 0.6; drawBootY = 0; bootRot = Math.PI / 2; bootStretch = 2.0;
+            break;
+        }
+
+        // LERP SMOOTHING: Interpolate between previous and target values
+        // This eliminates visible "jump cuts" between animation states
+        const lerpSpeed = 0.25; // 0 = no change, 1 = instant snap. 0.25 = buttery smooth
+        this._lerpSX += (sX - this._lerpSX) * lerpSpeed;
+        this._lerpSY += (sY - this._lerpSY) * lerpSpeed;
+        this._lerpRot += (rot - this._lerpRot) * lerpSpeed;
+        this._lerpOX += (offX - this._lerpOX) * lerpSpeed;
+        this._lerpOY += (offY - this._lerpOY) * lerpSpeed;
+
+        X.translate(this._lerpOX, this._lerpOY);
+        X.rotate(this._lerpRot);
+        X.scale(this._lerpSX, this._lerpSY);
+
+        // DRAW MAIN AI SPRITE (Transparent)
+        X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
+
+
+
+        // DRAW DYNAMIC LIMB OVERLAYS (SMOOTH PUPPET METHOD)
+        // Uses elliptical clipping for invisible, natural-looking limb extensions
+        if (drawFistX !== null) {
+          X.save();
+          X.translate(drawFistX, drawFistY);
+          X.rotate(fistRot);
+          X.scale(fistStretch, 1);
+
+          // Smooth motion-blur trail (uses character color)
+          X.fillStyle = this.color; X.globalAlpha = 0.2;
+          X.beginPath(); X.ellipse(-30, 0, 40, 14, 0, 0, Math.PI * 2); X.fill();
+          X.globalAlpha = 1.0;
+
+          // Elliptical clip for natural limb shape (no visible rectangle cuts)
+          const sliceW = imgCanvas.width * 0.25;
+          const sliceH = imgCanvas.height * 0.18;
+          const sliceX = imgCanvas.width * 0.6;
+          const sliceY = imgCanvas.height * 0.35;
+
+          X.shadowBlur = 8; X.shadowColor = 'rgba(0,0,0,0.5)';
+          X.beginPath();
+          X.ellipse(0, 0, sliceW * 0.55, sliceH * 0.55, 0, 0, Math.PI * 2);
+          X.clip();
+          X.drawImage(imgCanvas, sliceX, sliceY, sliceW, sliceH, -sliceW / 2, -sliceH / 2, sliceW, sliceH);
+          X.restore();
+        }
+
+        if (drawBootX !== null) {
+          X.save();
+          X.translate(drawBootX, drawBootY);
+          X.rotate(bootRot);
+          X.scale(bootStretch, 1);
+
+          // Motion blur
+          X.fillStyle = this.color; X.globalAlpha = 0.2;
+          X.beginPath(); X.ellipse(-35, 0, 45, 16, 0, 0, Math.PI * 2); X.fill();
+          X.globalAlpha = 1.0;
+
+          // Elliptical clip for natural leg shape
+          const sliceW = imgCanvas.width * 0.22;
+          const sliceH = imgCanvas.height * 0.25;
+          const sliceX = imgCanvas.width * 0.5;
+          const sliceY = imgCanvas.height * 0.65;
+
+          X.shadowBlur = 8; X.shadowColor = 'rgba(0,0,0,0.5)';
+          X.beginPath();
+          X.ellipse(0, 0, sliceW * 0.55, sliceH * 0.6, 0, 0, Math.PI * 2);
+          X.clip();
+          X.drawImage(imgCanvas, sliceX, sliceY, sliceW, sliceH, -sliceW / 2, -sliceH / 2, sliceW, sliceH);
+          X.restore();
+        }
+
+        X.restore(); // Restore all transforms applied to character
+
+        const fdir = this.facingRight ? 1 : -1;
+
+        // === PUNCH IMPACT (Glowing Burst) ===
+        if (this.state === 'punch' && st < 0.15) {
+          const ix = cX + fdir * dW * 0.8; const iy = fY - dH * 0.45;
+          X.save();
+          const pGrad = X.createRadialGradient(ix, iy, 0, ix, iy, 50);
+          pGrad.addColorStop(0, '#ffffff'); pGrad.addColorStop(0.4, '#ff00aa'); pGrad.addColorStop(1, 'rgba(119,0,255,0)');
+          X.fillStyle = pGrad; X.globalAlpha = 0.9;
+          X.beginPath(); X.arc(ix, iy, 50, 0, Math.PI * 2); X.fill();
+          X.restore();
+        }
+
+        // === KICK IMPACT (Electric Flash) ===
+        if (this.state === 'kick' && st < 0.2) {
+          const ix = cX + fdir * dW * 0.9; const iy = fY - dH * 0.3;
+          X.save();
+          const kGrad = X.createRadialGradient(ix, iy, 0, ix, iy, 55);
+          kGrad.addColorStop(0, '#ffffff'); kGrad.addColorStop(0.3, '#00ffff'); kGrad.addColorStop(1, 'rgba(0,85,255,0)');
+          X.fillStyle = kGrad; X.globalAlpha = 0.9;
+          X.beginPath(); X.arc(ix, iy, 55, 0, Math.PI * 2); X.fill();
+          X.restore();
+        }
+
+        // === SPECIAL ROLL AURA (Spinning Fire Ring) ===
+        if (this.state === 'special_roll') {
+          X.save();
+          X.translate(cX, fY - dH * 0.4);
+          X.rotate(this.t * 10);
+          const srGrad = X.createRadialGradient(0, 0, dW * 0.2, 0, 0, dW * 0.8);
+          srGrad.addColorStop(0, 'rgba(255,100,0,0.8)'); srGrad.addColorStop(0.6, 'rgba(255,0,100,0.4)'); srGrad.addColorStop(1, 'rgba(0,0,0,0)');
+          X.fillStyle = srGrad; X.globalAlpha = 0.7;
+          X.beginPath(); X.arc(0, 0, dW * 0.8, 0, Math.PI * 2); X.fill();
+          // Inner ring
+          X.strokeStyle = '#ff4400'; X.lineWidth = 4; X.shadowBlur = 20; X.shadowColor = '#ff8800';
+          X.beginPath(); X.arc(0, 0, dW * 0.4, 0, Math.PI * 2); X.stroke();
+          X.restore();
+        }
+
+        // === SPECIAL FLIP AURA (Neon Arc Trail) ===
+        if (this.state === 'special_flip') {
+          X.save();
+          X.translate(cX, fY - dH * 0.5);
+          X.globalAlpha = 0.6;
+          // Draw arc trail behind the character
+          X.strokeStyle = '#00ffff'; X.lineWidth = 8; X.shadowBlur = 30; X.shadowColor = '#00ffff';
+          X.beginPath();
+          X.arc(0, 0, dW * 0.6, -Math.PI, this.t * 5 % (Math.PI * 2));
+          X.stroke();
+          // Secondary trail
+          X.strokeStyle = '#ff00ff'; X.lineWidth = 4;
+          X.beginPath();
+          X.arc(0, 0, dW * 0.45, -Math.PI, this.t * 7 % (Math.PI * 2));
+          X.stroke();
+          X.restore();
+        }
+
+        // === SUPER MOVE AURA (Screen-filling Radial Explosion) ===
+        if (this.state === 'super') {
+          X.save();
+          X.translate(cX, fY - dH * 0.4);
+          // Pulsating energy sphere
+          const pulse = 1 + Math.sin(this.t * 15) * 0.3;
+          const superGrad = X.createRadialGradient(0, 0, 0, 0, 0, dW * 1.5 * pulse);
+          superGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+          superGrad.addColorStop(0.2, 'rgba(0,255,255,0.6)');
+          superGrad.addColorStop(0.5, 'rgba(170,0,255,0.3)');
+          superGrad.addColorStop(1, 'rgba(0,0,0,0)');
+          X.fillStyle = superGrad;
+          X.beginPath(); X.arc(0, 0, dW * 1.5 * pulse, 0, Math.PI * 2); X.fill();
+          // Lightning bolts
+          X.strokeStyle = '#fff'; X.lineWidth = 3; X.shadowBlur = 15; X.shadowColor = '#00ffff';
+          for (let b = 0; b < 6; b++) {
+            const ang = (b / 6) * Math.PI * 2 + this.t * 3;
+            const len = dW * 0.8 + Math.sin(this.t * 20 + b) * dW * 0.3;
+            X.beginPath(); X.moveTo(0, 0);
+            X.lineTo(Math.cos(ang) * len * 0.5, Math.sin(ang) * len * 0.5);
+            X.lineTo(Math.cos(ang + 0.2) * len, Math.sin(ang + 0.2) * len);
+            X.stroke();
+          }
+          X.restore();
+        }
+
+        // === DASH TRAIL (Speed Ghost) ===
+        if (this.state === 'dash') {
+          X.save(); X.globalAlpha = 0.25;
+          X.translate(cX - fdir * dW * 0.4, fY);
+          const dashScale = this.facingRight ? 1 : -1;
+          X.scale(dashScale, 1);
+          X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
+          X.restore();
+        }
+      }
+    }
+
+    // ===== THEMATIC DESTRUCTIBLE OBJECTS =====
+    let objects = [];
+    function spawnObjects() {
+      objects = []; // Disabled as requested by the user, keeps arena completely clean
+    }
+    // Debris fragments from destroyed objects
+    let debris = [];
+    function drawObjects() {
+      objects.forEach(o => {
+        if (o.broken) return;
+        X.save();
+        X.font = `${Math.min(220, C.width * 0.22)}px serif`;
+        X.textAlign = 'center';
+        X.textBaseline = 'bottom';
+
+        const sx = o.shk > 0 ? (Math.random() - 0.5) * o.shk * 20 : 0;
+
+        // Shadow under prop
+        X.fillStyle = 'rgba(0,0,0,0.5)';
+        X.beginPath(); X.ellipse(o.x, o.y - 15, 60, 15, 0, 0, Math.PI * 2); X.fill();
+
+        // Make objects look like they belong in the background (lighting/contrast)
+        X.filter = 'brightness(0.8) contrast(1.1)';
+
+        // Crack visual when damaged (hp=1) - no transparency, just a visual shake/tick
+        if (o.hp === 1) {
+          X.filter = 'brightness(1.2) contrast(1.2)'; // Highlight instead of fade
+          X.fillText(o.emoji, o.x + sx, o.y + 15);
+          // Draw a literal "crack" line
+          X.strokeStyle = '#000'; X.lineWidth = 4; X.beginPath();
+          X.moveTo(o.x - 10, o.y - 40); X.lineTo(o.x + 10, o.y - 20); X.lineTo(o.x - 5, o.y); X.stroke();
+        } else {
+          X.fillText(o.emoji, o.x + sx, o.y + 15);
+        }
+        X.restore();
+        o.shk *= 0.88;
+      });
+      // Draw flying debris fragments
+      debris.forEach(d => {
+        X.save();
+        X.globalAlpha = d.life;
+        X.translate(d.x, d.y);
+        X.rotate(d.rot);
+        X.font = `${d.size}px serif`;
+        X.textAlign = 'center';
+        X.fillText(d.emoji, 0, 0);
+        X.restore();
+      });
+    }
+    function updateDebris(dt) {
+      debris.forEach(d => {
+        d.x += d.vx; d.y += d.vy; d.vy += 0.6; // gravity
+        d.rot += d.rotSpd;
+        d.life -= dt * 1.5;
+      });
+      debris = debris.filter(d => d.life > 0);
+    }
+    function spawnDebris(x, y, emoji) {
+      const count = 6 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < count; i++) {
+        debris.push({
+          x: x + (Math.random() - 0.5) * 40,
+          y: y - 20 - Math.random() * 60,
+          vx: (Math.random() - 0.5) * 16,
+          vy: -4 - Math.random() * 10,
+          rot: Math.random() * Math.PI * 2,
+          rotSpd: (Math.random() - 0.5) * 0.4,
+          life: 1,
+          emoji: emoji,
+          size: 20 + Math.floor(Math.random() * 40)
+        });
+      }
+    }
+    function checkObjHit(f) {
+      objects.forEach(o => {
+        if (o.broken) return;
+        if (Math.abs(f.x - o.x) < 90 && (f.state === 'punch' || f.state === 'kick')) {
+          if (o.hp > 0) {
+            o.hp -= 1;
+            o.shk = 15;
+            SFX._noise(0.1, 0.3); SFX._tone(200, 0.08, 'square', 0.2); // Impact sound
+            if (o.hp <= 0) {
+              o.broken = true;
+              screenShake = 6;
+              SFX.break(); // Break SFX
+              spawnDebris(o.x, o.y, o.emoji);
+            }
+          }
+        }
+      });
+    }
+
+    // ===== FIREWORKS =====
+    let fireworks = [];
+    class Firework {
+      constructor(x, y) {
+        this.sparks = []; const c = 60; const h = Math.random() * 360;
+        for (let i = 0; i < c; i++) {
+          const a = (Math.PI * 2 / c) * i; const s = 4 + Math.random() * 6;
+          this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, hue: h + Math.random() * 40, size: 2 + Math.random() * 4 })
+        }
+      }
+      update() {
+        this.sparks.forEach(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.08; s.vx *= 0.97; s.vy *= 0.97; s.life -= 0.012; });
+        this.sparks = this.sparks.filter(s => s.life > 0);
+      }
+      draw() {
+        this.sparks.forEach(s => {
+          X.save(); X.globalAlpha = s.life; X.fillStyle = `hsl(${s.hue},100%,60%)`;
+          X.shadowBlur = 12; X.shadowColor = `hsl(${s.hue},100%,60%)`; X.beginPath(); X.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2); X.fill(); X.restore();
+        });
+      }
+    }
+
+    // ===== HUD (MODERNIZED & CAPCOM STYLE) =====
+    function drawHUD(p1, p2, ld) {
+      const bw = C.width * 0.38; // Wider bars
+      const bh = 30; // Thicker bars
+      const by = 20;
+
+      // Draw P1 (Left) Health Bar Background (Angled Capcom style)
+      X.save();
+      X.transform(1, 0, -0.4, 1, 0, 0); // Skew it!
+      X.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      X.fillRect(20 + by * 0.4, by, bw, bh);
+
+      // P1 Health Fill (Gradient: Neon Blue to Purple to Red)
+      const p1Pct = Math.max(0, p1.hp / 100);
+      const gw1 = X.createLinearGradient(20 + by * 0.4, by, 20 + by * 0.4 + bw, by);
+      gw1.addColorStop(0, '#ff00aa');
+      gw1.addColorStop(0.5, '#7700ff');
+      gw1.addColorStop(1, '#00ffff');
+
+      X.fillStyle = p1.hp > 25 ? gw1 : '#ff0055';
+      X.shadowBlur = 15; X.shadowColor = X.fillStyle;
+      if (p1Pct > 0) X.fillRect(20 + by * 0.4, by, bw * p1Pct, bh);
+
+      // Frame and Shine
+      X.strokeStyle = '#fff'; X.lineWidth = 3;
+      X.strokeRect(20 + by * 0.4, by, bw, bh);
+      X.fillStyle = 'rgba(255,255,255,0.2)';
+      X.fillRect(20 + by * 0.4, by, bw, bh * 0.4);
+      X.restore();
+
+      // P1 Name (compact — no Lord of the Light in gameplay)
+      const p1Label = gameMode === 'story' ? 'KEANO' : arcadeSelectedName;
+      X.font = `bold ${Math.min(26, C.width * 0.028)}px "Orbitron"`;
+      X.fillStyle = '#fff'; X.shadowBlur = 8; X.shadowColor = '#000';
+      X.fillText(p1Label, 25, by + bh + 25, bw - 10);
+
+      // P1 WINS (Golden stars)
+      for (let i = 0; i < p1Wins; i++) {
+        X.font = '18px serif'; X.fillText('★', 30 + (i * 22), by + bh + 45);
+      }
+
+      // P1 Super Meter (Bottom Left)
+      const sw = bw * 0.6;
+      const sh = 12;
+      const sY = C.height - sh - 20;
+      X.save();
+      X.transform(1, 0, -0.5, 1, 0, 0);
+      X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(40, sY, sw, sh);
+      X.fillStyle = p1.super >= 100 ? '#00ffff' : '#0055ff';
+      X.shadowBlur = p1.super >= 100 ? 15 : 0; X.shadowColor = '#00ffff';
+      X.fillRect(40, sY, sw * (p1.super / 100), sh);
+      X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(40, sY, sw, sh);
+      X.restore();
+      if (p1.super >= 100) {
+        X.fillStyle = '#00ffff'; X.font = 'bold 16px "Orbitron"';
+        X.fillText('SUPER', 20, sY - 10);
+      }
+
+      // Draw P2 (Right) Health Bar Background
+      const rx = C.width - 20 - bw;
+      X.save();
+      X.transform(1, 0, 0.4, 1, 0, 0); // Skew opposite way!
+      X.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      X.fillRect(rx - by * 0.4, by, bw, bh);
+
+      // P2 Health Fill
+      const p2Pct = Math.max(0, p2.hp / p2.maxHP);
+      const gw2 = X.createLinearGradient(rx - by * 0.4, by, rx - by * 0.4 + bw, by);
+      gw2.addColorStop(0, '#00ffff');
+      gw2.addColorStop(0.5, '#7700ff');
+      gw2.addColorStop(1, '#ff00aa');
+
+      X.fillStyle = p2.hp > (p2.maxHP * 0.25) ? gw2 : '#ff0055';
+      X.shadowBlur = 15; X.shadowColor = X.fillStyle;
+      // Right-aligned fill
+      if (p2Pct > 0) {
+        const fw = bw * p2Pct;
+        X.fillRect(rx - by * 0.4 + (bw - fw), by, fw, bh);
+      }
+
+      // Frame and Shine
+      X.strokeStyle = '#fff'; X.lineWidth = 3;
+      X.strokeRect(rx - by * 0.4, by, bw, bh);
+      X.fillStyle = 'rgba(255,255,255,0.2)';
+      X.fillRect(rx - by * 0.4, by, bw, bh * 0.4);
+      X.restore();
+
+      // P2 Name
+      X.textAlign = 'right'; X.fillStyle = '#fff'; X.font = 'bold 22px "Orbitron"';
+      X.shadowBlur = 4; X.shadowColor = '#000';
+      X.fillText(ld.name, C.width - 25, by + bh + 25, bw - 10);
+
+      // P2 WINS
+      for (let i = 0; i < p2Wins; i++) {
+        X.font = '22px serif'; X.fillText('★', C.width - 30 - (i * 24), by + bh + 50);
+      }
+
+      // P2 Super Meter (Bottom Right)
+      X.save();
+      X.transform(1, 0, 0.5, 1, 0, 0);
+      X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+      X.fillStyle = p2.super >= 100 ? '#ff00ff' : '#aa00aa';
+      X.shadowBlur = p2.super >= 100 ? 15 : 0; X.shadowColor = '#ff00ff';
+      const p2Sw = sw * (p2.super / 100);
+      X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5 + (sw - p2Sw), sY, p2Sw, sh);
+      X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+      X.restore();
+
+      // VERSUS or STAGE text in center
+      X.textAlign = 'center'; X.fillStyle = '#ff8800'; X.font = 'bold 36px "Orbitron"';
+      X.fillText(`STAGE ${ld.level}`, C.width / 2, by + 105);
+
+      // TIMER (Classic Big Arcade Numbers)
+      X.fillStyle = 'rgba(0,0,0,0.8)';
+      X.beginPath(); X.arc(C.width / 2, by + 30, 45, 0, Math.PI * 2); X.fill();
+      X.strokeStyle = '#00ffff'; X.lineWidth = 6; X.stroke();
+      X.strokeStyle = '#aa00ff'; X.lineWidth = 2; X.stroke();
+
+      X.fillStyle = '#fff'; X.font = 'bold 45px "Orbitron"';
+      const tStr = gameTimerStyle === 'infinite' ? '∞' : Math.ceil(roundTimerNum);
+      if (gameTimerStyle !== 'infinite' && roundTimerNum <= 15) {
+        X.fillStyle = '#ff0055'; X.shadowBlur = 20; X.shadowColor = '#ff0055';
+      }
+      X.fillText(tStr, C.width / 2, by + 45);
+      X.shadowBlur = 0;
+    }
+    function drawBigText(t, c, s = 1) {
+      const fSize = Math.min(80 * s, C.width * 0.08 * s, C.height * 0.1 * s);
+      X.save(); X.font = `italic 900 ${fSize}px "Orbitron"`;
+      X.textAlign = 'center'; X.fillStyle = c;
+      X.shadowBlur = 0; X.shadowColor = '#000';
+      X.lineWidth = 8; X.strokeStyle = '#000';
+      X.strokeText(t, C.width / 2, C.height * 0.45);
+      X.fillText(t, C.width / 2, C.height * 0.45);
+      X.restore();
+    }
+
+    // ===== GAME STATE =====
+    let screenShake = 0, flashTimer = 0;
+    let gameState = 'loading', player, enemy, currentLevel = 0, stateTimer = 0, time = 0, fwTimer = 0;
+
+    let p1WonLast = false;
+
+    function startLevel(idx, forceEpilogue = false) {
+      currentLevel = idx; p1Wins = 0; p2Wins = 0; roundNum = 1;
+      const ld = LEVELS[currentLevel];
+
+      // Handle alternate character randomization or forced story mode bosses
+      if (gameMode === 'story' && ld.name === 'VIKINGO') {
+        ld.activeFighter = ld.altProfile.fighter;
+        ld.activeName = ld.altProfile.name;
+        ld.activeFlag = ld.altProfile.flag;
+      } else if (gameMode === 'story' && ld.name === 'C. GARGAMEL') {
+        ld.activeFighter = ld.altProfile.fighter;
+        ld.activeName = ld.altProfile.name;
+        ld.activeFlag = ld.altProfile.flag;
+      } else if (ld.altProfile && Math.random() > 0.5) {
+        ld.activeFighter = ld.altProfile.fighter;
+        ld.activeName = ld.altProfile.name;
+        ld.activeFlag = ld.altProfile.flag;
+      } else {
+        ld.activeFighter = ld.fighter;
+        ld.activeName = ld.name;
+        ld.activeFlag = ld.flag;
+      }
+
+      // Trigger VS Screen before first round!
+      gameState = 'vs_screen';
+      stateTimer = 3.5; // 3.5 seconds of VS screen
+
+      // We will init the players so we can draw them on the VS screen
+      let pData;
+      if (gameMode === 'story') {
+        // STORY MODUS: PLAYER 1 IS KEANO!
+        pData = KEANO_PROFILE;
+      } else {
+        // ARCADE MODUS: Player plays as their selected character!
+        pData = [KEANO_PROFILE, HYPER_KEANO_PROFILE, ...LEVELS].find(l => l.name === arcadeSelectedName) || KEANO_PROFILE;
+      }
+      const eData = ld;
+
+      // Use the raw images with auras directly!
+      const cP = pData.gameFighter || pData.fighter;
+      const cE = eData.gameFighter || eData.activeFighter;
+
+      player = new HybridFighter(C.width * 0.22, GROUND(), true, rawImgs[cP] || cP, pData);
+      enemy = new HybridFighter(C.width * 0.78, GROUND(), false, rawImgs[cE] || cE, eData);
+
+      // Warmup sounds
+      SFX.fight(); // Placeholder sound for dramatic hit
+    }
+
+    function startRound() {
+      const ld = LEVELS[currentLevel];
+      // reset positions and health for round
+      player.x = C.width * 0.22; player.y = GROUND(); player.hp = player.maxHP; player.state = 'idle';
+      enemy.x = C.width * 0.78; enemy.y = GROUND(); enemy.hp = enemy.maxHP; enemy.state = 'idle';
+
+      projectiles = []; spawnObjects();
+      gameState = 'intro'; stateTimer = 3.0;
+      roundTimerNum = 99;
+      comboCount = 0; comboTimer = 0;
+      // Start unique level music
+      SFX.playLevelMusic(currentLevel);
+    }
+
+    let lastTime = 0;
+    // Tapping restarts logic
+    addEventListener('pointerdown', e => {
+      if (gameState === 'gameOver') {
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('loader').style.opacity = '1';
+      }
+    });
+
+    function gameLoop(ts) {
+      requestAnimationFrame(gameLoop);
+      try {
+        // Implement basic slowmo by reducing dt dynamically during KO
+        let dtMult = (gameState === 'ko' && stateTimer > 2.0) ? 0.2 : 1.0;
+        const dt = Math.min((ts - lastTime) / 1000, 0.05) * dtMult; lastTime = ts; time += dt;
+        X.save();
+        if (screenShake > 0) {
+          X.translate((Math.random() - 0.5) * screenShake * 3, (Math.random() - 0.5) * screenShake * 3);
+          screenShake *= 0.85; if (screenShake < 0.5) screenShake = 0;
+        }
+        const ld = LEVELS[currentLevel || 0]; const si = rawImgs[ld.stage];
+        if (si && si.complete) X.drawImage(si, 0, 0, C.width, C.height);
+        else { const g = X.createLinearGradient(0, 0, 0, C.height); g.addColorStop(0, '#1a0030'); g.addColorStop(1, '#0a0015'); X.fillStyle = g; X.fillRect(0, 0, C.width, C.height); }
+
+        if (gameState === 'vs_screen') {
+          const ld = LEVELS[currentLevel];
+          // Dynamic, mystical "Warrior of Light" Galaxy Background
+          const g2 = X.createLinearGradient(0, 0, C.width, C.height);
+          g2.addColorStop(0, '#0a0022'); // Deep space edge
+          g2.addColorStop(0.5, '#4400aa'); // Core purple
+          g2.addColorStop(1, '#00ccff'); // Neon cyan light
+          X.fillStyle = g2; X.fillRect(0, 0, C.width, C.height);
+
+          // Draw giant character silhouettes or cutouts sliding in
+          const slideIn1 = Math.max(0, (stateTimer - 2.5) * C.width); // Slides from left
+          const slideIn2 = Math.max(0, (stateTimer - 2.5) * C.width); // Slides from right
+
+          // Left Side Player
+          X.save(); X.translate(-slideIn1 + C.width * 0.25, C.height * 0.6); X.scale(1.5, 1.5);
+          // Draw him huge
+          const p1Img = gameMode === 'story' ? 'assets/Keano_Fighter.png' : player.imgSrc;
+          const kCanv = processedSprites[p1Img];
+          if (kCanv) X.drawImage(kCanv, -kCanv.width / 2, -kCanv.height / 2, kCanv.width, kCanv.height);
+          X.restore();
+
+          // Right Side Enemy
+          X.save(); X.translate(slideIn2 + C.width * 0.75, C.height * 0.6); X.scale(-1.5, 1.5); // flipped
+          const eCanv = processedSprites[ld.activeFighter];
+          if (eCanv) X.drawImage(eCanv, -eCanv.width / 2, -eCanv.height / 2, eCanv.width, eCanv.height);
+          X.restore();
+
+          // Cosmic Energy Split
+          X.save();
+          X.translate(C.width / 2, C.height / 2);
+          X.rotate(Math.PI / 8);
+          X.fillStyle = '#fff'; X.shadowBlur = 40; X.shadowColor = '#00ffff'; // Brighter neon glow
+          X.fillRect(-10, -C.height, 20, C.height * 2);
+          X.restore();
+
+          // VS TEXT
+          X.font = `italic 900 ${Math.min(120, C.width * 0.15)}px "Orbitron"`;
+          X.fillStyle = '#00ffff'; X.textAlign = 'center'; X.shadowBlur = 30; X.shadowColor = '#aa00ff';
+          X.strokeStyle = '#fff'; X.lineWidth = 10;
+          X.strokeText('VS', C.width / 2, C.height * 0.55);
+          X.fillText('VS', C.width / 2, C.height * 0.55);
+
+          // Names and Flags - Sleek UI Plate
+          const barH = 50;
+          const barY = C.height - barH - 20;
+
+          // P1 Banner
+          X.fillStyle = 'rgba(0, 50, 150, 0.8)';
+          X.fillRect(0, barY, C.width * 0.45, barH);
+          X.fillStyle = '#00ffff'; X.fillRect(C.width * 0.45 - 5, barY, 5, barH);
+
+          // P2 Banner
+          X.fillStyle = 'rgba(150, 0, 150, 0.8)';
+          X.fillRect(C.width * 0.55, barY, C.width * 0.45, barH);
+          X.fillStyle = '#ff00ff'; X.fillRect(C.width * 0.55, barY, 5, barH);
+
+          X.shadowBlur = 10; X.shadowColor = '#000';
+          X.font = `bold ${Math.min(24, C.width * 0.035)}px "Orbitron"`;
+
+          // Left Box (Player 1)
+          X.textAlign = 'left'; X.fillStyle = '#fff';
+          if (gameMode === 'story') {
+            X.fillText('🇩🇪 KEANO ROMEO', 20, barY + 35);
+          } else {
+            X.fillText(`${arcadeSelectedName}`, 20, barY + 35);
+          }
+
+          // Right Box (Opponent)
+          X.textAlign = 'right';
+          X.fillText(`${ld.activeName} ${ld.activeFlag}`, C.width - 20, barY + 35);
+
+          stateTimer -= dt;
+          if (stateTimer <= 0) {
+            startRound(); // Move to actual fight intro!
+          }
+        }
+        else if (gameState === 'intro') {
+          player.draw(); enemy.draw(); drawObjects(); drawHUD(player, enemy, ld);
+          stateTimer -= dt;
+
+          // Dark overlay fading out
+          if (stateTimer > 2.0) {
+            X.fillStyle = `rgba(0,0,0,${Math.min(1, stateTimer - 2.0)})`;
+            X.fillRect(0, 0, C.width, C.height);
+          }
+
+          const txt = roundNum >= 3 ? 'FINAL ROUND' : `ROUND ${roundNum}`;
+          if (stateTimer > 1.5) {
+            drawBigText(txt, '#ffcc00', 1.0);
+            if (stateTimer > 2.9 && stateTimer < 2.95) SFX.round(); // play once
+          }
+          else if (stateTimer > 0.5) {
+            drawBigText('READY...', '#ffffff', 0.8);
+          }
+          else if (stateTimer > 0) {
+            drawBigText('FIGHT!', '#ff0055', 1.3);
+            if (stateTimer > 0.45 && stateTimer < 0.5) SFX.fight();
+          }
+
+          if (stateTimer <= 0) gameState = 'fighting';
+        }
+        else if (gameState === 'fighting') {
+          if (gameTimerStyle !== 'infinite') {
+            roundTimerNum -= dt;
+            if (roundTimerNum <= 15) {
+              const b = document.getElementById('beat');
+              if (b && b.playbackRate < 1.25) b.playbackRate = 1.35;
+            }
+            if (roundTimerNum <= 0) roundTimerNum = 0;
+          }
+
+          player.update(dt, enemy); enemy.update(dt, player);
+          checkObjHit(player); checkObjHit(enemy);
+          updateDebris(dt);
+          particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= dt * 2.5; }); particles = particles.filter(p => p.life > 0);
+          projectiles = projectiles.filter(p => {
+            const alive = p.update(dt);
+            if (p.fromPlayer && p.checkHit(enemy)) return false;
+            if (!p.fromPlayer && p.checkHit(player)) return false;
+            return alive;
+          });
+
+          drawObjects();
+          if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
+          else { player.draw(); enemy.draw(); }
+
+          projectiles.forEach(p => p.draw());
+          particles.forEach(p => {
+            X.save();
+            if (p.isSpark) {
+              // Draw Capcom star impact
+              X.globalAlpha = p.life * 1.5;
+              X.translate(p.x, p.y);
+              X.rotate(p.life * Math.PI); // Spin it slightly as it fades
+              X.scale(p.life, p.life);
+
+              X.fillStyle = '#fff'; X.shadowBlur = 30; X.shadowColor = p.color;
+              // Star shape drawing
+              X.beginPath();
+              for (let k = 0; k < 8; k++) {
+                const ang = k * Math.PI / 4;
+                const r = k % 2 == 0 ? p.size : p.size / 4;
+                X.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
+              }
+              X.closePath(); X.fill();
+
+              // Inner ring
+              X.strokeStyle = p.color; X.lineWidth = 4;
+              X.beginPath(); X.arc(0, 0, p.size / 2, 0, Math.PI * 2); X.stroke();
+
+            } else if (p.isLine) {
+              // MANGA SPEED LINES radiating from impact
+              X.globalAlpha = p.life * 2;
+              X.strokeStyle = '#fff'; X.lineWidth = 3; X.shadowBlur = 10; X.shadowColor = '#ffcc00';
+              X.beginPath(); X.moveTo(p.x - p.vx * 0.3, p.y - p.vy * 0.3);
+              X.lineTo(p.x, p.y); X.stroke();
+            } else {
+              X.globalAlpha = p.life; X.fillStyle = p.color; X.shadowBlur = 10; X.shadowColor = p.color;
+              X.beginPath(); X.arc(p.x, p.y, p.size, 0, Math.PI * 2); X.fill();
+            }
+            X.restore();
+          });
+          drawHUD(player, enemy, ld);
+
+          // Combo counter HUD
+          if (comboTimer > 0) {
+            comboTimer -= dt;
+            X.save(); X.textAlign = 'center';
+            const cfs = Math.min(28, C.width * 0.04);
+            X.font = `bold ${cfs}px "Press Start 2P"`;
+            X.globalAlpha = Math.min(1, comboTimer);
+            if (comboCount >= 5) {
+              X.fillStyle = '#ffcc00'; X.shadowBlur = 20; X.shadowColor = '#ffcc00';
+              X.fillText(`${comboCount} HIT! SUPER READY! 🐉`, C.width * 0.5, C.height * 0.15);
+            } else if (comboCount >= 3) {
+              X.fillStyle = '#00ffcc'; X.shadowBlur = 15; X.shadowColor = '#00ffcc';
+              X.fillText(`${comboCount} HIT! SPECIAL READY! ⚡`, C.width * 0.5, C.height * 0.15);
+            } else if (comboCount >= 2) {
+              X.fillStyle = '#ff8800'; X.shadowBlur = 10; X.shadowColor = '#ff8800';
+              X.fillText(`${comboCount} HIT COMBO!`, C.width * 0.5, C.height * 0.15);
+            }
+            X.restore();
+          }
+
+          // Win conditions (Timer or HP empty)
+          const timeOver = gameTimerStyle !== 'infinite' && roundTimerNum <= 0;
+          if (enemy.hp <= 0 || player.hp <= 0 || timeOver) {
+            gameState = 'ko'; stateTimer = 3.5; screenShake = 20;
+            SFX.stopMusic(); SFX.ko();
+
+            p1WonLast = false;
+            let winner = 'draw';
+            if (player.hp > enemy.hp) { winner = 'p1'; p1Wins++; p1WonLast = true; }
+            else if (enemy.hp > player.hp) { winner = 'p2'; p2Wins++; } // Fixed: should be enemy.hp > player.hp
+            else { p1Wins++; p2Wins++; p1WonLast = true; }
+
+            if (winner === 'p1') { enemy.state = 'ko'; enemy.stateTimer = 99; }
+            if (winner === 'p2') { player.state = 'ko'; player.stateTimer = 99; }
+          }
+        }
+        else if (gameState === 'ko') {
+          player.draw(); enemy.draw(); drawObjects(); drawHUD(player, enemy, ld);
+
+          let tStr = 'K.O.!';
+          let tc = '#ff0055';
+          if (gameTimerStyle !== 'infinite' && roundTimerNum <= 0 && player.hp > 0 && enemy.hp > 0) {
+            tStr = 'TIME OVER'; tc = '#ffcc00';
+          } else if (p1WonLast && player.hp >= 100 && enemy.hp <= 0) {
+            tStr = 'PERFECT!'; tc = '#00ff88';
+          }
+
+          drawBigText(tStr, tc, 1.5); stateTimer -= dt;
+          if (tStr === 'PERFECT!' && stateTimer > 3.0) SFX.perfect();
+
+          if (stateTimer <= 0) {
+            // Determine rounds required to win
+            let roundsToWin = 2; // Default best of 3
+            if (gameMode === 'story') {
+              roundsToWin = 1; // Story mode is strictly 1 round
+            } else {
+              roundsToWin = Math.ceil(arcadeRoundsLimit / 2); // Best of 1=1, 3=2, 5=3
+            }
+
+            if (p1Wins >= roundsToWin) {
+              if (currentLevel >= LEVELS.length - 1) {
+                // UNLOCK ARCADE MODE
+                if (gameMode === 'story') {
+                  localStorage.setItem('arcadeUnlocked', 'true');
+                  const btnArcade = document.getElementById('btn-arcade');
+                  if (btnArcade) {
+                    btnArcade.style.color = '#00ffff';
+                    btnArcade.style.borderColor = '#00ffff';
+                    btnArcade.style.cursor = 'pointer';
+                    btnArcade.textContent = 'ARCADE MODE';
+                  }
+
+                  // In Story Mode: Divert to the Door/Memory Selection instead of instant victory!
+                  gameState = 'door_select'; stateTimer = 0;
+                  SFX.stopMusic();
+                  if (isMobile) document.getElementById('gamepad').style.display = 'none';
+                  return; // Stop here, wait for door choice
+                }
+
+                gameState = 'victory'; stateTimer = 0;
+                SFX.stopMusic(); // Stop game music
+                SFX.victory();   // Start warm ambient pad
+                // playVoiceWithReverb(); // Voice with reverb/warmth - removed as per instruction
+                // Hide controls if not mobile, otherwise hide to prevent overlap on KO screen
+                if (isMobile) document.getElementById('gamepad').style.display = 'none';
+
+                // === ACTIVATE EPIC GERMAN NARRATOR (TTS) ===
+                const speechText = epilogLines.filter(l => l.text && l.style !== 'title' && l.style !== 'mega').map(l => l.text).join(' ');
+                const u = new SpeechSynthesisUtterance(speechText);
+                u.lang = 'de-DE'; // German
+                u.rate = 0.85; // Slow, dramatic pacing
+                u.pitch = 0.1; // Extremely deep pitch (Optimus Prime / Vin Diesel style)
+
+                const voices = speechSynthesis.getVoices();
+                const germanVoices = voices.filter(v => v.lang.startsWith('de'));
+                const preferredVoice = germanVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google')) || germanVoices[0];
+                if (preferredVoice) u.voice = preferredVoice;
+
+                speechSynthesis.cancel();
+                speechSynthesis.speak(u);
+
+              } else {
+                gameState = 'nextLevel'; stateTimer = 1.5; SFX.levelUp();
+              }
+            } else if (p2Wins >= roundsToWin) {
+              gameState = 'continue'; stateTimer = 9.99; SFX.gameOver();
+            } else {
+              roundNum++;
+              startRound();
+            }
+          }
+        }
+        else if (gameState === 'nextLevel') {
+          drawBigText(`STAGE ${LEVELS[currentLevel + 1].level}`, '#00ffff', 1.2);
+          X.save(); X.font = 'bold 22px "Press Start 2P"'; X.textAlign = 'center'; X.fillStyle = '#fff';
+          X.fillText(LEVELS[currentLevel + 1].flag + ' ' + LEVELS[currentLevel + 1].name, C.width / 2, C.height * 0.58); X.restore();
+          stateTimer -= dt; if (stateTimer <= 0) startLevel(currentLevel + 1);
+        }
+        else if (gameState === 'continue') {
+          X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
+          drawBigText('CONTINUE?', '#ffcc00', 1.2);
+
+          X.save(); X.font = 'bold 120px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
+          X.fillText(Math.ceil(stateTimer), C.width / 2, C.height * 0.65);
+          stateTimer -= dt;
+          if (stateTimer <= 0) {
+            gameState = 'gameOver'; stateTimer = 3;
+          }
+
+          X.font = '20px "Press Start 2P"'; X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
+          X.fillText('PRESS SPACE OR TAP TO CONTINUE', C.width / 2, C.height * 0.85);
+          X.restore();
+        }
+        else if (gameState === 'gameOver') {
+          X.fillStyle = 'rgba(0,0,0,0.9)'; X.fillRect(0, 0, C.width, C.height);
+          drawBigText('GAME OVER', '#ff0033', 1.5);
+          X.save(); X.font = '20px "Press Start 2P"'; X.fillStyle = '#fff'; X.textAlign = 'center';
+
+          X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
+          X.fillText('TAP TO RETURN TO MENU', C.width / 2, C.height * 0.7); X.restore();
+        }
+        else if (gameState === 'victory') {
+          stateTimer += dt; // stateTimer counts UP in victory
+          fwTimer += dt; if (fwTimer > 0.3) { fireworks.push(new Firework(Math.random() * C.width, Math.random() * C.height * 0.4)); fwTimer = 0; }
+          fireworks.forEach(f => { f.update(); f.draw(); }); fireworks = fireworks.filter(f => f.sparks.length > 0);
+
+          // Deep space cosmic background
+          const cosmicG = X.createRadialGradient(C.width / 2, C.height / 2, 0, C.width / 2, C.height / 2, C.width);
+          cosmicG.addColorStop(0, '#00001a'); cosmicG.addColorStop(0.5, '#000005'); cosmicG.addColorStop(1, '#000000');
+          X.fillStyle = cosmicG; X.fillRect(0, 0, C.width, C.height);
+
+          // Slow drifting stars
+          for (let i = 0; i < 60; i++) {
+            const sx = ((i * 173.7 + stateTimer * 3) % C.width);
+            const sy = ((i * 97.3 + stateTimer * (1 + i % 3)) % C.height);
+            const sb = 0.3 + 0.7 * Math.abs(Math.sin(stateTimer * 0.5 + i));
+            X.globalAlpha = sb * 0.8;
+            X.fillStyle = i % 5 === 0 ? '#aaddff' : (i % 7 === 0 ? '#ffccaa' : '#ffffff');
+            X.beginPath(); X.arc(sx, sy, 1 + (i % 3) * 0.5, 0, Math.PI * 2); X.fill();
+          }
+          X.globalAlpha = 1;
+
+          fireworks.forEach(f => f.draw());
+
+          const cx = C.width / 2;
+          const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
+          const vt = stateTimer;
+          X.save(); X.textAlign = 'center';
+
+          // ===== EPILOG CREDIT ROLL =====
+          // The entire poem scrolls upward like Star Wars credits
+          const epilogLines = [
+            { text: '🌅 EPILOG', style: 'title', color: '#ffcc00' },
+            { text: '', style: 'gap' },
+            { text: 'Die Arenen sind durchschritten.', style: 'narr' },
+            { text: 'Die Vertreter sind gefallen —', style: 'narr' },
+            { text: 'nicht als Besiegte…', style: 'narr' },
+            { text: 'sondern als Offenbarte.', style: 'italic', color: '#aaddff' },
+            { text: '', style: 'gap' },
+            { text: 'Keano trat in jede Dimension', style: 'narr' },
+            { text: 'als Fremder.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Er verließ sie', style: 'narr' },
+            { text: 'als Spiegel.', style: 'italic', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: 'Denn was er in ihnen bekämpfte,', style: 'narr' },
+            { text: 'war nie nur ihre Dunkelheit.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Es war die Angst vor Veränderung.', style: 'narr' },
+            { text: 'Die Furcht, Kontrolle zu verlieren.', style: 'narr' },
+            { text: 'Der Irrglaube, Isolation sei Stärke.', style: 'italic', color: '#ff8866' },
+            { text: '', style: 'gap' },
+            { text: 'Jede Welt trug ihr eigenes Licht.', style: 'narr' },
+            { text: 'Doch sie hielten es fest —', style: 'narr' },
+            { text: 'als wäre es endlich.', style: 'italic', color: '#aaddff' },
+            { text: '', style: 'gap' },
+            { text: 'Keano verstand etwas,', style: 'narr' },
+            { text: 'das nur wenige begreifen:', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Licht wird schwächer,', style: 'bold', color: '#00ffff' },
+            { text: 'wenn man es einsperrt.', style: 'bold', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: '· · ·', style: 'divider', color: '#666' },
+            { text: '', style: 'gap' },
+            { text: 'Der letzte Gegner war kein Fremder.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Er war sein Vater.', style: 'bold', color: '#ff8866' },
+            { text: '', style: 'gap' },
+            { text: 'Vikingo — einst Hüter der Lichtlinie,', style: 'narr' },
+            { text: 'Vater zweier Söhne:', style: 'narr' },
+            { text: 'Keano, der das Licht trug,', style: 'italic', color: '#00ffff' },
+            { text: 'und Jayden, der das Feuer trug.', style: 'italic', color: '#ff4400' },
+            { text: '', style: 'gap' },
+            { text: 'Doch die Dimensionen hatten', style: 'narr' },
+            { text: 'einen Preis verlangt.', style: 'narr' },
+            { text: 'Vikingo hatte zu lange', style: 'narr' },
+            { text: 'in den Abgrund geblickt —', style: 'narr' },
+            { text: 'und der Abgrund blickte zurück.', style: 'italic', color: '#6600ff' },
+            { text: '', style: 'gap' },
+            { text: 'Die Dunkelheit fraß sein Licht.', style: 'narr' },
+            { text: 'Sie machte ihn zum Gefangenen', style: 'narr' },
+            { text: 'seiner eigenen Macht.', style: 'italic', color: '#ff8866' },
+            { text: '', style: 'gap' },
+            { text: 'Doch Keano schlug nicht zu,', style: 'narr' },
+            { text: 'um zu zerstören.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Er schlug zu, um zu befreien.', style: 'glow', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: 'Jeder Treffer war ein Ruf:', style: 'narr' },
+            { text: '„Ich bin hier, Vater.', style: 'italic', color: '#aaddff' },
+            { text: 'Komm zurück ins Licht."', style: 'italic', color: '#aaddff' },
+            { text: '', style: 'gap' },
+            { text: 'Und Vikingo hörte.', style: 'bold', color: '#ffcc00' },
+            { text: '', style: 'gap' },
+            { text: '· · ·', style: 'divider', color: '#666' },
+            { text: '', style: 'gap' },
+            { text: 'Die Linie seiner Ahnen lehrte ihn,', style: 'narr' },
+            { text: 'dass Energie fließen muss.', style: 'narr' },
+            { text: 'Zwischen Sternen.', style: 'italic', color: '#ffcc00' },
+            { text: 'Zwischen Dimensionen.', style: 'italic', color: '#ff00ff' },
+            { text: 'Zwischen Vater und Sohn.', style: 'bold', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: 'Er entzündete kein neues Feuer.', style: 'narr' },
+            { text: 'Er verband die alten.', style: 'bold', color: '#ffaa00' },
+            { text: '', style: 'gap' },
+            { text: 'Und so begann die Galaxie', style: 'narr' },
+            { text: 'wieder zu atmen.', style: 'italic', color: '#aaddff' },
+            { text: '', style: 'gap' },
+            { text: '· · ·', style: 'divider', color: '#666' },
+            { text: '', style: 'gap' },
+            { text: 'Manche Dimensionen werden sich widersetzen.', style: 'narr' },
+            { text: 'Manche werden wieder in Schatten fallen.', style: 'narr' },
+            { text: 'Zeitalter ändern sich nicht in einem Schlag.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Doch nun existiert ein Weg.', style: 'bold', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: 'Ein Pfad zwischen den Welten.', style: 'narr' },
+            { text: 'Geöffnet von einem Jungen', style: 'narr' },
+            { text: 'von vierzehn Wintern,', style: 'narr' },
+            { text: 'der sich weigerte,', style: 'narr' },
+            { text: 'Zersplitterung als Schicksal', style: 'italic', color: '#ff8866' },
+            { text: 'zu akzeptieren.', style: 'italic', color: '#ff8866' },
+            { text: '', style: 'gap' },
+            { text: 'Solange Dimensionen treiben…', style: 'narr' },
+            { text: 'solange Ideologien sich verhärten…', style: 'narr' },
+            { text: 'solange Macht über Mitgefühl', style: 'narr' },
+            { text: 'gestellt wird…', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'wird es jemanden brauchen,', style: 'narr' },
+            { text: 'der in die Mitte tritt —', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'und leuchtet.', style: 'glow', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: '', style: 'gap' },
+            { text: '· · · · · · ·', style: 'divider', color: '#444' },
+            { text: '', style: 'gap' },
+            { text: '', style: 'gap' },
+            { text: '🏆 HAPPY BIRTHDAY KEANO! 🏆', style: 'mega', color: '#ffcc00' },
+            { text: '', style: 'gap' },
+            { text: '🎇', style: 'glow', color: '#ffcc00' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Ein Lichtkristall wurde dir freigeschaltet –', style: 'bold', color: '#00ffff' },
+            { text: 'ein Geschenk des Lords of the Light selbst.', style: 'bold', color: '#00ffff' },
+            { text: '', style: 'gap' },
+            { text: 'Mit diesem Kristall kannst du', style: 'narr' },
+            { text: 'epische Icons für deinen Avatar erwerben.', style: 'narr' },
+            { text: '', style: 'gap-sm' },
+            { text: 'Er kann nur vom Lord of the Light', style: 'italic', color: '#aaddff' },
+            { text: 'genutzt werden und muss bei deinem Vater', style: 'italic', color: '#aaddff' },
+            { text: 'eingelöst werden bis zum nächsten Lichtmond,', style: 'italic', color: '#aaddff' },
+            { text: 'am 28. Februar 2027.', style: 'bold', color: '#ffcc00' },
+            { text: '', style: 'gap' },
+            { text: 'Möge dein Licht hell brennen', style: 'glow', color: '#00ffff' },
+            { text: 'und jede Dimension erleuchten,', style: 'italic', color: '#aaddff' },
+            { text: 'die du betrittst.', style: 'italic', color: '#aaddff' },
+            { text: '', style: 'gap' },
+            { text: 'In Liebe, Papa ❤️', style: 'glow', color: '#ffcc00' },
+            { text: '', style: 'gap' },
+            { text: '', style: 'gap' },
+            { text: '=====================', style: 'gap' },
+            { text: 'PROD. BY CAESAR', style: 'producer' },
+            { text: '© 2026', style: 'narr' },
+            { text: '=====================', style: 'gap' },
+            { text: '', style: 'gap' },
+            { text: '', style: 'gap' },
+            { text: '', style: 'gap' },
+          ];
+
+          // Ensure "Lichtkristall" is tracked for fireworks
+          let fireworksTriggered = false;
+
+          // Scrolling speed: 22 pixels per second upward
+          const scrollSpeed = 22;
+          const lineHeight = fs(0.04);
+          const gapHeight = lineHeight * 0.6;
+          const gapSmHeight = lineHeight * 0.3;
+          const totalScrollY = stateTimer * scrollSpeed;
+          const startY = C.height + 80; // Begin off-screen at bottom
+
+          let yPos = startY - totalScrollY;
+          for (const line of epilogLines) {
+            if (line.style === 'gap') { yPos += gapHeight; continue; }
+            if (line.style === 'gap-sm') { yPos += gapSmHeight; continue; }
+
+            // Only draw if on screen
+            if (yPos > -50 && yPos < C.height + 50) {
+              const distFromCenter = Math.abs(yPos - C.height * 0.45);
+              const maxDist = C.height * 0.55;
+              X.globalAlpha = Math.max(0.05, 1 - (distFromCenter / maxDist));
+
+              X.shadowBlur = 6; X.shadowColor = 'rgba(0,0,0,0.9)';
+
+              if (line.style === 'title') {
+                X.font = `bold ${fs(0.05)}px "Orbitron"`; X.fillStyle = line.color;
+                X.shadowBlur = 30; X.shadowColor = '#ff8800';
+              } else if (line.style === 'mega') {
+                X.font = `bold ${fs(0.055)}px "Orbitron"`; X.fillStyle = line.color;
+                X.shadowBlur = 40; X.shadowColor = '#ff8800';
+              } else if (line.style === 'subtitle') {
+                X.font = `bold ${fs(0.032)}px "Orbitron"`; X.fillStyle = line.color;
+                X.shadowBlur = 20; X.shadowColor = line.color;
+              } else if (line.style === 'narr') {
+                X.font = `${fs(0.022)}px "Orbitron"`; X.fillStyle = '#cccccc';
+              } else if (line.style === 'italic') {
+                X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#aaddff';
+              } else if (line.style === 'bold') {
+                X.font = `bold ${fs(0.024)}px "Orbitron"`; X.fillStyle = line.color || '#ffffff';
+                X.shadowBlur = 15; X.shadowColor = line.color || '#00ffff';
+              } else if (line.style === 'glow') {
+                X.font = `italic 900 ${fs(0.035)}px "Orbitron"`; X.fillStyle = line.color;
+                X.shadowBlur = 40; X.shadowColor = line.color;
+              } else if (line.style === 'divider') {
+                X.font = `${fs(0.03)}px "Orbitron"`; X.fillStyle = line.color;
+              } else if (line.style === 'personal') {
+                X.font = `${fs(0.021)}px "Orbitron"`; X.fillStyle = '#ffffff';
+              } else if (line.style === 'krieger') {
+                X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color;
+              } else if (line.style === 'gutschein') {
+                X.font = `bold ${fs(0.03)}px "Permanent Marker"`; X.fillStyle = line.color;
+                X.shadowBlur = 25; X.shadowColor = '#ff00ff';
+              } else if (line.style === 'signature') {
+                X.font = `bold ${fs(0.035)}px "Permanent Marker"`; X.fillStyle = line.color;
+                X.shadowBlur = 35; X.shadowColor = '#00ffff';
+              } else if (line.style === 'producer') {
+                X.font = `italic 900 ${fs(0.04)}px "Press Start 2P"`; X.fillStyle = '#ff0033';
+                X.shadowBlur = 20; X.shadowColor = '#ff0033';
+                X.strokeStyle = '#fff'; X.lineWidth = 2;
+              }
+
+              X.fillText(line.text, cx, yPos);
+              if (line.style === 'producer') X.strokeText(line.text, cx, yPos);
+
+              // FIREWORKS TRIGGER FOR "Lichtkristall"
+              if (line.text.includes('Lichtkristall') && distFromCenter < C.height * 0.1 && !fireworksTriggered && Math.random() < 0.2) {
+                // Spawn firework explosion behind the text
+                for (let i = 0; i < 30; i++) {
+                  particles.push({
+                    x: cx + (Math.random() - 0.5) * C.width * 0.5,
+                    y: yPos + (Math.random() - 0.5) * 50,
+                    vx: (Math.random() - 0.5) * 30,
+                    vy: (Math.random() - 0.5) * 30,
+                    life: 1.5 + Math.random(),
+                    color: Math.random() > 0.5 ? '#00ffff' : '#ffcc00',
+                    size: 3 + Math.random() * 5,
+                    isSpark: Math.random() > 0.7
+                  });
+                }
+              }
+
+            }
+            yPos += lineHeight;
+          }
+
+          // Draw active fireworks
+          particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= dt;
+            if (p.life > 0) {
+              X.save(); X.globalAlpha = Math.min(1, p.life); X.fillStyle = p.color; X.shadowBlur = 10; X.shadowColor = p.color;
+              X.fillRect(p.x, p.y, p.size, p.size); X.restore();
+            }
+          });
+          particles = particles.filter(p => p.life > 0);
+
+          X.restore();
+        }
+        if (flashTimer > 0) { X.save(); X.globalAlpha = flashTimer * 2; X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore(); flashTimer -= dt; }
+        X.restore();
+      } catch (err) { if (!window._loopErrLogged) { window._loopErrLogged = true; console.error('GAMELOOP ERROR:', err.message, err.stack); } }
+    }
+  </script>
+
+  <!-- Arcade Main Menu -->
+  <div id="arcade-menu">
+    <canvas id="lightning-canvas"></canvas>
+    <div class="scanlines-overlay"></div>
+    <div class="menu-glow"></div>
+    <div id="logo">KEANO ROMEO<br><span>LORD OF THE LIGHT I</span></div>
+
+    <div class="capcom-menu">
+      <button class="capcom-btn" id="btn-story">STORY MODUS (B-DAY MODUS)</button>
+      <button class="capcom-btn" id="btn-arcade" style="color: #666; border-color: #666; cursor: not-allowed;">ARCADE
+        MODE (LOCKED)</button>
+      <button class="capcom-btn" id="btn-versus" style="color: #666; border-color: #666; cursor: not-allowed;"
+        onclick="alert('Versus Modus bald verfügbar! 🎮')">VERSUS</button>
+      <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; align-items:center;">
+        <span style="color:#888; font-family:'Press Start 2P'; font-size:0.7rem;">DIFFICULTY:</span>
+        <button class="capcom-btn diff-btn" data-diff="easy"
+          style="font-size:0.9rem; padding:6px 14px; color:#00ff00;">EASY</button>
+        <button class="capcom-btn diff-btn active-diff" data-diff="normal"
+          style="font-size:0.9rem; padding:6px 14px; color:#ffcc00;">NORMAL</button>
+        <button class="capcom-btn diff-btn" data-diff="hard"
+          style="font-size:0.9rem; padding:6px 14px; color:#ff0033;">HARD</button>
+      </div>
+      <button class="capcom-btn" id="btn-options" onclick="toggleOptions()">OPTIONS</button>
+    </div>
+
+    <div id="options-panel">
+      <h2 style="color:#aaddff; font-family:'Press Start 2P'; margin-bottom:20px; text-shadow:0 0 10px #0088ff">OPTIONS
+      </h2>
+
+      <div style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center;">
+
+        <!-- SOUND Column -->
+        <div
+          style="display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:8px;">
+          <h3 style="color:#ffcc00; font-family:'Orbitron'; margin-bottom:15px;">AUDIO</h3>
+          <div style="color: #fff; margin-bottom: 5px; font-family: 'Orbitron'; font-size:0.8rem">MUSIC VOL</div>
+          <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.2"
+            oninput="setGlobalMusic(this.value)" onchange="SFX.click()">
+          <div style="color: #fff; margin-top: 15px; margin-bottom: 5px; font-family: 'Orbitron'; font-size:0.8rem">SFX
+            VOL</div>
+          <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.35"
+            oninput="setGlobalSfx(this.value)" onchange="SFX.punch()">
+          <div style="color: #fff; margin-top: 15px; margin-bottom: 5px; font-family: 'Orbitron'; font-size:0.8rem">
+            VOICE VOL</div>
+          <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.35"
+            oninput="setGlobalVoice(this.value)"
+            onchange="const u=new SpeechSynthesisUtterance('Test'); u.lang='de-DE'; u.volume=this.value; window.speechSynthesis.speak(u);">
+        </div>
+
+        <!-- ARCADE SETTINGS Column -->
+        <div
+          style="display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:8px;">
+          <h3 style="color:#ffcc00; font-family:'Orbitron'; margin-bottom:15px;">ARCADE RULESET</h3>
+          <div style="color: #fff; font-size:0.8rem; margin-bottom: 5px; font-family: 'Orbitron';">MATCH LENGTH</div>
+          <div style="display:flex; gap:10px;">
+            <button class="capcom-btn diff-btn round-btn" data-rounds="1" style="font-size:0.8rem; padding:4px 8px;">1
+              ROUND</button>
+            <button class="capcom-btn diff-btn round-btn active-diff" data-rounds="3"
+              style="font-size:0.8rem; padding:4px 8px;">3 ROUNDS</button>
+            <button class="capcom-btn diff-btn round-btn" data-rounds="5" style="font-size:0.8rem; padding:4px 8px;">5
+              ROUNDS</button>
+          </div>
+          <div
+            style="color: #aaa; font-size:0.6rem; margin-top: 5px; font-family: 'Orbitron'; max-width:200px; text-align:center;">
+            Story Mode is always <strong style="color: #00ffcc">1 Round</strong>.
+          </div>
+        </div>
+
+        <!-- CONTROLS Column -->
+        <div
+          style="display:flex; flex-direction:column; align-items:flex-start; background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; min-width:250px;">
+          <h3 style="color:#ffcc00; font-family:'Orbitron'; margin-bottom:15px; align-self:center;">CONTROLS & MOVES
+          </h3>
+          <div style="font-family:'Orbitron'; font-size:0.8rem; line-height:1.6; color:#ccc;">
+            <b style="color:#fff">MOVE / JUMP:</b> Arrows / D-Pad <br>
+            <b style="color:#fff">PUNCH:</b> Ctrl / Cmd / Pad X <br>
+            <b style="color:#fff">KICK:</b> Alt / Option / Pad Y <br>
+            <b style="color:#fff">SPECIAL:</b> F / Gamepad B <br>
+            <b style="color:#fff">SUPER:</b> Space / Gamepad A <br>
+            <div style="margin-top:10px; border-top:1px solid #444; padding-top:10px;">
+              <b style="color:#aaddff;">ADVANCED MOVES:</b> <br>
+              <span style="color:#ff8800">Fireball:</span> DOWN, FORWARD, PUNCH<br>
+              <span style="color:#00ffcc">Roll/Flip:</span> DOWN, BACK, KICK
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="capcom-btn" style="border: 2px solid #ffcc00; margin-top: 25px; font-size:1.0rem;"
+        onclick="toggleOptions()">CLOSE</button>
+    </div>
+
+    <div class="insert-coin"><span class="rotating-coin">🪙</span><span class="text-blink">INSERT LIGHT COIN</span><span
+        class="rotating-coin">🪙</span></div>
+  </div>
+
+  <!-- In-Game Pause Menu -->
+  <button id="mobile-hamburger" onclick="togglePause()">☰</button>
+  <div id="pause-overlay">
+    <h2
+      style="color:#00ffff; font-family:'Press Start 2P'; font-size: 2rem; margin-bottom: 20px; text-shadow:0 0 15px #00ffff;">
+      PAUSED</h2>
+    <button class="capcom-btn" onclick="togglePause()" style="border-color: #00ffcc; color: #00ffcc;">▶ RESUME</button>
+    <button class="capcom-btn" onclick="togglePause(); toggleOptions()" style="border-color: #ffcc00; color: #ffcc00;">⚙
+      OPTIONS</button>
+    <button class="capcom-btn" onclick="quitToMenu()" style="border-color: #ff0033; color: #ff0033;">✖ QUIT
+      MATCH</button>
+  </div>
+
+  <!-- Character Select Screen (Overlay) -->
+  <div id="char-select">
+    <button id="cs-back-btn" class="cs-btn-back">◀ BACK</button>
+    <div class="cs-left">
+      <div id="cs-title">SELECT YOUR FIGHTER</div>
+      <div class="cs-grid" id="cs-grid-container">
+        <!-- Auto populated via JS -->
+      </div>
+      <div class="cs-alt-grid" id="cs-alt-grid-container">
+        <!-- Auto populated via JS -->
+      </div>
+    </div>
+    <div class="cs-right">
+      <img id="cs-preview-img" src="" alt="Fighter Preview">
+      <div id="cs-name">???</div>
+      <div id="cs-title-label"></div>
+      <div id="cs-desc"></div>
+      <div class="cs-stats">
+        <span class="cs-stat-label">SPD</span>
+        <div class="cs-stat-bar">
+          <div class="cs-stat-fill" id="stat-spd" style="width:0%;background:linear-gradient(90deg,#00ff88,#00ffcc)">
+          </div>
+        </div>
+        <span class="cs-stat-label">POW</span>
+        <div class="cs-stat-bar">
+          <div class="cs-stat-fill" id="stat-pow" style="width:0%;background:linear-gradient(90deg,#ff4400,#ffaa00)">
+          </div>
+        </div>
+        <span class="cs-stat-label">DEF</span>
+        <div class="cs-stat-bar">
+          <div class="cs-stat-fill" id="stat-def" style="width:0%;background:linear-gradient(90deg,#0055ff,#00ccff)">
+          </div>
+        </div>
+        <span class="cs-stat-label">SPC</span>
+        <div class="cs-stat-bar">
+          <div class="cs-stat-fill" id="stat-spc" style="width:0%;background:linear-gradient(90deg,#aa00ff,#ff00ff)">
+          </div>
+        </div>
+      </div>
+      <div class="cs-moves-box">
+        <div class="cs-move-label">MOVES</div>
+        <div class="cs-move-name" id="cs-moves">—</div>
+        <div class="cs-move-label">SPECIAL</div>
+        <div class="cs-move-name" id="cs-special" style="color:#ffcc00">—</div>
+        <div class="cs-move-label">FINISHER</div>
+        <div class="cs-move-name" id="cs-finisher" style="color:#ff0055">—</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== MENU LOGIC =====
+    const arcadeMenu = document.getElementById('arcade-menu');
+    const charSelect = document.getElementById('char-select');
+    const optionsPanel = document.getElementById('options-panel');
+    let gameStarted = false;
+    let gameMode = 'story'; // default
+    let arcadeSelectedName = 'KEANO'; // default if they somehow skip
+
+    // ===== DIFFICULTY & ROUNDS =====
+    gameDifficulty = 'normal';
+    let arcadeRoundsLimit = 3; // Best of 3 by default
+
+    // Wire up Arcade round buttons
+    document.querySelectorAll('.round-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('active-diff'));
+        btn.classList.add('active-diff');
+        arcadeRndsLimit = parseInt(btn.dataset.rounds);
+        SFX.click();
+      });
+    });
+    const DIFF_SCALES = {
+      easy: { hpScale: 0.7, spdScale: 0.75, aiAggro: 0.5, blockRate: 0.1 },
+      normal: { hpScale: 1.0, spdScale: 1.0, aiAggro: 1.0, dmgScale: 1.0, blockRate: 0.25 },
+      hard: { hpScale: 1.5, spdScale: 1.3, aiAggro: 1.8, dmgScale: 1.4, blockRate: 0.45 }
+    };
+    function getDiff() { return DIFF_SCALES[gameDifficulty]; }
+
+    // Wire up difficulty buttons
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active-diff'));
+        btn.classList.add('active-diff');
+        gameDifficulty = btn.dataset.diff;
+      });
+    });
+
+    // Build the Grid
+    const csGrid = document.getElementById('cs-grid-container');
+    const csName = document.getElementById('cs-name');
+    const csPreview = document.getElementById('cs-preview-img');
+    const csTitleLabel = document.getElementById('cs-title-label');
+    const csDesc = document.getElementById('cs-desc');
+    const csMoves = document.getElementById('cs-moves');
+    const csSpecial = document.getElementById('cs-special');
+    const csFinisher = document.getElementById('cs-finisher');
+
+    function showFighterDetails(f) {
+      csName.textContent = f.name + ' ' + f.flag;
+      csPreview.src = f.fighter; // Raw image with epic galactic background
+      csTitleLabel.textContent = f.title || '';
+      csDesc.textContent = f.desc || '';
+      csMoves.textContent = f.moves || '—';
+      csSpecial.textContent = f.specialName || f.special?.toUpperCase() || '—';
+      csFinisher.textContent = f.finisher || '—';
+      // Stat bars (1-5 scale → 20%-100%)
+      const s = f.str || { spd: 3, pow: 3, def: 3, spc: 3 };
+      document.getElementById('stat-spd').style.width = (s.spd * 20) + '%';
+      document.getElementById('stat-pow').style.width = (s.pow * 20) + '%';
+      document.getElementById('stat-def').style.width = (s.def * 20) + '%';
+      document.getElementById('stat-spc').style.width = (s.spc * 20) + '%';
+    }
+
+    const csAltGrid = document.getElementById('cs-alt-grid-container');
+
+    function createPortrait(dataObj, isAlt = false) {
+      const port = document.createElement('div');
+      port.className = 'cs-portrait ' + (isAlt ? 'alt-portrait' : '');
+      const img = document.createElement('img');
+      img.src = dataObj.fighter; // Raw image with cosmic background for cards
+      port.appendChild(img);
+      // Name label on card
+      const label = document.createElement('div');
+      label.className = 'cs-label';
+      label.style.background = isAlt ? 'rgba(80, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.75)';
+      label.style.color = isAlt ? '#ff4444' : '#fff';
+      label.textContent = dataObj.name;
+      port.appendChild(label);
+
+      port.addEventListener('mouseover', () => showFighterDetails(dataObj));
+
+      port.addEventListener('click', () => {
+        document.querySelectorAll('.cs-portrait').forEach(p => p.classList.remove('selected'));
+        port.classList.add('selected');
+        arcadeSelectedName = dataObj.name; // Keep tracking the selected fighter
+        showFighterDetails(dataObj);
+        SFX.fight(); // selection sound
+
+        setTimeout(() => {
+          charSelect.classList.remove('visible');
+          // Show gamepad on mobile
+          if (isMobile) document.getElementById('gamepad').style.display = 'flex';
+          // Show universal hamburger menu button for pause/quit
+          document.getElementById('mobile-hamburger').style.display = 'flex';
+
+          if (!gameStarted) {
+            gameStarted = true;
+            startLevel(0);
+            requestAnimationFrame(gameLoop);
+          }
+        }, 800);
+      });
+      return port;
+    }
+
+    // Add Keano variants and base LEVELS to roster for selection
+    const mainRoster = [KEANO_PROFILE, ...LEVELS];
+
+    // Alt roster gathers all altProfiles (Supreme Keano, Dark Jayden, etc.)
+    const altRoster = [];
+    if (KEANO_PROFILE.altProfile) altRoster.push(KEANO_PROFILE.altProfile);
+    altRoster.push(HYPER_KEANO_PROFILE);
+    LEVELS.forEach(l => { if (l.altProfile) altRoster.push(l.altProfile); });
+
+    // Render Main Roster
+    mainRoster.forEach((l) => {
+      csGrid.appendChild(createPortrait(l, false));
+    });
+
+    // Render Alt Roster if they exist
+    if (altRoster.length > 0) {
+      const altTitle = document.createElement('div');
+      altTitle.className = 'cs-alt-title';
+      altTitle.textContent = 'SHADOW FIGHTERS & VARIANTS';
+      csAltGrid.appendChild(altTitle);
+
+      altRoster.forEach((altData) => {
+        csAltGrid.appendChild(createPortrait(altData, true));
+      });
+    } else {
+      csAltGrid.style.display = 'none';
+    }
+
+    // Show Keano by default
+    showFighterDetails(KEANO_PROFILE);
+
+    // Navigation back to menu
+    document.getElementById('cs-back-btn').addEventListener('click', () => {
+      charSelect.classList.remove('visible');
+      arcadeMenu.classList.remove('hidden');
+    });
+
+    // Navigation back to menu
+    document.getElementById('cs-back-btn').addEventListener('click', () => {
+      charSelect.classList.remove('visible');
+      arcadeMenu.classList.remove('hidden');
+    });
+
+    // Options Logic
+    window.toggleOptions = function () {
+      const panel = document.getElementById('options-panel');
+      if (panel.style.display === 'flex') {
+        panel.style.display = 'none';
+        if (gameState === 'options-paused') {
+          gameState = 'fighting';
+          lastTime = performance.now();
+        }
+      } else {
+        panel.style.display = 'flex';
+        // Auto pause on options open
+        if (gameState === 'fight' || gameState === 'fighting') {
+          gameState = 'options-paused';
+        }
+      }
+    };
+
+    window.togglePause = function () {
+      const overlay = document.getElementById('pause-overlay');
+      if (overlay.style.display === 'flex') {
+        overlay.style.display = 'none';
+        if (gameState === 'paused') {
+          gameState = 'fighting';
+          lastTime = performance.now();
+        }
+      } else {
+        if (gameState === 'fight' || gameState === 'fighting') {
+          gameState = 'paused';
+          overlay.style.display = 'flex';
+        }
+      }
+    };
+
+    window.quitToMenu = function () {
+      document.getElementById('pause-overlay').style.display = 'none';
+      document.getElementById('gamepad').style.display = 'none';
+      document.getElementById('mobile-hamburger').style.display = 'none';
+      document.getElementById('arcade-menu').classList.remove('hidden');
+      gameState = 'menu';
+      SFX.stopMusic();
+    };
+
+    // Global volume setter
+    window.setGlobalMusic = function (val) {
+      SFX.setMusicVol(val);
+      const beat = document.getElementById('beat');
+      if (beat) beat.volume = val * 0.5; // Scale down mp3 a bit so it doesn't overpower synth
+    };
+
+    window.setGlobalSfx = function (val) {
+      SFX.setSfxVol(val);
+    };
+
+    window.setGlobalVoice = function (val) {
+      SFX.setVoiceVol(val);
+      const voice = document.getElementById('voice');
+      if (voice) voice.volume = val;
+    };
+
+    function bootGame() {
+      if (!originalLevels) {
+        // Backup the massive 14-character roster
+        originalLevels = [...LEVELS];
+      }
+
+      if (gameMode === 'story') {
+        // FULL 14-FIGHT STORY MODE (B-DAY MODUS)
+        // All 14 fighters in original order, Vikingo = Endgegner!
+        // Alt profiles (Cyber Gargamel, Dark Vikingo) are forced in startLevel()
+        LEVELS = [...originalLevels];
+      } else {
+        // ARCADE MODE: Same roster, player picks their fighter
+        LEVELS = [...originalLevels];
+      }
+      try { const e = window.event; if (e) e.stopPropagation(); } catch (err) { }
+
+      // Resume AudioContext 
+      if (AC.state === 'suspended') AC.resume();
+
+      SFX.stopTitleMusic(); // Stop title theme when game starts
+
+      if (gameMode === 'story') {
+        arcadeMenu.classList.add('hidden');
+        if (!gameStarted) {
+          gameStarted = true;
+          try {
+            startLevel(0);
+          } catch (err) {
+            console.error('STARTLEVEL CRASH:', err.message, err.stack);
+            // Fallback: set minimal state so game can still render
+            gameState = 'vs_screen'; stateTimer = 3.5;
+          }
+          requestAnimationFrame(gameLoop);
+        }
+      } else if (gameMode === 'arcade') {
+        if (!localStorage.getItem('arcadeUnlocked')) {
+          alert('ARCADE MODE IS LOCKED!\\nYou must beat STORY MODUS (B-DAY MODUS) first to unlock this mode.');
+          SFX.playTitleMusic(); // ressume music if backed out
+          return;
+        }
+        arcadeMenu.classList.add('hidden');
+        // Hide gamepad during character select
+        if (isMobile) document.getElementById('gamepad').style.display = 'none';
+        charSelect.classList.add('visible');
+        SFX.round(); // dramatic swoosh
+      }
+    }
+
+    // Check localStorage on load to visually unlock Arcade Mode
+    if (localStorage.getItem('arcadeUnlocked') === 'true') {
+      const btnArcade = document.getElementById('btn-arcade');
+      if (btnArcade) {
+        btnArcade.style.color = '#00ffff';
+        btnArcade.style.borderColor = '#00ffff';
+        btnArcade.style.cursor = 'pointer';
+        btnArcade.textContent = 'ARCADE MODE';
+      }
+    }
+
+    // START MODES
+    document.getElementById('btn-story').addEventListener('click', () => { gameMode = 'story'; bootGame(); });
+    document.getElementById('btn-arcade').addEventListener('click', () => { gameMode = 'arcade'; bootGame(); });
+
+    // ===== PROCEDURAL LIGHTNING BOLT RENDERER =====
+    (function initLightning() {
+      const canvas = document.getElementById('lightning-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let bolts = [];
+      let nextBoltTime = 0;
+
+      function resize() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function drawBolt(x1, y1, x2, y2, depth) {
+        if (depth <= 0) return;
+        const dx = x2 - x1, dy = y2 - y1;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 5) return;
+
+        const segments = 8 + Math.floor(Math.random() * 6);
+        const points = [{ x: x1, y: y1 }];
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const jitter = (Math.random() - 0.5) * dist * 0.15;
+          points.push({
+            x: x1 + dx * t + jitter,
+            y: y1 + dy * t + (Math.random() - 0.5) * 10
+          });
+        }
+        points.push({ x: x2, y: y2 });
+
+        // Main bolt
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.strokeStyle = depth > 2 ? 'rgba(200,220,255,0.9)' : 'rgba(150,180,255,0.5)';
+        ctx.lineWidth = depth > 2 ? 3 : 1.5;
+        ctx.shadowBlur = depth > 2 ? 25 : 10;
+        ctx.shadowColor = '#4488ff';
+        ctx.stroke();
+
+        // Branches
+        if (depth > 1) {
+          for (let i = 2; i < points.length - 2; i++) {
+            if (Math.random() < 0.3) {
+              const branchLen = dist * 0.3 * Math.random();
+              const angle = (Math.random() - 0.5) * Math.PI * 0.8;
+              const bx = points[i].x + Math.cos(angle + Math.PI / 2) * branchLen;
+              const by = points[i].y + Math.sin(angle + Math.PI / 2) * branchLen;
+              drawBolt(points[i].x, points[i].y, bx, by, depth - 1);
+            }
+          }
+        }
+      }
+
+      function spawnBolt() {
+        const startX = Math.random() * canvas.width;
+        const endX = startX + (Math.random() - 0.5) * 300;
+        const endY = canvas.height * (0.3 + Math.random() * 0.3);
+        bolts.push({ x1: startX, y1: 0, x2: endX, y2: endY, life: 0.15 + Math.random() * 0.1 });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        // Only draw when menu is visible
+        const menu = document.getElementById('arcade-menu');
+        if (!menu || menu.classList.contains('hidden')) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const now = performance.now() / 1000;
+        if (now >= nextBoltTime) {
+          spawnBolt();
+          // Sometimes double-strike
+          if (Math.random() < 0.4) setTimeout(spawnBolt, 50 + Math.random() * 100);
+          nextBoltTime = now + 2 + Math.random() * 4; // every 2-6 seconds
+        }
+
+        // Draw active bolts
+        for (let i = bolts.length - 1; i >= 0; i--) {
+          const b = bolts[i];
+          b.life -= 0.016;
+          if (b.life <= 0) { bolts.splice(i, 1); continue; }
+          ctx.globalAlpha = Math.min(1, b.life * 8);
+          drawBolt(b.x1, b.y1, b.x2, b.y2, 4);
+
+          // Screen flash on fresh bolt
+          if (b.life > 0.1) {
+            ctx.globalAlpha = b.life * 1.5;
+            ctx.fillStyle = 'rgba(150,180,255,0.03)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+      animate();
+    })();
+
+    // ===== TITLE MUSIC ON FIRST CLICK =====
+    let titleMusicStarted = false;
+    document.getElementById('arcade-menu').addEventListener('click', () => {
+      if (!titleMusicStarted) {
+        titleMusicStarted = true;
+        if (AC.state === 'suspended') AC.resume();
+        SFX.playTitleMusic();
+      }
+    }, { once: false });
+
+  </script>
+</body>
+
+</html>

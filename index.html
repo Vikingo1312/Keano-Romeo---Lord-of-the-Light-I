@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <title>KEANO ROMEO — LORD OF THE LIGHT I ⚔️</title>
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap"
+    rel="stylesheet">
+  <style>
+    /* =========================================================================
+       1. V3: CORE RESET & FONTS
+       ========================================================================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Press Start 2P', monospace;
+      color: white;
+      touch-action: none;
+    }
+
+    /* Fullscreen Game Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    /* Core Rendering Canvas */
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      /* Image Rendering crisp for pixel art, but we use high res AI art, so normal is fine */
+      /* image-rendering: pixelated; */
+    }
+
+    /* Global Helper Classes */
+    .hidden {
+      display: none !important;
+    }
+
+    .neon-text {
+      text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+
+    /* =========================================================================
+       2. UI SCREENS (OVERLAYS)
+       ========================================================================= */
+    /* 2.1 MAIN MENU (State 1) */
+    #main-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: url('assets/UX_Cosmic_Shimmer.png') center/cover no-repeat;
+    }
+
+    @keyframes thunder-shake {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      10% {
+        transform: translate(-8px, 6px) scale(1.02);
+        filter: brightness(2) contrast(1.5);
+      }
+
+      15% {
+        transform: translate(6px, -6px) scale(1.03);
+        filter: brightness(3.5) contrast(2) saturate(0.5);
+      }
+
+      25% {
+        transform: translate(-10px, 5px) scale(1.02);
+        filter: brightness(1.8) contrast(1.5);
+      }
+
+      35% {
+        transform: translate(5px, -4px) scale(1.02);
+        filter: brightness(1.2);
+      }
+
+      45% {
+        transform: translate(-4px, 6px) scale(1.01);
+        filter: brightness(1);
+      }
+
+      60% {
+        transform: translate(3px, -2px) scale(1.01);
+      }
+
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
+    .lightning-active {
+      animation: thunder-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+    }
+
+    /* ===== LIGHTNING CANVAS ===== */
+    #lightning-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .caesar-branding-logo {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 180px;
+      height: auto;
+      filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5));
+      z-index: 101;
+      opacity: 0.8;
+    }
+
+    .main-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 8vw, 6rem);
+      letter-spacing: 5px;
+      margin-bottom: -10px;
+      text-transform: uppercase;
+      background: repeating-linear-gradient(0deg, #00ffff 0px, #00ffff 4px, #0088cc 4px, #0088cc 6px);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+      filter: drop-shadow(0px 0px 10px rgba(0, 255, 255, 0.8));
+      line-height: 1.1;
+      animation: pulsate-title 3s infinite alternate;
+      text-align: center;
+    }
+
+    .sub-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.2rem, 3vw, 2.2rem);
+      color: #fff;
+      -webkit-text-stroke: 1px #000;
+      letter-spacing: 12px;
+      text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    /* Capcom Style Arcade Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 102;
+    }
+
+    .capcom-btn {
+      background: rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+      padding: 15px 40px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #fff;
+      border: 4px solid #fff;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5), 0 0 15px rgba(255, 255, 255, 0.5);
+      transition: all 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .capcom-btn:hover:not(:disabled) {
+      background: #fff;
+      color: #000;
+      transform: scale(1.05);
+      box-shadow: 0 0 30px #fff;
+    }
+
+    .capcom-btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .capcom-btn:disabled {
+      border-color: #444;
+      color: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Padlock for locked modes */
+    .btn-lock {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+      font-size: 1.2rem;
+    }
+
+    @keyframes pulsate-title {
+      0% {
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+      }
+
+      100% {
+        text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+      }
+    }
+
+    /* 2.2 CHARACTER SELECT (State 3) */
+    #char-select {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 90;
+      background: linear-gradient(135deg, #0a001a 0%, #000033 100%);
+      display: flex;
+      flex-direction: row;
+      padding: 20px;
+    }
+
+    /* Keep bottom area free for virtual pads on mobile */
+    @media (max-width: 800px) {
+      #char-select {
+        flex-direction: column;
+        padding-bottom: 30vh;
+      }
+    }
+
+    .cs-left {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cs-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: rgba(0, 10, 30, 0.6);
+      backdrop-filter: blur(10px);
+      border-left: 2px solid #00ffff;
+      box-shadow: -10px 0 30px rgba(0, 255, 255, 0.1);
+      padding: 5px 0 0 0;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    #cs-title {
+      font-size: 2rem;
+      color: #ffcc00;
+      text-align: center;
+      text-shadow: 0 0 10px #ffcc00;
+      margin-bottom: 20px;
+    }
+
+    .cs-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      padding: 12px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .cs-portrait {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 3px solid #333;
+      background: #111;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cs-portrait img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .cs-portrait.selected {
+      border-color: #00ffff;
+      box-shadow: 0 0 15px #00ffff;
+      transform: scale(1.1);
+      z-index: 2;
+    }
+
+    /* Highlight the boss/Keano specifically */
+    .cs-portrait.boss {
+      border-color: #ff0000;
+    }
+
+    .cs-portrait.boss.selected {
+      box-shadow: 0 0 20px #ff0000;
+    }
+
+    .cs-portrait.variant {
+      border-color: #ffcc00;
+    }
+
+    .cs-portrait.variant.selected {
+      border-color: #ffcc00;
+      box-shadow: 0 0 20px #ffcc00;
+    }
+
+    .cs-portrait-name {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-size: 0.5rem;
+      text-align: center;
+      padding: 2px 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .cs-info-panel {
+      padding: 5px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-grow: 0;
+    }
+
+    /* Character Display */
+    #cs-preview-img {
+      width: 100%;
+      max-height: 45vh;
+      object-fit: contain;
+      object-position: top center;
+      margin: 0;
+      padding: 5px;
+      filter: drop-shadow(0 0 25px rgba(0, 255, 255, 0.4));
+      border-bottom: 1px solid rgba(0, 255, 255, 0.4);
+      background: linear-gradient(to top, rgba(0, 200, 255, 0.1), transparent);
+    }
+
+    #cs-name {
+      font-size: 1.3rem;
+      color: #fff;
+      text-shadow: 0 0 10px #fff;
+      margin: 3px 0 2px;
+      text-align: center;
+    }
+
+    #cs-title-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      color: #00ffff;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+
+    .cs-desc {
+      font-size: 0.7rem;
+      color: #aaa;
+      text-align: center;
+      margin: 5px 0 10px;
+    }
+
+    .cs-stats {
+      width: 100%;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+    }
+
+    .cs-stat-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .cs-stat-label {
+      width: 50px;
+      color: #ccc;
+    }
+
+    .cs-stat-bar-bg {
+      flex: 1;
+      height: 12px;
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .cs-stat-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease-out;
+      border-radius: 3px;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    .btn-select-confirm {
+      margin-top: auto;
+      width: 90%;
+      margin-bottom: 20px;
+      padding: 20px;
+      font-size: 2rem;
+      background: linear-gradient(90deg, #00ffff, #0055ff);
+      color: #000;
+      border: 3px solid #fff;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      animation: pulsate-title 1s infinite alternate;
+      text-transform: uppercase;
+      font-weight: 900;
+      box-shadow: 0 0 20px #00ffff;
+      transition: all 0.2s;
+    }
+
+    .btn-select-confirm:hover {
+      background: #fff;
+      box-shadow: 0 0 40px #fff, inset 0 0 15px #00ffff;
+      transform: scale(1.05);
+    }
+
+    /* 2.3 OPTIONS & HUD/PAUSE MENU */
+    #pause-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 150;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .options-panel {
+      background: rgba(0, 20, 40, 0.9);
+      border: 2px solid #00ffff;
+      padding: 30px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+      max-width: 600px;
+      width: 90%;
+    }
+
+    .opt-title {
+      color: #00ffff;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 0.8rem;
+    }
+
+    input[type=range] {
+      width: 60%;
+      accent-color: #00ffff;
+    }
+
+    /* Controls Tutorial Section */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      border-top: 1px solid #444;
+      padding-top: 15px;
+    }
+
+    .ctrl-key {
+      color: #ffcc00;
+      font-weight: bold;
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #555;
+    }
+
+    /* Hamburger Button (Always visible during gameplay) */
+    /* === INSERT COIN / CREDITS SYSTEM === */
+    .insert-coin-bar {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      z-index: 20;
+    }
+
+    .coin-icon {
+      font-size: 2rem;
+      animation: coinSpin 1.5s ease-in-out infinite;
+      filter: drop-shadow(0 0 8px #ffcc00);
+    }
+
+    @keyframes coinSpin {
+
+      0%,
+      100% {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scaleX(0.1);
+        opacity: 0.7;
+      }
+    }
+
+    .insert-coin-text {
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 1rem;
+      color: #ffcc00;
+      text-shadow: 0 0 10px #ffcc00, 0 0 20px #ff8800;
+      letter-spacing: 3px;
+    }
+
+    @keyframes insertBlink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.2;
+      }
+    }
+
+    .credit-counter {
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 0.85rem;
+      color: #00ffff;
+      text-shadow: 0 0 8px #00ffff;
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      z-index: 20;
+    }
+
+    /* When credits are empty: blink red + clickable */
+    .insert-coin-bar.empty {
+      cursor: pointer;
+    }
+
+    .insert-coin-bar.empty .insert-coin-text {
+      color: #ff0033;
+      text-shadow: 0 0 10px #ff0033, 0 0 20px #ff0000;
+      animation: insertBlink 0.4s ease-in-out infinite;
+    }
+
+    .insert-coin-bar.empty .coin-icon {
+      filter: drop-shadow(0 0 8px #ff0033) hue-rotate(180deg);
+    }
+
+    /* SKIP BUTTON (Voice Sequences) */
+    #btn-skip-sequence {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid #ffcc00;
+      color: #ffcc00;
+      font-family: 'Press Start 2P', 'Orbitron', monospace;
+      font-size: 0.85rem;
+      padding: 12px 30px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px #ffcc00;
+      animation: insertBlink 1s ease-in-out infinite;
+      transition: all 0.2s;
+    }
+
+    #btn-skip-sequence:hover {
+      background: rgba(255, 200, 0, 0.15);
+      border-color: #fff;
+      color: #fff;
+    }
+
+    #btn-hamburger {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 80;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 1.5rem;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 2.4 VIRTUAL GAMEPAD (Mobile Only) */
+    #mobile-controls {
+      position: absolute;
+      bottom: 5vh;
+      left: 0;
+      width: 100%;
+      height: auto;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      pointer-events: none;
+      touch-action: none;
+    }
+
+    .mc-zone {
+      pointer-events: auto;
+      display: flex;
+      align-items: flex-end;
+      touch-action: none;
+    }
+
+    #joystick-base {
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle at center, rgba(30, 30, 40, 0.8), rgba(10, 10, 15, 0.9));
+      border: 3px solid rgba(0, 255, 255, 0.5);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 0, 0, 0.8);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    #joystick-knob {
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle at 30% 30%, #666, #111);
+      border: 2px solid #00ffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 45px;
+      left: 45px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    }
+
+    .action-btn-group {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .action-btn {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      font-size: 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255, 255, 255, 0.2);
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    #btn-punch {
+      top: 0;
+      left: 55px;
+      background: radial-gradient(circle, #0088ff, #004488);
+      border-color: #00aaff;
+    }
+
+    #btn-kick {
+      bottom: 0;
+      left: 55px;
+      background: radial-gradient(circle, #ff3300, #881100);
+      border-color: #ff5533;
+    }
+
+    #btn-block {
+      left: 0;
+      top: 55px;
+      background: radial-gradient(circle, #888, #444);
+      border-color: #aaa;
+      color: #ddd;
+    }
+
+    #btn-special {
+      right: 0;
+      top: 55px;
+      background: radial-gradient(circle, #ffcc00, #886600);
+      border-color: #ffee33;
+      color: #fff;
+    }
+
+    @media (min-width: 1025px) {
+      #mobile-controls {
+        display: none !important;
+      }
+    }
+
+    /* =========================================================================
+       V3: Scene Manager & Transitions
+       ========================================================================= */
+    #scene-fader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center,
+          rgba(0, 0, 0, 1) 40%,
+          rgba(0, 30, 60, 0.98) 60%,
+          rgba(0, 180, 255, 0.15) 80%,
+          rgba(120, 0, 255, 0.1) 100%);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #scene-fader.fade-in {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="game-container">
+    <!-- Scene Manager Overlay -->
+    <div id="scene-fader"></div>
+    <!-- V7 QA DEBUG LOGGER -->
+    <div id="qa-logger"
+      style="position:fixed; top:10px; left:10px; width:40%; max-height:30%; overflow-y:auto; background:rgba(0,0,0,0.8); color:#ff5555; font-family:monospace; font-size:12px; z-index:9999; pointer-events:none; padding:10px; border:1px solid #ff0000; border-radius:5px; display:none;">
+      <strong>V7 QA ERROR LOG:</strong><br>
+    </div>
+
+    <div id="crt-overlay"></div>
+
+    <!-- Main Render Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Initial Audio Interactor -->
+    <div id="audio-unlock-overlay"
+      style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white;">
+      <h1
+        style="font-family: 'Press Start 2P', monospace; font-size: 2rem; color: #ffeb3b; text-shadow: 2px 2px #ff0000; animation: pulsate-title 1.5s infinite alternate;">
+        CLICK ANYWHERE TO START</h1>
+      <p style="font-family: 'Orbitron', sans-serif; font-size: 1rem; margin-top: 15px;">Initializing Arcade Engine...
+      </p>
+    </div>
+
+    <button id="btn-skip-sequence" class="hidden">⏭ SKIP</button>
+
+    <!-- STATE 1: Main Menu -->
+    <div id="main-menu">
+      <canvas id="lightning-canvas"></canvas>
+      <div class="menu-logo-container">
+        <h1 class="main-title">KEANO ROMEO</h1>
+        <h2 class="sub-title">LORD OF THE LIGHT 1</h2>
+      </div>
+
+      <div class="btn-group">
+        <button class="capcom-btn" id="btn-story">STORY MODUS</button>
+        <button class="capcom-btn" id="btn-arcade" disabled
+          style="color:#ff0033; border-color:#ff0033; cursor:not-allowed; opacity:0.6;">🔒 ARCADE MODUS</button>
+        <button class="capcom-btn" id="btn-versus" disabled
+          style="color:#ff0033; border-color:#ff0033; cursor:not-allowed; opacity:0.6;">🔒 VERSUS MODUS</button>
+        <button class="capcom-btn" id="btn-options-menu" onclick="toggleOptions()">OPTIONEN</button>
+      </div>
+    </div>
+    <script>
+      // =========================================================================
+      // V7 QA GLOBAL ERROR CATCHER
+      // =========================================================================
+      const qaLogger = document.getElementById('qa-logger');
+      let hasErrors = false;
+
+      // V9 QA Metrics Tracker
+      const QATracker = {
+        active: window.location.search.includes('qa=true'),
+        matches: 0,
+        hits: 0,
+        misses: 0, // attacks that didn't hit
+        specials: 0,
+        glowTriggers: 0,
+        kos: 0,
+        frameDrops: 0,
+        print() {
+          return `
+                <div style="background:#000; color:#0f0; border:2px solid #0f0; padding:20px; text-align:left; font-family:monospace; font-size:16px;">
+                  <h3>✅ QA AUTOMATION COMPLETE</h3>
+                  <hr>
+                  Matches Played: ${this.matches}<br>
+                  Total Hits Connected: ${this.hits}<br>
+                  Attacks Missed: ${this.misses}<br>
+                  Special Attacks Fired: ${this.specials}<br>
+                  Glow FX Triggers: ${this.glowTriggers}<br>
+                  Total KOs: ${this.kos}<br>
+                  Severe Frame Drops: ${this.frameDrops}<br>
+                  Memory Errors: ${hasErrors ? 'YES' : 'NONE'}
+                </div>
+              `;
+        }
+      };
+      window.onerror = function (msg, url, lineNo, columnNo, error) {
+        if (!hasErrors) { qaLogger.style.display = 'block'; hasErrors = true; }
+        const errStr = `[ERR] ${msg} <br> <span style="color:#aaa;">Line ${lineNo}:${columnNo}</span><br>`;
+        qaLogger.innerHTML += errStr;
+        console.error("QA CAUGHT ERROR:", msg, url, lineNo, columnNo, error);
+        return false;
+      };
+      window.onunhandledrejection = function (event) {
+        if (!hasErrors) { qaLogger.style.display = 'block'; hasErrors = true; }
+        qaLogger.innerHTML += `[PROMISE] ${event.reason}<br>`;
+        console.error("QA UNHANDLED PROMISE:", event.reason);
+      };
+
+      // Boot check: unlock if Story was already completed on this device
+      if (localStorage.getItem('arcadeUnlocked') === 'true') {
+        ['btn-arcade', 'btn-versus'].forEach(id => {
+          const b = document.getElementById(id);
+          b.disabled = false; b.style.color = '#00ffff'; b.style.borderColor = '#00ffff'; b.style.cursor = 'pointer'; b.style.opacity = '1';
+        });
+        document.getElementById('btn-arcade').textContent = 'ARCADE MODUS';
+        document.getElementById('btn-versus').textContent = 'VERSUS MODUS';
+      }
+
+      // iOS Audio Unlock
+      document.getElementById('audio-unlock-overlay').addEventListener('click', () => {
+        // 1. Resume global Audio Engine Context (Music & SFX)
+        if (typeof AC !== 'undefined' && AC.state === 'suspended') {
+          AC.resume();
+        }
+
+        // 2. Initialize Voice Audio Context inside user gesture explicitly
+        if (typeof initVoiceEffects === 'function') {
+          initVoiceEffects();
+        }
+        if (typeof voiceAudioCtx !== 'undefined' && voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+          voiceAudioCtx.resume();
+        }
+
+        // 3. Force load HTML5 Audio Elements so iOS grants playback permission later
+        ['audio-prologue', 'audio-reflexion', 'audio-epilogue', 'audio-outro', 'bgm-player', 'voice-player'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.load();
+            // Create media element source now within the gesture to avoid later pipeline blocks
+            if (id.startsWith('audio-') && typeof voiceAudioCtx !== 'undefined' && voiceAudioCtx && typeof voiceSources !== 'undefined' && !voiceSources[id.split('-')[1]]) {
+              try {
+                voiceSources[id.split('-')[1]] = voiceAudioCtx.createMediaElementSource(el);
+                if (typeof voiceFilter !== 'undefined') voiceSources[id.split('-')[1]].connect(voiceFilter);
+              } catch (e) { console.warn("Pre-Connect fail:", e); }
+            }
+          }
+        });
+
+        // Hide the overlay after interaction
+        document.getElementById('audio-unlock-overlay').style.display = 'none';
+      }, { once: true });
+    </script>
+
+    <!-- INSERT COIN & CREDITS -->
+    <div class="insert-coin-bar" id="insert-coin-bar">
+      <span class="coin-icon">🪙</span>
+      <span class="insert-coin-text" id="insert-coin-text">INSERT COIN</span>
+      <span class="coin-icon">🪙</span>
+    </div>
+
+    <div class="credit-counter" id="credit-counter">CREDIT(S): 3</div>
+  </div>
+
+  <!-- STATE 3: Character Select -->
+  <div id="char-select" class="hidden">
+    <div class="cs-left">
+      <div id="cs-title">SELECT YOUR FIGHTER</div>
+      <div class="cs-grid" id="cs-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="cs-right">
+      <img id="cs-preview-img" src="" alt="">
+      <div class="cs-info-panel">
+        <div id="cs-flag" style="font-size:2rem;">🌍</div>
+        <div id="cs-name">???</div>
+        <div id="cs-title-label">...</div>
+        <div id="cs-desc" style="font-size:0.7rem; color:#aaa; text-align:center; margin:5px 0 10px;">Wähle deinen
+          Kämpfer</div>
+        <button class="btn-select-confirm" id="btn-confirm-fighter">FIGHT!</button>
+        <div class="cs-stats">
+          <div class="cs-stat-row"><span class="cs-stat-label">SPD</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-spd" style="background: linear-gradient(90deg, #00ff88, #00ffcc);">
+              </div>
+            </div>
+          </div>
+          <div class="cs-stat-row"><span class="cs-stat-label">POW</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-pow" style="background: linear-gradient(90deg, #ff4400, #ffcc00);">
+              </div>
+            </div>
+          </div>
+          <div class="cs-stat-row"><span class="cs-stat-label">DEF</span>
+            <div class="cs-stat-bar-bg">
+              <div class="cs-stat-fill" id="stat-def" style="background: linear-gradient(90deg, #0055ff, #00ccff);">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONS / PAUSE MENU -->
+  <button id="btn-hamburger" class="hidden">☰</button>
+  <div id="pause-menu" class="hidden">
+    <div class="options-panel">
+      <h2 class="opt-title">⚙ Optionen</h2>
+
+
+      <div class="slider-row">
+        <span>🗣 Voice:</span>
+        <input type="range" id="vol-voice" min="0" max="1" step="0.1" value="0.9">
+      </div>
+      <div class="slider-row">
+        <span>⚔ Difficulty:</span>
+        <select id="sel-difficulty"
+          style="background:#000; color:#0ff; border:1px solid #0ff; font-family:'Orbitron'; padding:2px;">
+          <option value="easy">Easy</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="slider-row">
+        <span>⏳ Time:</span>
+        <select id="sel-round-time"
+          style="background:#222; color:#fff; border:1px solid #00ffff; padding:5px; font-family:'Orbitron', sans-serif;">
+          <option value="99">99 Sec</option>
+          <option value="66">66 Sec</option>
+        </select>
+      </div>
+      <div class="slider-row">
+        <span>⚡ Speed:</span>
+        <select id="sel-game-speed"
+          style="background:#222; color:#fff; border:1px solid #00ff00; padding:5px; font-family:'Orbitron', sans-serif;">
+          <option value="1.0">Normal (1.0x)</option>
+          <option value="1.25">Schnell (1.25x)</option>
+          <option value="1.5">Turbo Arcade (1.5x)</option>
+        </select>
+      </div>
+
+      <div class="controls-grid">
+        <div><span class="ctrl-key">W/A/S/D</span> Bewegung</div>
+        <div><span class="ctrl-key">J</span> Punch</div>
+        <div><span class="ctrl-key">K</span> Kick</div>
+        <div><span class="ctrl-key">L</span> Special</div>
+        <div><span class="ctrl-key">U</span> Block</div>
+        <div><span class="ctrl-key">SPACE</span> Pause/Skip</div>
+      </div>
+
+      <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+        <button class="capcom-btn" id="btn-resume">RESUME</button>
+        <button class="capcom-btn" id="btn-quit" style="border-color:#ff0033; color:#ff0033;">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOUCH CONTROLS -->
+  <div id="mobile-controls" class="hidden">
+    <div class="mc-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+    <div class="mc-zone">
+      <div class="action-btn-group">
+        <div class="action-btn" id="btn-block">BLK (U)</div>
+        <div class="action-btn" id="btn-punch">PUN (J)</div>
+        <div class="action-btn" id="btn-special">SPC (L)</div>
+        <div class="action-btn" id="btn-kick">KCK (K)</div>
+        <!-- Jump is mapped to up on joystick, but can provide dedicated button -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Container (Web Audio API sources) -->
+  <div id="audio-container" style="display:none;">
+    <audio id="audio-prologue" src="assets/audio/voice/prologue.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-reflexion" src="assets/audio/voice/reflexion.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-epilogue" src="assets/audio/voice/epilogue.mp3" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="audio-outro" src="assets/audio/voice/outro.mp3" crossorigin="anonymous" preload="auto"></audio>
+
+    <!-- Permanent runtime players for iOS -->
+    <audio id="bgm-player" crossorigin="anonymous" preload="auto"></audio>
+    <audio id="voice-player" crossorigin="anonymous" preload="auto"></audio>
+  </div>
+
+  <!-- V10 MODULAR ARCHITECTURE: Ordered Script Loading -->
+  <script src="js/globals.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/fighter.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+
+</html>
