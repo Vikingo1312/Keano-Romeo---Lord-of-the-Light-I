@@ -26,6 +26,10 @@ const allSrcs = new Set();
   allSrcs.add(l.fighterDir + '/_left.png');
   allSrcs.add(l.fighterDir + '/_right.png');
   if (l.stage) allSrcs.add(l.stage);
+  if (l.objType) {
+    allSrcs.add(`assets/props/${l.objType}.png`);
+    allSrcs.add(`assets/props/${l.objType}_broken.png`);
+  }
 });
 // Global UI & VFX
 allSrcs.add('assets/UX_Main_Menu_Nexus.png');

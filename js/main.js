@@ -216,12 +216,15 @@ window.quitToMenu = function () {
 
     document.getElementById('main-menu').classList.remove('hidden');
     gameState = 'menu';
-    SFX.playBGM('assets/audio/music/main_menu.mp3');
+    document.getElementById('btn-start-menu').addEventListener('click', () => {
+      SFX.init();
+      SFX.playBGM('assets/audio/music/main_soundtrack.mp3');
 
-    // Bind UI Sounds to all interactive elements
-    document.querySelectorAll('.menu-btn, .action-btn, .slot-container, input[type="range"], input[type="checkbox"]').forEach(el => {
-      el.addEventListener('mouseenter', () => SFX.uiHover());
-      el.addEventListener('click', () => SFX.uiSelect());
+      // Bind UI Sounds to all interactive elements
+      document.querySelectorAll('.menu-btn, .action-btn, .slot-container, input[type="range"], input[type="checkbox"]').forEach(el => {
+        el.addEventListener('mouseenter', () => SFX.uiHover());
+        el.addEventListener('click', () => SFX.uiSelect());
+      });
     });
   });
 };
@@ -245,15 +248,18 @@ function bootGame() {
       stateTimer = 0;
 
       // Play a heavy synthesized impact for the logo
-      const osc = AC.createOscillator();
-      const gain = AC.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, AC.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(10, AC.currentTime + 1.5);
-      gain.gain.setValueAtTime(0.5, AC.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 1.5);
-      osc.connect(gain); gain.connect(AC.destination);
-      osc.start(); osc.stop(AC.currentTime + 1.5);
+      // Gentle, harmonious "Unlock" Chime
+      const freqs = [440, 554.37, 659.25]; // A major chord
+      freqs.forEach(f => {
+        const osc = AC.createOscillator();
+        const gain = AC.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, AC.currentTime);
+        gain.gain.setValueAtTime(0.05, AC.currentTime); // Very quiet
+        gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 1.0);
+        osc.connect(gain); gain.connect(AC.destination);
+        osc.start(); osc.stop(AC.currentTime + 1.0);
+      });
 
       document.removeEventListener('click', initClick);
       document.removeEventListener('keydown', initClick);
@@ -283,6 +289,10 @@ document.getElementById('btn-story').addEventListener('click', () => {
 
 document.getElementById('btn-arcade').addEventListener('click', () => {
   if (!document.getElementById('btn-arcade').disabled) {
+    // Mobile Polish: Force App-Fullscreen
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
+    }
     SFX.playBGM('assets/audio/music/char_select.mp3');
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
@@ -298,6 +308,10 @@ document.getElementById('btn-arcade').addEventListener('click', () => {
 
 document.getElementById('btn-versus').addEventListener('click', () => {
   if (!document.getElementById('btn-versus').disabled) {
+    // Mobile Polish: Force App-Fullscreen
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
+    }
     SFX.playBGM('assets/audio/music/char_select.mp3');
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
@@ -315,9 +329,9 @@ document.getElementById('btn-options-menu').addEventListener('click', toggleOpti
 document.getElementById('btn-hamburger').addEventListener('click', toggleOptions);
 
 // INSERT COIN: Click to refill credits when empty
-
-
-// RESUME button in pause menu
+if (document.getElementById('insert-coin-bar')) {
+  document.getElementById('insert-coin-bar').addEventListener('click', insertCoin);
+}// RESUME button in pause menu
 document.getElementById('btn-resume').addEventListener('click', () => {
   document.getElementById('pause-menu').classList.add('hidden');
   if (gameState === 'options-paused') { gameState = 'fighting'; lastTime = performance.now(); }
@@ -423,9 +437,20 @@ window.addEventListener('keyup', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   const btnStory = document.getElementById('btn-story');
   const btnArcade = document.getElementById('btn-arcade');
+  const btnVersus = document.getElementById('btn-versus');
+
+  // Check if Arcade is unlocked, else disable buttons initially
+  if (localStorage.getItem('arcadeUnlocked') !== 'true') {
+    if (btnArcade) { btnArcade.disabled = true; btnArcade.style.color = '#555'; btnArcade.style.borderColor = '#555'; btnArcade.textContent = '???'; }
+    if (btnVersus) { btnVersus.disabled = true; btnVersus.style.color = '#555'; btnVersus.style.borderColor = '#555'; btnVersus.textContent = '???'; }
+  }
 
   if (btnStory) {
     btnStory.addEventListener('click', () => {
+      // Mobile Polish: Force App-Fullscreen
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
+      }
       gameMode = 'story';
       bootGame();
     });
@@ -433,6 +458,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnArcade) {
     btnArcade.addEventListener('click', () => {
+      // Mobile Polish: Force App-Fullscreen
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
+      }
       gameMode = 'arcade';
       bootGame();
     });
@@ -463,13 +492,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  const btnVersus = document.getElementById('btn-versus');
-  if (btnVersus) {
-    btnVersus.addEventListener('click', () => {
-      gameMode = 'versus';
-      bootGame();
-    });
-  }
+  // The btnVersus listener that boots straight into the game has been removed.
+  // The correct listener that opens the Character Select screen is managed at line 302.
   // Difficulty Selection
   if (document.getElementById('sel-difficulty')) {
     document.getElementById('sel-difficulty').addEventListener('change', (e) => {
@@ -547,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(animate);
       // Only draw when menu is visible
       const menu = document.getElementById('main-menu');
-      if (!menu || menu.classList.contains('hidden')) return;
+      if (FX_BYPASS.lightning || !menu || menu.classList.contains('hidden')) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -578,5 +602,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     animate();
   })();
+
+  // --- FX BYPASS: CRT Overlay ---
+  if (FX_BYPASS.crtOverlay) {
+    const crt = document.getElementById('crt-overlay');
+    if (crt) crt.style.display = 'none';
+  }
 
 });

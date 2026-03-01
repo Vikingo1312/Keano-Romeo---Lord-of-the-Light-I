@@ -119,16 +119,45 @@ class HybridFighter {
   get w() { return FW(); }
   get h() { return FH(); }
 
-  shout(text, duration = 2.0) {
+  shout(text, duration = 2.0, actionType = null) {
     this.shoutText = text;
     this.shoutTimer = duration;
-    // Simple Text-to-Speech fallback if no MP3 exists for this line
-    if (window.speechSynthesis && !SFX.muted) {
+
+    // Play physical MP3 if actionType provided (e.g. 'intro', 'special', 'win')
+    if (actionType && this._getVoiceId()) {
+      SFX.playCharacterVoice(this._getVoiceId(), actionType);
+    } else if (window.speechSynthesis && !SFX.muted) {
+      // Fallback only if no action type given
       speechSynthesis.cancel();
       let u = new SpeechSynthesisUtterance(text);
-      u.lang = 'de-DE'; u.rate = 1.1; u.pitch = this.isPlayer ? 1.0 : 0.8;
+      u.lang = 'en-US'; u.rate = 1.1; u.pitch = this.isPlayer ? 1.0 : 0.8;
       speechSynthesis.speak(u);
     }
+  }
+
+  // Helper to resolve the correct Voice ID based on image subfolder
+  _getVoiceId() {
+    if (!this.fighterDir) return null;
+    let d = this.fighterDir.toLowerCase();
+
+    // Match against names in LEVELS
+    if (d.includes('keano')) return 'keano';
+    if (d.includes('vikingo')) return 'vikingo';
+    if (d.includes('jay_x') || d.includes('jayden') || d.includes('jj_dark')) return 'jayden';
+    if (d.includes('hattori')) return 'hattori';
+    if (d.includes('raheel')) return 'raheel';
+    if (d.includes('pablo')) return 'pablo';
+    if (d.includes('tzubaza')) return 'tzubaza';
+    if (d.includes('capone')) return 'capone';
+    if (d.includes('gargamel')) return 'gargamel';
+    if (d.includes('marley')) return 'marley';
+    if (d.includes('kowalski')) return 'kowalski';
+    if (d.includes('paco')) return 'paco';
+    if (d.includes('juan')) return 'juan';
+    if (d.includes('lee')) return 'lee';
+    if (d.includes('putin')) return 'putin';
+
+    return null;
   }
 
   takeHit(dmg, dir, isHeavy = false) {
@@ -142,7 +171,8 @@ class HybridFighter {
       this.hp -= dmg;
       this.state = 'hit';
       this.stateTimer = isHeavy ? 0.65 : 0.40;
-      this.knockVX = dir * (isHeavy ? 20 : 12);
+      // Studio Polish 1: Reduced Pushback to allow combos instead of pushing opponents out of range
+      this.knockVX = dir * (isHeavy ? 14 : 6);
       this.hitFlash = 1;
       this.hitStop = isHeavy ? 0.22 : 0.12;
       screenShake = isHeavy ? 15 : 8;
@@ -150,7 +180,15 @@ class HybridFighter {
       if (wasAlive && this.hp <= 0 && isHeavy) {
         finisherTint = 1.0;
         screenShake = 35;
+      }
+      if (wasAlive && this.hp <= 0) {
+        // Studio Polish 3: Cinematic Street Fighter K.O.
+        this.state = 'ko';
+        this.stateTimer = 9.9; // Stay down
         this.hitStop = 0.5; // Massive hitstop
+        this.knockVX = dir * 25; // Slide far
+        this.vy = -18; // Fly high up
+        this.shout("KO...", 2.0, "ko"); // Play KO sound
       }
       if (this.isPlayer) { comboCount = 0; comboTimer = 0; }
     }
@@ -172,7 +210,9 @@ class HybridFighter {
       this.vy = 0;
 
       if (this.state === 'roll' || this.state === 'hit' || this.state === 'ko') {
-        if (this.isPlayer && this.hp > 0 && (keys['control'] || keys['alt']) && this.state !== 'ko') {
+        if (this.state === 'ko') {
+          this.knockVX *= 0.7; // Hard ground friction for knocked out bodies
+        } else if (this.isPlayer && this.hp > 0 && (keys['control'] || keys['alt'])) {
           // Tech
           this.state = 'roll';
           this.stateTimer = 0.4;
@@ -201,9 +241,14 @@ class HybridFighter {
 
     this.x = Math.max(this.w * 0.5, Math.min(C.width - this.w * 0.5, this.x));
 
-    if (opponent && this.state !== 'roll' && this.state !== 'evade_back' && this.state !== 'roll_forward') {
+    // Studio Polish 2: Jump-Lock Hysteresis & Corner Anti-Jitter
+    // Don't change facing direction while in mid-air (jump) or during evade mechanics
+    const isLockedState = (this.state === 'roll' || this.state === 'evade_back' || this.state === 'roll_forward' || this.state === 'jump' || Math.abs(this.vy) > 0.1);
+
+    if (opponent && !isLockedState) {
       this.wasFacingRight = this.facingRight;
-      if (Math.abs(this.x - opponent.x) > 10) {
+      // Hysteresis threshold: Must be significantly crossed (40px) to snap orientation
+      if (Math.abs(this.x - opponent.x) > 40) {
         this.facingRight = this.x < opponent.x;
       }
     }
@@ -341,10 +386,29 @@ class HybridFighter {
   }
 
   updateAI(dt, opponent) {
-    if (this.state !== 'idle' && this.state !== 'walk') return;
+    if (this.state === 'ko' || opponent.hp <= 0) return;
+
+    // Studio Polish 4: Dynamic Difficulty Scaling logic
+    let diffMult = 1.0;
+    let blockChance = 0.3; // Base 30%
+    const diffSetting = window.gameDifficulty || 'middle';
+
+    if (!FX_BYPASS.combatAI) {
+      if (diffSetting === 'easy') {
+        diffMult = 0.4;  // Very sluggish
+        blockChance = 0.6; // High block chance
+      } else if (diffSetting === 'hard') {
+        diffMult = 1.8;  // Extremely aggressive
+        blockChance = 0.15; // Punishes instead of blocking
+      }
+    }
+
+    const distLineX = Math.abs(this.x - opponent.x);
+    // AI decisions are made at discrete timer ticks
+    this.aiTimer -= dt;
+    if (this.state !== 'idle' && this.state !== 'walk' && this.aiTimer <= 0) return;
 
     const dist = Math.abs(this.x - opponent.x);
-    const diffMult = gameDifficulty === 'hard' ? 1.8 : (gameDifficulty === 'easy' ? 0.7 : 1.0);
     const spdMult = this.ld?.speedMult || 1.0;
     const jumpFreq = this.ld?.jumpFreq || 1.0;
     const projFreq = this.ld?.projFreq || 1.0;
@@ -362,7 +426,7 @@ class HybridFighter {
         this.knockVX = (this.x > opponent.x) ? 25 : -25;
         SFX.dash();
         return;
-      } else if (r < 0.5 * diffMult) {
+      } else if (r < blockChance) {
         this.state = 'block';
         this.stateTimer = 0.5;
         return;
@@ -476,7 +540,8 @@ class HybridFighter {
 
     if (opponent) {
       const dist = Math.abs(this.x - Math.max(opponent.x, this.x - this.w) - Math.min(opponent.x - this.x, 0));
-      const range = type === 'punch' ? this.w * 0.8 : this.w * 1.0;
+      // Studio Polish 1: Expanded hitbox reach by ~30%
+      const range = type === 'punch' ? this.w * 1.1 : this.w * 1.35;
       const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
       if (dist < range && !isOpponentInvincible) {
         let baseDmg = type === 'punch' ? 8 + Math.random() * 5 : 14 + Math.random() * 6;
@@ -515,11 +580,10 @@ class HybridFighter {
     if (this.companion) {
       const opp = (this === player) ? enemy : player;
       this.companion.triggerBite(opp);
-      this.shout("Fass, Simba!", 1.5);
+      this.shout("Attack!", 1.5);
     } else {
-      // Char-specific Voice triggers on Special
-      if (this.fighterDir.includes('Gargamel')) this.shout("Schatten-Sog!", 1.5);
-      else if (this.fighterDir.includes('Jay_X') || this.fighterDir.includes('Jayden')) this.shout("Feuer frei!", 1.5);
+      // Trigger MP3 based on logical special string instead of TTS
+      this.shout(this.isPlayer ? "SPECIAL!" : "DIE!", 1.5, "special");
     }
   }
 
@@ -545,6 +609,9 @@ class HybridFighter {
 
     const projType = this.isPlayer ? 'super' : (this.ld?.special || 'fire');
     projectiles.push(new Projectile(this.x + dir * this.w * 0.3, this.y - this.h * 0.5, dir, projType, this.isPlayer));
+
+    this.shout("SUPER!", 2.0, "super"); // Trigger MP3
+
     if (opponent && Math.abs(this.x - opponent.x) < this.w * 1.3) {
       opponent.takeHit(this.isPlayer ? 45 : 30, dir);
     }
@@ -570,8 +637,14 @@ class HybridFighter {
     let faceScale = this.facingRight ? 1 : -1;
     if (this.cleanImgSrc.includes('_left.png') || this.cleanImgSrc.includes('_right.png')) faceScale = 1; // Actual sprites don't need reverse if strictly loaded
 
-    X.filter = `saturate(1.8) contrast(1.1) brightness(1.1)`;
-    if (this.hitFlash > 0) X.filter = `brightness(2) contrast(1.5)`;
+    // Studio Polish 8: Performance Bypass for costly canvas filters
+    if (!FX_BYPASS.canvasFilters) {
+      X.filter = `saturate(1.8) contrast(1.1) brightness(1.1)`;
+      if (this.hitFlash > 0) X.filter = `brightness(2) contrast(1.5)`;
+    } else {
+      X.filter = 'none';
+      if (this.hitFlash > 0) X.globalAlpha = 0.5; // Cheap fallback for hit visibility
+    }
 
     X.scale(faceScale, 1);
 
@@ -596,7 +669,7 @@ class HybridFighter {
       this.fighterDir.includes('Jay_X') ||
       this.fighterDir.includes('Gargamel');
 
-    if (isMainHero && (this.state === 'special' || this.state === 'super' || finisherTint > 0.5)) {
+    if (!FX_BYPASS.heavyGlow && isMainHero && (this.state === 'special' || this.state === 'super' || finisherTint > 0.5)) {
       X.shadowColor = this.color;
       // Animierbare Intensitätskurve basierend auf Zeit
       X.shadowBlur = 15 + Math.sin(this.t * 10) * 10;
@@ -617,8 +690,8 @@ class HybridFighter {
       case 'idle': sY = 1 + Math.sin(this.t * 3) * 0.02; sX = 1 - Math.sin(this.t * 3) * 0.01; break;
       case 'walk': offY = Math.abs(Math.sin(this.t * 12)) * 10; rot = Math.sin(this.t * 6) * 0.05; break;
       case 'roll': offY = dH * 0.4; rot = this.t * 15; sX = 0.7; sY = 0.7; break;
-      case 'punch': offX = dW * 0.3; rot = 0.2; sX = 1.08; sY = 0.92; break;
-      case 'kick': offX = dW * 0.1; rot = -0.25; sX = 0.9; sY = 1.1; offY = -dH * 0.05; break;
+      case 'punch': offX = dW * 0.55; rot = 0.25; sX = 1.25; sY = 0.85; break; // Extreme Squash & Stretch forward!
+      case 'kick': offX = dW * 0.45; rot = -0.3; sX = 0.8; sY = 1.25; offY = -dH * 0.08; break; // Extreme Stretch upward/forward!
       case 'jump': sX = 0.9; sY = 1.1; rot = this.vy > 0 ? 0.1 : -0.1; break;
       case 'hit': rot = -0.3; offX = -dW * 0.2; sX = 0.85; sY = 1.15; break;
       case 'block': rot = -0.1; sX = 1.1; sY = 0.9; offX = -dW * 0.1; break;
@@ -638,12 +711,20 @@ class HybridFighter {
     X.translate(this._lerpOX, this._lerpOY); X.rotate(this._lerpRot); X.scale(this._lerpSX, this._lerpSY);
 
     // ========== V9: CONDITIONAL SHADER GLOW ==========
-    const fId = this.ld?.id || '';
-    const isGlowChar = ['keano', 'supreme_keano', 'hyper_keano', 'vikingo', 'vikingo_god', 'c_gargamel', 'jay_x'].includes(fId);
+    // Studio Polish 6: Aura & Fire Shimmer Fix for all variants
+    const dStr = (this.fighterDir || '').toLowerCase();
+    const isGlowChar = dStr.includes('keano') || dStr.includes('vikingo') || dStr.includes('jayden') || dStr.includes('jay_x') || dStr.includes('gargamel');
     const isGlowState = ['special', 'super', 'special_roll', 'special_flip', 'finisher', 'perfect'].includes(this.state);
 
-    if (isGlowChar && isGlowState) {
-      X.shadowColor = this.ld?.glowColor || '#00ffff';
+    if (!FX_BYPASS.heavyGlow && isGlowChar && isGlowState) {
+      // Vikingo Fire Shimmer exception
+      if (dStr.includes('vikingo')) {
+        X.shadowColor = '#ff3300';
+        X.filter = `drop-shadow(0 0 10px #ff6600) drop-shadow(0 0 20px #ff0000)`;
+      } else {
+        X.shadowColor = this.ld?.glowColor || '#00ffff';
+      }
+
       X.shadowBlur = Math.abs(Math.sin(this.t * 6)) * 40 + 10;
       if (QATracker.active) QATracker.glowTriggers++;
     } else {
@@ -651,9 +732,80 @@ class HybridFighter {
       X.shadowColor = 'transparent';
     }
 
-    // Draw Character Sprite
+    // ==========================================
+    // V12 STUDIO AGILITY (Smear / Phantom StrikeTrails)
+    // ==========================================
+    const isAttacking = ['punch', 'kick', 'special', 'super', 'finisher'].includes(this.state);
+    if (!FX_BYPASS.attackSmear && isAttacking && this.stateTimer > 0.1 && imgCanvas && imgCanvas.complete !== false) {
+      // Create 2 trailing "phantom" frames to simulate high-speed reach + aura
+      for (let p = 1; p <= 2; p++) {
+        X.save();
+        // Offset trail strictly backwards relative to the attack lunge
+        const trailDist = (dW * 0.4) * p;
+        X.translate(-trailDist, 0);
+
+        // Stretch the phantom to create a kinetic "smear" 
+        X.scale(this.state === 'kick' ? 1.4 : 1.5, 0.9);
+
+        X.globalCompositeOperation = 'screen';
+        X.globalAlpha = 0.4 / p; // Fade out older trails
+        if (this.color) { X.shadowColor = this.color; X.shadowBlur = 30; }
+        X.filter = `saturate(2) brightness(1.8) blur(3px)`;
+
+        X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
+        X.restore();
+      }
+    }
+
+    // Draw Main Character Sprite
     if (imgCanvas && imgCanvas.complete !== false && (imgCanvas.naturalWidth !== 0 || imgCanvas.width !== 0)) {
       X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
+    }
+
+    // ==========================================
+    // V11 IMPACT SPARK (Plugin/Effect)
+    // ==========================================
+    if (this.hitFlash > 0 && !FX_BYPASS.hitFlash) {
+      X.save();
+      // Un-scale face direction for the spark so it doesn't flip weirdly relative to the screen
+      X.scale(faceScale > 0 ? 1 : -1, 1);
+
+      const sparkAlpha = Math.max(0, this.hitFlash);
+      X.globalAlpha = sparkAlpha * 0.85; // Transparent "chirurgisch"
+      X.globalCompositeOperation = 'screen';
+
+      // Position roughly at chest height, shifted forward toward the hit origin
+      const sparkX = faceScale * (dW * 0.15);
+      const sparkY = -dH * 0.45;
+      X.translate(sparkX, sparkY);
+
+      // Rotate dynamically for impact feel, plus spin
+      X.rotate((performance.now() / 100) + this.hitFlash * Math.PI);
+
+      // Flashy Manga-Star Core
+      X.fillStyle = '#ffaa00';
+      X.shadowBlur = 20;
+      X.shadowColor = '#ff0000';
+
+      X.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const radius = (i % 2 === 0) ? (dW * 0.6) : (dW * 0.15);
+        const angle = (i / 8) * Math.PI * 2;
+        if (i === 0) X.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        else X.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+      }
+      X.closePath();
+      X.fill();
+
+      // Inner bright white/cyan core
+      X.fillStyle = '#ffffff';
+      X.shadowBlur = 10;
+      X.shadowColor = '#00ffff';
+      X.beginPath();
+      X.arc(0, 0, dW * 0.12, 0, Math.PI * 2);
+      X.fill();
+
+      X.restore();
     }
 
     // Draw Voice / Shout Bubble globally un-rotated

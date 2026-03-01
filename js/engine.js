@@ -65,18 +65,15 @@ function startRound() {
 
   projectiles = [];
   stageObjects = [];
-  if (ld && ld.objType) {
-    const count = 2 + Math.floor(Math.random() * 3);
-    const exclusions = [player.x, enemy.x];
+  if (!FX_BYPASS.stageProps && ld && ld.objType) {
+    const isBossOrSecret = ['dark_vikingo', 'supreme_keano', 'hyper_keano', 'vikingo_coat', 'jay_x', 'gargamel_hoodie'].includes(ld.id);
+    const count = isBossOrSecret ? 2 : (2 + Math.floor(Math.random() * 2)); // 2 to 3 objects
+
     for (let i = 0; i < count; i++) {
-      let ox;
-      let valid = false;
-      for (let j = 0; j < 5; j++) { // try up to 5 times to avoid spawning on players
-        ox = C.width * 0.15 + (C.width * 0.7) * (i / (count - 1 || 1)) + (Math.random() * 60 - 30);
-        ox = Math.max(80, Math.min(C.width - 80, ox));
-        if (Math.abs(ox - player.x) > 100 && Math.abs(ox - enemy.x) > 100) { valid = true; break; }
-      }
-      if (valid) stageObjects.push(new StageObject(ld.objType, ox, GROUND()));
+      // Spawn at edges: Left side (50 to 250), Right side (Width-250 to Width-50)
+      const isLeftEdge = (i % 2 === 0);
+      let ox = isLeftEdge ? (50 + Math.random() * 200) : (C.width - 250 + Math.random() * 200);
+      stageObjects.push(new StageObject(ld.objType, ox, GROUND()));
     }
   }
 
@@ -90,10 +87,10 @@ function startRound() {
   }
 
   // V4 AUDIO MANAGER: Pre-Match Intro Trash Talk!
-  if (Math.random() > 0.5 && player.voice && player.voice.intro) {
-    SFX.playVoice(player.voice.intro);
-  } else if (enemy.voice && enemy.voice.intro) {
-    setTimeout(() => SFX.playVoice(enemy.voice.intro), 800); // slight delay for dramatic effect
+  if (Math.random() > 0.5 && player._getVoiceId()) {
+    player.shout(player.shoutText || "Let's go!", 2.0, "intro");
+  } else if (enemy._getVoiceId()) {
+    setTimeout(() => enemy.shout(enemy.shoutText || "Prepare!", 2.0, "intro"), 800); // slight delay for dramatic effect
   }
 }
 
@@ -118,7 +115,7 @@ function gameLoop(ts) {
     time += dt;
 
     // --- Main Menu Lightning Effect ---
-    if (gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
+    if (!FX_BYPASS.lightning && gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
       if (time > nextLightning) {
         document.getElementById('main-menu').classList.add('lightning-active');
         SFX.hitHeavy(); // Using a heavy hit sound to simulate thunder rumble
@@ -133,7 +130,9 @@ function gameLoop(ts) {
     X.clearRect(0, 0, C.width, C.height);
     X.save();
     if (screenShake > 0) {
-      X.translate((Math.random() - 0.5) * screenShake * 3, (Math.random() - 0.5) * screenShake * 3);
+      if (!FX_BYPASS.screenShake) {
+        X.translate((Math.random() - 0.5) * screenShake * 3, (Math.random() - 0.5) * screenShake * 3);
+      }
       screenShake *= 0.85; if (screenShake < 0.5) screenShake = 0;
     }
     const ld = LEVELS[currentLevel || 0]; const si = rawImgs[ld.stage];
@@ -460,14 +459,23 @@ function gameLoop(ts) {
 
       const txt = roundNum >= 3 ? 'FINAL ROUND' : `ROUND ${roundNum}`;
       if (stateTimer > 1.5) {
+        if (!this._announcedRound) {
+          SFX.playCharacterVoice('announcer', roundNum >= 3 ? 'round_final' : (roundNum === 2 ? 'round_2' : 'round_1'));
+          this._announcedRound = true;
+        }
         drawBigText(txt, '#ffcc00', 1.0);
       } else if (stateTimer > 0.5) {
         drawBigText('READY...', '#ffffff', 0.8);
       } else if (stateTimer > 0) {
+        if (!this._announcedFight) {
+          SFX.playCharacterVoice('announcer', 'fight');
+          this._announcedFight = true;
+        }
         drawBigText('FIGHT!', '#ff0055', 1.3);
       }
       if (stateTimer <= 0) {
         gameState = 'fighting';
+        this._announcedRound = false; this._announcedFight = false; // Reset for next round
         document.getElementById('btn-hamburger').classList.remove('hidden');
         if (isMobile) document.getElementById('mobile-controls').classList.remove('hidden');
       }
@@ -495,6 +503,33 @@ function gameLoop(ts) {
       stageObjects.forEach(obj => { obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
 
       projectiles.forEach(p => p.draw());
+
+      // Studio Polish 5: Action UI for Specials
+      [player, enemy].forEach(f => {
+        if (f && ['special', 'super', 'special_roll', 'special_flip', 'finisher'].includes(f.state) && f.stateTimer > 0.1) {
+          X.save();
+          X.translate(f.x, Math.max(C.height * 0.2, f.y - f.h * 1.2));
+          X.scale(1.2 - (f.stateTimer * 0.5), 1.2 - (f.stateTimer * 0.5)); // Pop-in scale
+          X.font = 'italic 900 35px "Orbitron"';
+          X.textAlign = 'center';
+
+          // Text colors based on move
+          let txt = 'SPECIAL!'; let color = '#ffcc00'; let shadow = '#ff0000';
+          if (f.state === 'super') { txt = 'SUPER!'; color = '#00ffff'; shadow = '#0000ff'; }
+          else if (f.state === 'finisher') { txt = 'FINISHER!'; color = '#ff00ff'; shadow = '#ffffff'; }
+
+          // Dim the whole screen slightly during SUPERS
+          if (f.state === 'super' && f.stateTimer > 0.4) {
+            X.fillStyle = 'rgba(0,0,0,0.3)'; X.fillRect(-C.width, -C.height, C.width * 2, C.height * 2);
+          }
+
+          X.fillStyle = color; X.shadowBlur = 20; X.shadowColor = shadow;
+          X.strokeStyle = '#fff'; X.lineWidth = 4;
+          X.strokeText(txt, 0, 0); X.fillText(txt, 0, 0);
+          X.restore();
+        }
+      });
+
       drawHUD(player, enemy, ld);
 
       const timeOver = gameTimerStyle !== 'infinite' && roundTimerNum <= 0;
@@ -508,15 +543,13 @@ function gameLoop(ts) {
           p1Wins++; p1WonLast = true;
           enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = 0.15; // Slo-Mo
           player.timeScale = 1.0; player.state = 'idle'; // Sieger bleibt stehen
-          player.shout("Das Licht fließt weiter.", 3.0);
-          if (player.voice && player.voice.win) SFX.playVoice(player.voice.win);
+          player.shout("Victory.", 3.0, "win");
         }
         else if (winner === 'p2') {
           p2Wins++; p1WonLast = false;
           player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15; // Slo-Mo
           enemy.timeScale = 1.0; enemy.state = 'idle'; // Sieger bleibt stehen
-          enemy.shout("Zu schwach!", 3.0);
-          if (enemy.voice && enemy.voice.win) SFX.playVoice(enemy.voice.win);
+          enemy.shout("Too weak.", 3.0, "win");
         }
         if (winner === 'draw') {
           player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15;
@@ -535,21 +568,30 @@ function gameLoop(ts) {
 
       player.draw(); enemy.draw(); drawHUD(player, enemy, ld);
 
-      let tStr = 'K.O.!'; let tc = '#ff0055';
+      let tStr = 'K.O.!'; let tc = '#ff0055'; let aVoice = 'ko';
       if (gameTimerStyle !== 'infinite' && roundTimerNum <= 0 && player.hp > 0 && enemy.hp > 0) {
         tStr = 'TIME OVER'; tc = '#ffcc00';
       } else if (p1WonLast && player.hp >= 100 && enemy.hp <= 0) {
-        tStr = 'PERFECT!'; tc = '#00ff88';
+        tStr = 'PERFECT!'; tc = '#00ff88'; aVoice = 'perfect';
+      }
+
+      if (stateTimer === 3.5 && !this._announcedKO) {
+        SFX.playCharacterVoice('announcer', aVoice);
+        this._announcedKO = true;
       }
       drawBigText(tStr, tc, 1.5); stateTimer -= dt;
 
       if (stateTimer <= 0) {
+        this._announcedKO = false;
         let roundsToWin = 2;
         if (gameMode === 'story') roundsToWin = 1;
         // else defaults to 2 (Best of 3)
 
         if (p1Wins >= roundsToWin) {
-          if (currentLevel >= LEVELS.length - 1) {
+          // Studio Polish: Hardcode Story Finale to Vikingo Boss (Index 13). Arcade goes till the very end.
+          const isFinale = (gameMode === 'story' && currentLevel >= 13) || (gameMode === 'arcade' && currentLevel >= LEVELS.length - 1);
+
+          if (isFinale) {
             if (gameMode === 'story') {
               localStorage.setItem('arcadeUnlocked', 'true');
               ['btn-arcade', 'btn-versus'].forEach(id => {
@@ -562,6 +604,9 @@ function gameLoop(ts) {
             TransitionManager.fadeScreen(800, 300, 600, () => {
               gameState = 'victory'; stateTimer = 0;
               SFX.stopMusic();
+              // Studio Polish: Epic Epilogue Theme
+              SFX.playBGM('assets/audio/music/end_theme.mp3');
+
               document.getElementById('btn-hamburger').classList.add('hidden');
               if (isMobile) document.getElementById('mobile-controls').classList.add('hidden');
               playingOutro = false; playingHappyBirthday = false;
@@ -580,20 +625,38 @@ function gameLoop(ts) {
       }
     }
     else if (gameState === 'nextLevel') {
-      drawBigText(`STAGE ${LEVELS[currentLevel + 1]?._lvl || currentLevel + 2}`, '#00ffff', 1.2);
+      // Skip arcadeOnly fighters when calculating the next opponent level
+      let nextLvl = currentLevel + 1;
+      while (LEVELS[nextLvl] && LEVELS[nextLvl].arcadeOnly) {
+        nextLvl++;
+      }
+
+      drawBigText(`STAGE ${LEVELS[nextLvl]?._lvl || nextLvl + 1}`, '#00ffff', 1.2);
       X.save(); X.font = 'bold 22px "Orbitron"'; X.textAlign = 'center'; X.fillStyle = '#fff';
-      X.fillText(LEVELS[currentLevel + 1].flag + ' ' + LEVELS[currentLevel + 1].name, C.width / 2, C.height * 0.58); X.restore();
+      if (LEVELS[nextLvl]) {
+        X.fillText(LEVELS[nextLvl].flag + ' ' + LEVELS[nextLvl].name, C.width / 2, C.height * 0.58);
+      }
+      X.restore();
       stateTimer -= dt; if (stateTimer <= 0) {
-        TransitionManager.fadeScreen(400, 150, 400, () => { startLevel(currentLevel + 1); });
+        TransitionManager.fadeScreen(400, 150, 400, () => {
+          currentLevel = nextLvl - 1; // It increments inside startLevel usually, or we adjust startLevel logic. Wait, startLevel takes the ID. 
+          startLevel(nextLvl);
+        });
       }
     }
     else if (gameState === 'continue') {
       X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
+
+      if (stateTimer > 9.9 && !this._announcedCont) {
+        SFX.playCharacterVoice('announcer', 'continue');
+        this._announcedCont = true;
+      }
+
       drawBigText('CONTINUE?', '#ffcc00', 1.2);
       X.save(); X.font = 'bold 120px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
       X.fillText(Math.ceil(stateTimer), C.width / 2, C.height * 0.65);
       stateTimer -= dt;
-      if (stateTimer <= 0) { useCredit(); gameState = 'gameOver'; stateTimer = 3; }
+      if (stateTimer <= 0) { useCredit(); gameState = 'gameOver'; stateTimer = 3; this._announcedCont = false; }
       X.font = '20px "Orbitron"'; X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
       X.fillText('PRESS SPACE OR TAP TO CONTINUE', C.width / 2, C.height * 0.85);
       // Show remaining credits
@@ -614,6 +677,10 @@ function gameLoop(ts) {
     }
     else if (gameState === 'gameOver') {
       X.fillStyle = 'rgba(0,0,0,0.9)'; X.fillRect(0, 0, C.width, C.height);
+      if (stateTimer === 3 && !this._announcedGameOver) {
+        SFX.playCharacterVoice('announcer', 'game_over');
+        this._announcedGameOver = true;
+      }
       drawBigText('GAME OVER', '#ff0033', 1.5);
       X.save(); X.font = '20px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
       X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
@@ -630,6 +697,7 @@ function gameLoop(ts) {
 
       stateTimer -= dt; // Ensure this ticks down if we want the 3s delay
       if (stateTimer <= 0 && !keys[' ']) {
+        this._announcedGameOver = false;
         quitToMenu();
       }
 
@@ -736,14 +804,78 @@ function gameLoop(ts) {
           if (currentAudioTrack) currentAudioTrack.pause();
           if (!playingOutro) {
             playingOutro = true; stateTimer = 0; playEpicVoice(outroLines, 'outro'); keys[' '] = false;
-          } else {
-            playingHappyBirthday = true; keys[' '] = false;
+          } else if (!playingHappyBirthday) {
+            playingHappyBirthday = true; stateTimer = 0; keys[' '] = false;
+            SFX.playBGM('assets/audio/music/end.mp3', false);
           }
         }
       }
+
+      if (playingHappyBirthday) {
+        X.save();
+        let fireworksTriggered = false;
+        const cx = C.width / 2;
+        const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
+        const scrollSpeed = 22;
+        const lineHeight = fs(0.04);
+        const gapHeight = lineHeight * 0.6;
+        const gapSmHeight = lineHeight * 0.3;
+        const totalScrollY = stateTimer * scrollSpeed;
+        const startY = C.height + 80;
+
+        let yPos = startY - totalScrollY;
+        for (const line of birthdayLines) {
+          if (line.style === 'gap') { yPos += gapHeight; continue; }
+          if (line.style === 'gap-sm') { yPos += gapSmHeight; continue; }
+
+          if (yPos > -50 && yPos < C.height + 50) {
+            const distFromCenter = Math.abs(yPos - C.height * 0.45);
+            const maxDist = C.height * 0.55;
+            X.globalAlpha = Math.max(0.05, 1 - (distFromCenter / maxDist));
+            X.textAlign = 'center';
+            X.shadowBlur = 6; X.shadowColor = 'rgba(0,0,0,0.9)';
+
+            if (line.style === 'title') { X.font = `bold ${fs(0.05)}px "Orbitron"`; X.fillStyle = line.color; X.shadowBlur = 30; X.shadowColor = '#ff8800'; }
+            else if (line.style === 'mega') { X.font = `bold ${fs(0.055)}px "Orbitron"`; X.fillStyle = line.color; X.shadowBlur = 40; X.shadowColor = '#ff8800'; }
+            else if (line.style === 'narr') { X.font = `${fs(0.022)}px "Orbitron"`; X.fillStyle = '#cccccc'; }
+            else if (line.style === 'italic') { X.font = `italic ${fs(0.022)}px "Orbitron"`; X.fillStyle = line.color || '#aaddff'; }
+            else if (line.style === 'bold') { X.font = `bold ${fs(0.024)}px "Orbitron"`; X.fillStyle = line.color || '#ffffff'; X.shadowBlur = 15; X.shadowColor = line.color || '#00ffff'; }
+            else if (line.style === 'glow') { X.font = `italic 900 ${fs(0.035)}px "Orbitron"`; X.fillStyle = line.color; X.shadowBlur = 40; X.shadowColor = line.color; }
+            else if (line.style === 'divider') { X.font = `${fs(0.03)}px "Orbitron"`; X.fillStyle = line.color; }
+            else if (line.style === 'producer') { X.font = `italic 900 ${fs(0.04)}px "Press Start 2P"`; X.fillStyle = '#ff0033'; X.shadowBlur = 20; X.shadowColor = '#ff0033'; X.strokeStyle = '#fff'; X.lineWidth = 2; }
+
+            X.fillText(line.text, cx, yPos);
+            if (line.style === 'producer') X.strokeText(line.text, cx, yPos);
+
+            if (line.text.includes('Lichtkristall') && distFromCenter < C.height * 0.1 && !fireworksTriggered && Math.random() < 0.2) {
+              for (let i = 0; i < 30; i++) {
+                particles.push({
+                  x: cx + (Math.random() - 0.5) * C.width * 0.5, y: yPos + (Math.random() - 0.5) * 50,
+                  vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
+                  life: 1.5 + Math.random(), color: Math.random() > 0.5 ? '#00ffff' : '#ffcc00',
+                  size: 3 + Math.random() * 5, isSpark: Math.random() > 0.7
+                });
+              }
+            }
+          }
+          yPos += lineHeight;
+        }
+
+        particles.forEach(p => {
+          p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= dt;
+          if (p.life > 0) { X.save(); X.globalAlpha = Math.min(1, p.life); X.fillStyle = p.color; X.shadowBlur = 10; X.shadowColor = p.color; X.fillRect(p.x, p.y, p.size, p.size); X.restore(); }
+        });
+        particles = particles.filter(p => p.life > 0);
+        X.restore();
+      }
     }
 
-    if (flashTimer > 0) { X.save(); X.globalAlpha = flashTimer * 2; X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore(); flashTimer -= dt; }
+    if (flashTimer > 0) {
+      if (!FX_BYPASS.hitFlash) {
+        X.save(); X.globalAlpha = flashTimer * 2; X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore();
+      }
+      flashTimer -= dt;
+    }
     X.restore();
 
   } catch (err) {

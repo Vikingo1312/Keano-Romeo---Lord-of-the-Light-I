@@ -13,6 +13,32 @@ let currentFps = 60;
 let framesThisSecond = 0;
 
 // =========================================================================
+// FX MIXBOARD (BYPASS SYSTEM)
+// =========================================================================
+const FX_BYPASS = {
+  // Visual FX
+  screenShake: false,     // false = Effect Active. true = Bypassed
+  hitFlash: false,        // White screen flash on heavy hits
+  particles: false,       // Blood, sparks, dirt
+  heavyGlow: false,       // The expensive globalCompositeOperation glow
+  crtOverlay: false,      // The retro CRT scanline overlay
+  lightning: false,       // Main menu dynamic lightning background
+  stageProps: false,      // false = Props spawnen. true = Props komplett deaktiviert
+  attackSmear: false,     // false = Agile Phantom Strikes active. true = off
+  canvasFilters: false,   // false = Saturate/Contrast filters ON. true = Filters OFF (Performance jump)
+
+  // Gameplay/Feel FX (Coming soon)
+  hitStop: false,         // Mini slow-mo on heavy impacts
+  combatAI: false,        // false = Dynamic AI Scaling based on difficulty. true = Vanilla AI
+
+  // Audio FX
+  music: false,
+  sfx: false,
+  voice: false
+};
+
+
+// =========================================================================
 // ARCADE CREDIT SYSTEM
 // =========================================================================
 let arcadeCredits = 3;

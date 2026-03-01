@@ -17,8 +17,7 @@ const prologueLines = [
   { text: 'Und dass wahre Stärke nicht im Beherrschen liegt —', style: 'narr' },
   { text: 'sondern im Verbinden.', style: 'bold', color: '#ffcc00' },
   { text: '(Längere Pause)', style: 'gap' },
-  { text: '', style: 'gap' },
-  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+  { text: '', style: 'gap' }
 ];
 
 const epilogLines = [
@@ -59,8 +58,7 @@ const epilogLines = [
   { text: '© 2026', style: 'narr' },
   { text: '=====================', style: 'gap' },
   { text: '', style: 'gap' },
-  { text: '', style: 'gap' },
-  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+  { text: '', style: 'gap' }
 ];
 
 const outroLines = [
@@ -76,8 +74,7 @@ const outroLines = [
   { text: 'Und in diesem Fluss lag Hoffnung...', style: 'bold', color: '#aaddff' },
   { text: 'leise, doch unvergänglich...', style: 'italic', color: '#ffffff' },
   { text: '(Längere Pause)', style: 'gap' },
-  { text: '', style: 'gap' },
-  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+  { text: 'und leuchtet.', style: 'glow', color: '#00ffff' }
 ];
 
 const reflexionLines = [
@@ -106,8 +103,38 @@ const reflexionLines = [
   { text: '(Lange, ausklingende Pause)', style: 'gap' },
 
   { text: '· · · · · · ·', style: 'divider', color: '#444' },
+  { text: '', style: 'gap' }
+];
+
+const birthdayLines = [
   { text: '', style: 'gap' },
-  { text: '[ PRESS SPACE TO SKIP ]', style: 'instruction', color: '#666666' }
+  { text: '🏆 HAPPY BIRTHDAY KEANO! 🏆', style: 'mega', color: '#ffcc00' },
+  { text: '', style: 'gap' },
+  { text: '🎇', style: 'glow', color: '#ffcc00' },
+  { text: '', style: 'gap-sm' },
+  { text: 'Ein Lichtkristall wurde dir freigeschaltet –', style: 'bold', color: '#00ffff' },
+  { text: 'ein Geschenk des Lords of the Light selbst.', style: 'bold', color: '#00ffff' },
+  { text: '', style: 'gap' },
+  { text: 'Mit diesem Kristall kannst du', style: 'narr' },
+  { text: 'epische Icons für deinen Avatar erwerben.', style: 'narr' },
+  { text: '', style: 'gap-sm' },
+  { text: 'Er kann nur vom Lord of the Light', style: 'italic', color: '#aaddff' },
+  { text: 'genutzt werden und muss bei deinem Vater', style: 'italic', color: '#aaddff' },
+  { text: 'eingelöst werden bis zum nächsten Lichtmond,', style: 'italic', color: '#aaddff' },
+  { text: 'am 28. Februar 2027.', style: 'bold', color: '#ffcc00' },
+  { text: '', style: 'gap' },
+  { text: 'Möge dein Licht hell brennen', style: 'glow', color: '#00ffff' },
+  { text: 'und jede Dimension erleuchten,', style: 'italic', color: '#aaddff' },
+  { text: 'die du betrittst.', style: 'italic', color: '#aaddff' },
+  { text: '', style: 'gap' },
+  { text: 'In Liebe, Papa ❤️', style: 'glow', color: '#ffcc00' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: '=====================', style: 'gap' },
+  { text: 'PROD. BY CAESAR', style: 'producer' },
+  { text: '© 2026', style: 'narr' },
+  { text: '=====================', style: 'gap' },
+  { text: '', style: 'gap' }
 ];
 
 const audioTracks = {
@@ -133,19 +160,29 @@ function initVoiceEffects() {
 
   // Sanfter Raum (sehr subtil, ohne Echo/Verdopplung)
   const convolver = voiceAudioCtx.createConvolver();
-  // Anstelle eines echten Impulses nutzen wir einen extrem kurzen Delay (Haas Effekt) nur für etwas Körper, KEIN Echo
+  // Studio Polish 2: Voice Compressor & Warm Room (No Echo)
+  const compressor = voiceAudioCtx.createDynamicsCompressor();
+  compressor.threshold.setValueAtTime(-24, voiceAudioCtx.currentTime); // Catch spoken peaks early
+  compressor.knee.setValueAtTime(10, voiceAudioCtx.currentTime);       // Smooth compression curve
+  compressor.ratio.setValueAtTime(4, voiceAudioCtx.currentTime);       // 4:1 Ratio (studio standard voice)
+  compressor.attack.setValueAtTime(0.005, voiceAudioCtx.currentTime);  // Fast attack
+  compressor.release.setValueAtTime(0.15, voiceAudioCtx.currentTime);  // Smooth release
+
+  // Very short, thick 'Slap/Room' feel to avoid distinct echoing
   const delay = voiceAudioCtx.createDelay();
-  delay.delayTime.value = 0.02; // 20ms = kein hörbares Echo, nur "Körper"
+  delay.delayTime.value = 0.04; // 40ms = Room reflections, not a canyon echo
 
   const voiceGain = voiceAudioCtx.createGain();
   voiceGain.gain.value = 0.8; // Wieder etwas lauter, da Halleffekt wegfällt
 
-  // Routing: Source -> Filter (Wärme) -> Split (Direkt + Mikro-Delay für Körper) -> Gain
-  voiceFilter.connect(voiceGain);
+  // Routing: Filter -> Compressor -> Split (Direct + Room Body) -> Gain
+  voiceFilter.connect(compressor);
 
-  voiceFilter.connect(delay);
+  compressor.connect(voiceGain);
+
+  compressor.connect(delay);
   const delayGain = voiceAudioCtx.createGain();
-  delayGain.gain.value = 0.15; // Sehr unterschwelliger Körper
+  delayGain.gain.value = 0.25; // Thicker body presence
   delay.connect(delayGain);
   delayGain.connect(voiceGain);
 
@@ -168,6 +205,7 @@ function playEpicVoice(linesArray, type) {
     }
 
     SFX.duckBGM(0.15, 1000);
+    if (SFX.startAmbientPad) SFX.startAmbientPad();
     currentAudioTrack.currentTime = 0;
 
     currentAudioTrack.addEventListener('ended', () => { SFX.restoreBGM(); }, { once: true });
@@ -191,6 +229,7 @@ function stopEpicVoice() {
     speechSynthesis.cancel();
   }
   SFX.restoreBGM();
+  if (SFX.stopAmbientPad) SFX.stopAmbientPad();
 }
 
 function playFallbackTTS(linesArray) {

@@ -40,7 +40,7 @@ const LEVELS = [
   },
   {
     id: 'marley', name: 'MARLEY', flag: '🇯🇲', fighterDir: 'assets/CHARACTERS/7.Marley_Jamaica', stage: 'assets/7_Jamaica.png', special: 'electric',
-    bgm: 'assets/audio/music/7_Jamaica.mp3', voice: { intro: 'assets/audio/voice/marley_intro.mp3', win: 'assets/audio/voice/marley_win.mp3' },
+    bgm: 'assets/audio/music/7_Jamaica.wav', voice: { intro: 'assets/audio/voice/marley_intro.mp3', win: 'assets/audio/voice/marley_win.mp3' },
     title: 'Karibik-Blitz', desc: 'One Love — One Knockout.', speedMult: 1.3, hitPow: 0.8, str: { spd: 4, pow: 2, def: 2 },
     portrait: 'assets/7.Marley_Jamaica.png'
   },
@@ -76,13 +76,13 @@ const LEVELS = [
   },
   {
     id: 'putin', name: 'PUTIN', flag: '🇷🇺', fighterDir: 'assets/CHARACTERS/13.Putin', stage: 'assets/13_Russia_Ice.png', special: 'dark',
-    bgm: 'assets/audio/music/13_Russia_Ice.mp3', voice: { intro: 'assets/audio/voice/putin_intro.mp3', win: 'assets/audio/voice/putin_win.mp3' },
+    bgm: 'assets/audio/music/13_Russia_Ice.wav', voice: { intro: 'assets/audio/voice/putin_intro.mp3', win: 'assets/audio/voice/putin_win.mp3' },
     title: 'Sibirische Kälte', desc: 'Unaufhaltbarer Frost.', speedMult: 0.75, hitPow: 1.8, str: { spd: 1, pow: 5, def: 5 },
     portrait: 'assets/13.Putin fighter_russia_fullbody_1772215831383.png'
   },
   {
     id: 'dark_vikingo', name: 'DARK VIKINGO', flag: '💀', fighterDir: 'assets/CHARACTERS/14.1.vikingo_shirtless', stage: 'assets/14_Valhalla_Boss.png', special: 'super',
-    bgm: 'assets/audio/music/14_Valhalla_Boss.mp3', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
+    bgm: 'assets/audio/music/14_Valhalla_Boss.wav', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
     title: 'Entfesselte Urgewalt', desc: 'Ohne Limit. Kein Erbarmen.', speedMult: 1.5, hitPow: 2.5, str: { spd: 6, pow: 7, def: 4 },
     portrait: 'assets/14.1.vikingo_shirtless_solo_1772218100612.png'
   },
@@ -106,7 +106,7 @@ const LEVELS = [
   },
   {
     id: 'vikingo_coat', name: 'VIKINGO', flag: 'ᛣ', fighterDir: 'assets/CHARACTERS/14.vikingo_coat', stage: 'assets/14_Valhalla_Boss.png', special: 'super',
-    bgm: 'assets/audio/music/14_Valhalla_Boss.mp3', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
+    bgm: 'assets/audio/music/14_Valhalla_Boss.wav', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
     title: 'Der Imperator', desc: 'Meister aller Dimensionen.', speedMult: 1.3, hitPow: 1.4, str: { spd: 5, pow: 5, def: 5 },
     portrait: 'assets/14.vikingo_coat_solo_1772218116323.png'
   },
@@ -115,6 +115,14 @@ const LEVELS = [
     bgm: 'assets/audio/music/6_Germany.mp3', voice: { intro: 'assets/audio/voice/gargamel_intro.mp3', win: 'assets/audio/voice/gargamel_win.mp3' },
     title: 'Schatten-Wächter', desc: 'Verborgene Klinge.', speedMult: 1.3, hitPow: 1.2, str: { spd: 4, pow: 4, def: 2 },
     portrait: 'assets/6.1.C_Gargamel_Hoodie.png'
+  },
+  {
+    // Studio Polish: Simba als Standalone Fighter
+    id: 'simba', name: 'SIMBA', flag: '🦁', fighterDir: 'assets/CHARACTERS/15.Simba', stage: 'assets/14_Valhalla_Boss.png', special: 'super',
+    bgm: 'assets/audio/music/14_Valhalla_Boss.wav', voice: { intro: 'assets/audio/voice/vikingo_intro.mp3', win: 'assets/audio/voice/vikingo_win.mp3' },
+    title: 'Herr der Bestien', desc: 'Nur in Arcade spielbar.', speedMult: 2.0, hitPow: 1.5, str: { spd: 7, pow: 5, def: 2 },
+    portrait: 'assets/clean_simba_cane_corso_solo.png',
+    arcadeOnly: true
   }
 ];
 
@@ -125,9 +133,29 @@ const KEANO = {
   portrait: 'assets/Keano_Fighter.png'
 };
 
+const PROP_MAP = {
+  'hattori': 'lantern',
+  'raheel': 'incense',
+  'pablo': 'crate',
+  'tzubaza': 'pagoda',
+  'alcapone': 'trashcan',
+  'gargamel': 'server',
+  'marley': 'speaker',
+  'kowalski': 'barrel',
+  'paco': 'chair',
+  'juan': 'barricade',
+  'lee': 'neon',
+  'jayden': 'shrine',
+  'putin': 'ice',
+  'dark_vikingo': 'brazier',
+  'vikingo_coat': 'brazier',
+  'supreme_keano': 'crystal',
+  'hyper_keano': 'crystal',
+  'jay_x': 'shrine',
+  'gargamel_hoodie': 'shrine'
+};
+
 LEVELS.forEach(l => {
-  if (['hattori', 'tzubaza', 'lee', 'dark_vikingo', 'supreme_keano', 'hyper_keano', 'vikingo_coat'].includes(l.id)) l.objType = 'lantern';
-  else if (['raheel', 'paco'].includes(l.id)) l.objType = 'vase';
-  else l.objType = 'crate';
+  l.objType = PROP_MAP[l.id] || 'crate';
 });
 KEANO.objType = 'crate';

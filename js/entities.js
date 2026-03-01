@@ -163,38 +163,72 @@ let stageObjects = [];
 class StageObject {
   constructor(type, x, y) {
     this.type = type; this.x = x; this.y = y; this.broken = false;
-    if (type === 'lantern') { this.w = 34; this.h = 60; this.color = '#ff3300'; }
-    else if (type === 'vase') { this.w = 40; this.h = 55; this.color = '#00aaff'; }
-    else { this.w = 50; this.h = 50; this.color = '#885522'; }
+
+    // New Studio Sizing (Larger, more presence)
+    this.w = 120; this.h = 150;
+
+    // Image Asset Paths
+    this.imgSrc = `assets/props/${type}.png`;
+    this.imgBrokenSrc = `assets/props/${type}_broken.png`;
+
+    // Fallback Colors for placeholder boxes if images don't exist yet
+    if (type === 'lantern' || type === 'brazier') { this.color = '#ff3300'; }
+    else if (type === 'neon' || type === 'server' || type === 'speaker') { this.color = '#ff00ff'; }
+    else if (type === 'ice' || type === 'crystal') { this.color = '#00ffff'; }
+    else { this.color = '#885522'; }
   }
+
   draw() {
     X.save(); X.translate(this.x, this.y);
-    if (!this.broken) {
-      X.fillStyle = this.color; X.shadowBlur = 10; X.shadowColor = '#000';
-      if (this.type === 'lantern') {
-        X.fillRect(-this.w / 2, -this.h, this.w, this.h);
-        X.fillStyle = '#ffeeaa'; X.globalAlpha = 0.6 + Math.sin(time * 5) * 0.3; X.shadowColor = '#ffaa00'; X.shadowBlur = 20;
-        X.fillRect(-this.w / 2 + 4, -this.h + 8, this.w - 8, this.h - 16);
-      } else if (this.type === 'vase') {
-        X.beginPath(); X.arc(0, -this.h / 2, this.w / 2, 0, Math.PI * 2); X.fill();
-        X.fillRect(-this.w / 4, -this.h, this.w / 2, this.h / 2);
-      } else {
-        X.fillRect(-this.w / 2, -this.h, this.w, this.h);
-        X.strokeStyle = '#331100'; X.lineWidth = 3; X.strokeRect(-this.w / 2, -this.h, this.w, this.h);
-        X.beginPath(); X.moveTo(-this.w / 2, -this.h); X.lineTo(this.w / 2, 0); X.stroke();
-      }
+
+    const targetSrc = this.broken ? this.imgBrokenSrc : this.imgSrc;
+    const imgCanvas = processedSprites[targetSrc] || rawImgs[targetSrc];
+
+    if (imgCanvas && imgCanvas.complete && imgCanvas.naturalWidth !== 0 && imgCanvas.width > 0) {
+      // Draw actual high-quality sprite
+      X.drawImage(imgCanvas, -this.w / 2, -this.h, this.w, this.h);
     } else {
-      X.fillStyle = this.color; X.globalAlpha = 0.5;
-      X.fillRect(-this.w / 2, -this.h / 4, this.w, this.h / 4);
-      X.beginPath(); X.moveTo(-this.w / 2, -this.h / 4); X.lineTo(-this.w / 4, -this.h / 2); X.lineTo(this.w / 4, -this.h / 4); X.fill();
+      // Render Placeholder Geometry
+      if (!this.broken) {
+        X.fillStyle = this.color;
+        X.globalAlpha = 0.6;
+        X.shadowBlur = 15; X.shadowColor = '#000';
+        X.fillRect(-this.w / 2, -this.h, this.w, this.h);
+
+        X.strokeStyle = '#fff'; X.lineWidth = 2; X.globalAlpha = 0.8;
+        X.strokeRect(-this.w / 2, -this.h, this.w, this.h);
+
+        X.fillStyle = '#fff'; X.font = 'bold 16px Orbitron'; X.textAlign = 'center';
+        X.fillText(this.type.toUpperCase(), 0, -this.h / 2);
+      } else {
+        X.fillStyle = this.color; X.globalAlpha = 0.3;
+        X.fillRect(-this.w / 2, -this.h / 4, this.w, this.h / 4);
+      }
     }
     X.restore();
   }
+
   checkHit(f) {
     if (this.broken) return;
     if ((f.state === 'hit' || f.state === 'ko' || f.state === 'dash' || f.state === 'special_roll') && Math.abs(f.knockVX) > 2) {
-      if (Math.abs(this.x - f.x) < this.w / 2 + f.w / 2 && f.y >= GROUND() - this.h) {
-        this.broken = true; SFX.hitHeavy(); screenShake += 6;
+      if (Math.abs(this.x - f.x) < f.w * 0.7 && f.y >= GROUND() - this.h) {
+        this.broken = true;
+        SFX.hitHeavy();
+        if (!FX_BYPASS.screenShake) screenShake += 8;
+        if (!FX_BYPASS.particles) {
+          for (let i = 0; i < 25; i++) {
+            // Wood/Brown/Orange debris
+            f.sparks.push({
+              x: this.x + (Math.random() - 0.5) * this.w,
+              y: this.y - this.h / 2 + (Math.random() - 0.5) * 40,
+              vx: (Math.random() - 0.5) * 12,
+              vy: (Math.random() - 1) * 15,
+              life: 1,
+              hue: 20 + Math.random() * 20,
+              size: 3 + Math.random() * 5
+            });
+          }
+        }
       }
     }
   }

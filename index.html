@@ -830,6 +830,14 @@
           style="color:#ff0033; border-color:#ff0033; cursor:not-allowed; opacity:0.6;">🔒 VERSUS MODUS</button>
         <button class="capcom-btn" id="btn-options-menu" onclick="toggleOptions()">OPTIONEN</button>
       </div>
+
+      <!-- INSERT COIN & CREDITS -->
+      <div class="insert-coin-bar" id="insert-coin-bar">
+        <span class="coin-icon">🪙</span>
+        <span class="insert-coin-text" id="insert-coin-text">INSERT COIN</span>
+        <span class="coin-icon">🪙</span>
+      </div>
+      <div class="credit-counter" id="credit-counter">CREDIT(S): 3</div>
     </div>
     <script>
       // =========================================================================
@@ -922,15 +930,6 @@
         document.getElementById('audio-unlock-overlay').style.display = 'none';
       }, { once: true });
     </script>
-
-    <!-- INSERT COIN & CREDITS -->
-    <div class="insert-coin-bar" id="insert-coin-bar">
-      <span class="coin-icon">🪙</span>
-      <span class="insert-coin-text" id="insert-coin-text">INSERT COIN</span>
-      <span class="coin-icon">🪙</span>
-    </div>
-
-    <div class="credit-counter" id="credit-counter">CREDIT(S): 3</div>
   </div>
 
   <!-- STATE 3: Character Select -->

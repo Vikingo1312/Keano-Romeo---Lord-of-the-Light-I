@@ -11,14 +11,18 @@ const SFX = {
   voiceNode: null,      // Currently playing voice line Audio element
   activeBGMUrl: null,
 
+  _ambientNodes: [],
+  _ambientGain: null,
+
   init() {
     this._musicGain = AC.createGain(); this._musicGain.gain.value = 0.5; this._musicGain.connect(AC.destination);
     this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.8; this._sfxGain.connect(AC.destination);
   },
 
   setMusicVol(v) {
-    if (this._musicGain) this._musicGain.gain.value = v;
-    if (this.bgmNode) this.bgmNode.volume = v;
+    const clampedV = v * 0.3; // Studio Polish 1: Max Music limit 30% against master FX
+    if (this._musicGain) this._musicGain.gain.value = clampedV;
+    if (this.bgmNode) this.bgmNode.volume = clampedV;
   },
   setSFXVol(v) { if (this._sfxGain) this._sfxGain.gain.value = v; },
 
@@ -35,14 +39,17 @@ const SFX = {
   restoreBGM(durationMs = 800) {
     if (this._musicGain) {
       const userVol = document.getElementById('vol-music') ? parseFloat(document.getElementById('vol-music').value) : 0.5;
+      const clampedVol = userVol * 0.3; // Studio Polish 1: Max Music Limit
       this._musicGain.gain.cancelScheduledValues(AC.currentTime);
-      this._musicGain.gain.linearRampToValueAtTime(userVol, AC.currentTime + (durationMs / 1000));
+      this._musicGain.gain.linearRampToValueAtTime(clampedVol, AC.currentTime + (durationMs / 1000));
     }
   },
 
   // --- ASSET-BASED AUDIO (V4) ---
 
   playBGM(url, loop = true, fadeTime = 0.5) {
+    if (this.stopAmbientPad) this.stopAmbientPad();
+    if (FX_BYPASS.music) return;
     if (this.activeBGMUrl === url) {
       this.restoreBGM(); // Always ensure it's un-ducked if re-requested
       return;
@@ -61,8 +68,12 @@ const SFX = {
   },
 
   playVoice(url) {
+    if (FX_BYPASS.voice) return;
     const voiceEl = document.getElementById('voice-player');
-    if (!voiceEl || !url) return;
+    if (!voiceEl || !url) {
+      console.warn("Audio Context Voice Skip:", url);
+      return;
+    }
 
     voiceEl.pause();
     voiceEl.src = url;
@@ -77,6 +88,79 @@ const SFX = {
     };
 
     voiceEl.play().catch(e => console.warn("Voice Playblock:", e));
+  },
+
+  startAmbientPad() {
+    this.stopAmbientPad();
+    this._ambientGain = AC.createGain();
+    this._ambientGain.gain.value = 0.001;
+    this._ambientGain.connect(this._musicGain);
+    this._ambientGain.gain.linearRampToValueAtTime(0.3, AC.currentTime + 3.0); // Slow fade in
+
+    // 16-bit style open minor/sus chord (A2, E3, A3, B3, E4)
+    const freqs = [110.00, 164.81, 220.00, 246.94, 329.63];
+
+    freqs.forEach(f => {
+      const osc = AC.createOscillator();
+      osc.type = 'triangle'; // Smooth 16-bit pad sound
+
+      // Slight detune for chorus effect
+      osc.frequency.value = f;
+      osc.detune.value = (Math.random() - 0.5) * 15;
+
+      const filter = AC.createBiquadFilter();
+      filter.type = 'lowpass';
+      // Slow sweep filter
+      filter.frequency.setValueAtTime(400, AC.currentTime);
+      filter.frequency.linearRampToValueAtTime(800, AC.currentTime + 10);
+
+      const vca = AC.createGain();
+      vca.gain.value = 0.2; // Divide volume
+
+      osc.connect(filter);
+      filter.connect(vca);
+      vca.connect(this._ambientGain);
+
+      osc.start();
+      this._ambientNodes.push({ osc, filter, vca });
+    });
+  },
+
+  stopAmbientPad() {
+    if (this._ambientGain) {
+      this._ambientGain.gain.cancelScheduledValues(AC.currentTime);
+      this._ambientGain.gain.linearRampToValueAtTime(0.001, AC.currentTime + 1.5);
+      const nodesToStop = this._ambientNodes;
+      const gainToStop = this._ambientGain;
+      this._ambientNodes = [];
+      this._ambientGain = null;
+
+      setTimeout(() => {
+        nodesToStop.forEach(n => {
+          try { n.osc.stop(); n.osc.disconnect(); n.filter.disconnect(); n.vca.disconnect(); } catch (e) { }
+        });
+        try { gainToStop.disconnect(); } catch (e) { }
+      }, 1600);
+    }
+  },
+
+  playCharacterVoice(charId, action) {
+    // Dynamic path builder for the generated files: assets/audio/voice/{char}_{action}.mp3
+    // charId needs to match the prefixes we generated (e.g. 'keano', 'vikingo', 'hattori')
+    if (FX_BYPASS.voice) return;
+
+    // Normalize charId mappings from levels.js to the generator script's IDs
+    let cId = charId.toLowerCase();
+    if (cId === 'dark_vikingo' || cId === 'vikingo_coat') cId = 'vikingo';
+    if (cId === 'supreme_keano' || cId === 'hyper_keano') cId = 'keano';
+    if (cId === 'jay_x') cId = 'jayden';
+    if (cId === 'gargamel_hoodie') cId = 'gargamel';
+    if (cId === 'alcapone') cId = 'capone';
+    // 'paco' is correct for paco_el_taco but just in case:
+    if (cId.includes('paco')) cId = 'paco';
+
+    const url = `assets/audio/voice/${cId}_${action}.mp3`;
+    this.playVoice(url);
   },
 
   playSound(url) {
