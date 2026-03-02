@@ -6,14 +6,34 @@ class Projectile {
     this.speed = type === 'super' ? 14 : 9;
     this.life = 1; this.size = type === 'super' ? 45 : 25;
     this.trail = [];
+
+    // Post-Review 8: Capcom 2.0 Specific Properties
+    if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+      if (this.type === 'electric') { this.speed = 22; this.size = 15; }
+      if (this.type === 'wind') { this.speed = 8; this.size = 35; }
+      if (this.type === 'fire') { this.speed = 6; this.size = 40; }
+      if (this.type === 'ice') { this.speed = 5; this.size = 50; }
+      if (this.type === 'dark' || this.type === 'super') { this.speed = 10; this.size = 60; }
+    }
   }
+
   update(dt) {
+    if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+      // Custom Physics per type
+      if (this.type === 'wind') this.speed += dt * 15; // Accel
+      if (this.type === 'fire') { this.speed *= 0.98; this.y += Math.sin(performance.now() / 50) * 3; } // Flamethrower wave
+      if (this.type === 'ice') this.life -= dt * 0.4; // Lingers longer
+      else this.life -= dt * 0.7;
+    } else {
+      this.life -= dt * 0.7;
+    }
+
     this.x += this.dir * this.speed;
-    this.life -= dt * 0.7;
     this.trail.push({ x: this.x, y: this.y, life: 0.3 });
     this.trail = this.trail.filter(t => { t.life -= dt * 2.5; return t.life > 0; });
     return this.x > -100 && this.x < C.width + 100 && this.life > 0;
   }
+
   draw() {
     const cols = {
       fire: ['#ff4400', '#ffaa00'], ice: ['#88ddff', '#ffffff'], electric: ['#ffff00', '#ffffff'],
@@ -21,39 +41,73 @@ class Projectile {
     };
     const c = cols[this.type] || cols.fire;
 
-    // Draw trailing particles first
-    this.trail.forEach((t, idx) => {
-      X.save(); X.globalAlpha = t.life * 0.6;
-      X.fillStyle = idx % 2 === 0 ? c[0] : c[1];
-      X.shadowBlur = 15; X.shadowColor = c[0];
-      X.beginPath(); X.arc(t.x, t.y, this.size * 0.9 * t.life, 0, Math.PI * 2); X.fill();
-      X.restore();
-    });
-
-    // Massive energy core
     X.save(); X.globalAlpha = this.life;
     X.translate(this.x, this.y);
-    X.rotate(performance.now() / 150); // Fast spinning aura
 
-    // Outer glow
-    const grad = X.createRadialGradient(0, 0, 0, 0, 0, this.size * 1.5);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.3, c[1]);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    X.fillStyle = grad;
-    X.beginPath(); X.arc(0, 0, this.size * 1.5, 0, Math.PI * 2); X.fill();
-
-    // Inner dense core
-    X.fillStyle = '#ffffff'; X.shadowBlur = 30; X.shadowColor = c[0];
-    X.beginPath(); X.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); X.fill();
-
+    if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+      if (this.type === 'electric') {
+        X.fillStyle = c[0]; X.shadowBlur = 20; X.shadowColor = c[1];
+        X.fillRect(this.dir === 1 ? -150 : 0, -5, 150, 10); // Lazer beam
+      } else if (this.type === 'fire') {
+        X.rotate(performance.now() / 150);
+        for (let i = 0; i < 3; i++) {
+          X.fillStyle = i === 0 ? c[1] : c[0]; X.shadowBlur = 30; X.shadowColor = c[0];
+          X.beginPath(); X.arc((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, this.size - i * 10, 0, Math.PI * 2); X.fill();
+        }
+      } else if (this.type === 'wind') {
+        X.strokeStyle = c[0]; X.lineWidth = 5; X.globalAlpha = this.life * 0.5;
+        X.beginPath(); X.arc(0, 0, this.size, -Math.PI / 2, Math.PI / 2, this.dir === 1); X.stroke();
+      } else {
+        // Default / Ice / Dark rendering
+        X.rotate(performance.now() / 150);
+        const grad = X.createRadialGradient(0, 0, 0, 0, 0, this.size);
+        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, c[1]); grad.addColorStop(1, 'rgba(0,0,0,0)');
+        X.fillStyle = grad; X.beginPath(); X.arc(0, 0, this.size, 0, Math.PI * 2); X.fill();
+      }
+    } else {
+      // Legacy V10 uniform glow
+      this.trail.forEach((t, idx) => {
+        X.save(); X.globalAlpha = t.life * 0.6; X.fillStyle = idx % 2 === 0 ? c[0] : c[1];
+        X.shadowBlur = 15; X.shadowColor = c[0]; X.beginPath(); X.arc(t.x - this.x, t.y - this.y, this.size * 0.9 * t.life, 0, Math.PI * 2); X.fill();
+        X.restore();
+      });
+      X.rotate(performance.now() / 150);
+      const grad = X.createRadialGradient(0, 0, 0, 0, 0, this.size * 1.5);
+      grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, c[1]); grad.addColorStop(1, 'rgba(0,0,0,0)');
+      X.fillStyle = grad; X.beginPath(); X.arc(0, 0, this.size * 1.5, 0, Math.PI * 2); X.fill();
+      X.fillStyle = '#ffffff'; X.shadowBlur = 30; X.shadowColor = c[0];
+      X.beginPath(); X.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); X.fill();
+    }
     X.restore();
   }
+
   checkHit(fighter) {
-    if (Math.abs(this.x - fighter.x) < fighter.w * 0.25 && Math.abs(this.y - (fighter.y - fighter.h * 0.4)) < fighter.h * 0.5) {
-      const dmg = this.type === 'super' ? 25 : 12;
+    let hitRadius = fighter.w * 0.25;
+    let hitHeight = fighter.h * 0.5;
+
+    // Post-Review 8: Custom Hitboxes per type
+    if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+      if (this.type === 'ice') hitRadius = fighter.w * 0.5; // Huge
+      if (this.type === 'fire') { hitRadius = fighter.w * 0.4; hitHeight = fighter.h * 0.8; }
+    }
+
+    if (Math.abs(this.x - fighter.x) < hitRadius && Math.abs(this.y - (fighter.y - fighter.h * 0.4)) < hitHeight) {
+      let dmg = this.type === 'super' || this.type === 'dark' ? 25 : 12;
+
+      if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+        if (this.type === 'electric') dmg = 8; // Fast but weak
+        if (this.type === 'fire') dmg = 15; // Burn
+        if (this.type === 'ice') dmg = 10;
+      }
+
       fighter.takeHit(dmg, this.dir);
       screenShake = this.type === 'super' ? 18 : 8;
+
+      // Ice freezes (extra hitstop)
+      if (this.type === 'ice' && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
+        fighter.hitStop = 0.6; // Freeze
+      }
+
       return true;
     }
     return false;
@@ -74,39 +128,52 @@ class Companion {
   constructor(owner) {
     this.owner = owner;
     this.x = owner.x;
-    this.y = GROUND();
+    this.y = owner.y;
     this.vy = 0;
     this.w = owner.w * 0.6;
     this.h = owner.h * 0.45;
-    this.state = 'hidden';
+    this.state = 'idle';
     this.stateTimer = 0;
     this.facingRight = owner.facingRight;
-    this.imgSrc = 'assets/clean_simba_cane_corso_solo.png';
-    const img = new Image(); img.src = this.imgSrc;
-    this.img = img;
-    this.alpha = 0;
+    this.imgSrc = 'assets/CHARACTERS/15.Simba/_side.png'; // Fallback
+    this.alpha = 1;
   }
 
   triggerBite() {
-    if (this.state !== 'hidden') return;
+    if (this.state === 'leap' || this.state === 'bite') return;
     this.state = 'leap';
     this.facingRight = this.owner.facingRight;
     const fdir = this.facingRight ? 1 : -1;
-    this.x = this.owner.x - fdir * 100;
-    this.y = GROUND();
-    this.vy = -18;
-    this.alpha = 1;
+    this.vy = -12;
     this.stateTimer = 1.0;
     if (QATracker.active) QATracker.specials++;
     SFX.hitHeavy(); // Bark proxy
   }
 
   update(dt, opponent) {
-    if (this.state === 'hidden') return;
+    const isAdvancedAI = (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.companionAI : 1.0) <= 0.0);
 
-    if (this.state === 'leap') {
-      const fdir = this.facingRight ? 1 : -1;
-      this.x += fdir * 16 * gameSpeedMult;
+    // Legacy behavior: hidden unless biting
+    if (!isAdvancedAI && this.state === 'hidden') return;
+
+    const fdir = this.facingRight ? 1 : -1;
+
+    if (this.state === 'idle' || this.state === 'hidden') {
+      if (isAdvancedAI) {
+        this.state = 'idle';
+        this.alpha = 1;
+        this.facingRight = this.owner.facingRight;
+        // Follow owner at an offset
+        const targetX = this.owner.x - (this.owner.facingRight ? 120 : -120);
+        this.x += (targetX - this.x) * 0.1; // Smooth follow
+        this.y = this.owner.y; // Match jumps perfectly
+      } else {
+        this.state = 'hidden';
+      }
+    }
+    else if (this.state === 'leap') {
+      this.alpha = 1;
+      this.x += fdir * 18 * gameSpeedMult;
       this.y += this.vy * gameSpeedMult;
       this.vy += GRAV * 1.5 * gameSpeedMult;
 
@@ -115,12 +182,15 @@ class Companion {
         this.state = 'bite';
         this.stateTimer = 0.5;
       }
-    } else if (this.state === 'bite') {
+    }
+    else if (this.state === 'bite') {
       this.stateTimer -= dt * gameSpeedMult;
       if (this.stateTimer <= 0) {
-        this.state = 'fade';
+        // advanced AI simply returns to idle; legacy fades out
+        this.state = isAdvancedAI ? 'idle' : 'fade';
       }
-    } else if (this.state === 'fade') {
+    }
+    else if (this.state === 'fade') {
       this.alpha -= dt * 2.5 * gameSpeedMult;
       if (this.alpha <= 0) {
         this.state = 'hidden';
@@ -137,16 +207,18 @@ class Companion {
     const faceScale = this.facingRight ? 1 : -1;
     X.scale(faceScale, 1);
 
-    const imgCanvas = processedSprites[this.imgSrc] || rawImgs[this.imgSrc] || this.img;
+    // Get correct Simba asset direction
+    const assetId = `assets/CHARACTERS/15.Simba/${this.facingRight ? '_right' : '_left'}.png`;
+    const imgCanvas = processedSprites[assetId] || rawImgs[assetId];
+
     if (imgCanvas && imgCanvas.complete && imgCanvas.naturalWidth !== 0) {
       let rot = 0;
       if (this.state === 'leap') rot = this.vy > 0 ? 0.2 : -0.2;
-      if (this.state === 'bite') rot = Math.sin(performance.now() / 20) * 0.1; // fast shaking bite
+      if (this.state === 'bite') rot = Math.sin(performance.now() / 20) * 0.1;
 
       X.rotate(rot);
       X.drawImage(imgCanvas, -this.w / 2, -this.h, this.w, this.h);
 
-      // Speed kinetics
       if (this.state === 'leap') {
         X.strokeStyle = 'rgba(255,255,255,0.6)'; X.lineWidth = 3;
         X.beginPath(); X.moveTo(-this.w / 2, -this.h / 2); X.lineTo(-this.w - 60, -this.h / 2); X.stroke();
@@ -163,9 +235,10 @@ let stageObjects = [];
 class StageObject {
   constructor(type, x, y) {
     this.type = type; this.x = x; this.y = y; this.broken = false;
+    this.fadeTimer = 0; this.deleted = false;
 
-    // New Studio Sizing (Larger, more presence)
-    this.w = 120; this.h = 150;
+    // V14 Polish: New Studio Sizing (Bigger, more Arcade presence)
+    this.w = 160; this.h = 200;
 
     // Image Asset Paths
     this.imgSrc = `assets/props/${type}.png`;
@@ -178,8 +251,27 @@ class StageObject {
     else { this.color = '#885522'; }
   }
 
+  update(dt) {
+    if (this.broken) {
+      this.fadeTimer += dt;
+      if (this.fadeTimer > 3.0) this.deleted = true;
+    }
+  }
+
   draw() {
+    if (this.deleted) return;
+
     X.save(); X.translate(this.x, this.y);
+
+    // V14: Capcom Flicker Effect before despawn
+    if (this.broken && this.fadeTimer > 1.5) {
+      // Flashing rapidly between visible and invisible
+      if (Math.sin(performance.now() * 0.05) > 0) {
+        X.globalAlpha = 0.3; X.filter = 'brightness(2) contrast(2)';
+      } else {
+        X.globalAlpha = 0;
+      }
+    }
 
     const targetSrc = this.broken ? this.imgBrokenSrc : this.imgSrc;
     const imgCanvas = processedSprites[targetSrc] || rawImgs[targetSrc];
@@ -191,7 +283,7 @@ class StageObject {
       // Render Placeholder Geometry
       if (!this.broken) {
         X.fillStyle = this.color;
-        X.globalAlpha = 0.6;
+        X.globalAlpha *= 0.6;
         X.shadowBlur = 15; X.shadowColor = '#000';
         X.fillRect(-this.w / 2, -this.h, this.w, this.h);
 
@@ -201,7 +293,7 @@ class StageObject {
         X.fillStyle = '#fff'; X.font = 'bold 16px Orbitron'; X.textAlign = 'center';
         X.fillText(this.type.toUpperCase(), 0, -this.h / 2);
       } else {
-        X.fillStyle = this.color; X.globalAlpha = 0.3;
+        X.fillStyle = this.color; X.globalAlpha *= 0.3;
         X.fillRect(-this.w / 2, -this.h / 4, this.w, this.h / 4);
       }
     }
@@ -210,22 +302,33 @@ class StageObject {
 
   checkHit(f) {
     if (this.broken) return;
-    if ((f.state === 'hit' || f.state === 'ko' || f.state === 'dash' || f.state === 'special_roll') && Math.abs(f.knockVX) > 2) {
-      if (Math.abs(this.x - f.x) < f.w * 0.7 && f.y >= GROUND() - this.h) {
+    // Expanded range to ensure flying bodies always trigger the break
+    if ((f.state === 'hit' || f.state === 'ko' || f.state === 'dash' || f.state === 'special_roll' || f.state === 'kick' || f.state === 'punch') && Math.abs(f.knockVX || 0) > 2) {
+      if (Math.abs(this.x - f.x) < f.w * 1.5 && f.y >= GROUND() - this.h * 1.5) {
+        // Did the strike hit or did a body fly into it?
+        if (f.state === 'kick' || f.state === 'punch') {
+          if (!f.hasHit) return; // Only break if an actual attack landed near it
+        }
+
         this.broken = true;
         SFX.hitHeavy();
-        if (!FX_BYPASS.screenShake) screenShake += 8;
-        if (!FX_BYPASS.particles) {
-          for (let i = 0; i < 25; i++) {
-            // Wood/Brown/Orange debris
+        let shakeFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.screenShake : 1.0;
+        let particleFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.particles : 1.0;
+
+        screenShake += 8 * shakeFader;
+
+        // V14 "Splitter" (Splinter) Explosion
+        let particleCount = Math.floor(40 * particleFader);
+        if (f.sparks && Array.isArray(f.sparks)) {
+          for (let i = 0; i < particleCount; i++) {
             f.sparks.push({
               x: this.x + (Math.random() - 0.5) * this.w,
-              y: this.y - this.h / 2 + (Math.random() - 0.5) * 40,
-              vx: (Math.random() - 0.5) * 12,
-              vy: (Math.random() - 1) * 15,
-              life: 1,
-              hue: 20 + Math.random() * 20,
-              size: 3 + Math.random() * 5
+              y: this.y - this.h / 2 + (Math.random() - 0.5) * this.h,
+              vx: (Math.random() - 0.5) * 18, // Wide horizontal spread
+              vy: (Math.random() - 1) * 20,   // High vertical chunk arc
+              life: 1 + Math.random() * 0.5,
+              hue: this.type === 'ice' ? 180 + Math.random() * 40 : 20 + Math.random() * 20, // Cyan for ice, Wood/Orange mostly
+              size: 4 + Math.random() * 8       // Chunker particles
             });
           }
         }

@@ -1,0 +1,16 @@
+.git/
+node_modules/
+tools/
+import_music.py
+trim_audio.py
+test_eleven.py
+fix_missing_audio.py
+assets/audio/voice/*.wav
+.env
+.env.local
+.u2net/
+release/
+.npm-cache/
+.tmp/
+.vercel
+.DS_Store

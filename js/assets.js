@@ -111,25 +111,27 @@ if (joyArea && joyKnob) {
     const cy = rect.top + center;
     const dx = ex - cx;
     const dy = ey - cy;
-    const maxDist = 55; // Max knob travel
+    // V16 Mobile Overhaul: Wider snap radius but smaller deadzones for instant 8-way response
+    const maxDist = 70; // Increased Max knob travel so thumbs don't slip out easily
     const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
     const angle = Math.atan2(dy, dx);
 
     const nx = Math.cos(angle) * dist;
     const ny = Math.sin(angle) * dist;
 
+    // Visual Joystick Knob drag
     joyKnob.style.transform = `translate(${nx}px, ${ny}px)`;
 
     // Reset inputs
     keys['arrowup'] = keys['arrowleft'] = keys['arrowdown'] = keys['arrowright'] = false;
     keys['w'] = keys['a'] = keys['s'] = keys['d'] = false;
 
-    // Deadzone of 15px
-    if (dist > 15) {
-      if (nx < -20) { keys['a'] = true; keys['arrowleft'] = true; }
-      if (nx > 20) { keys['d'] = true; keys['arrowright'] = true; }
-      if (ny < -20) { keys['w'] = true; keys['arrowup'] = true; }
-      if (ny > 20) { keys['s'] = true; keys['arrowdown'] = true; }
+    // Sensitive Deadzone (10px) to prevent resting-thumb drift, but sharp enough for diagonals
+    if (dist > 10) {
+      if (nx < -15) { keys['a'] = true; keys['arrowleft'] = true; }
+      if (nx > 15) { keys['d'] = true; keys['arrowright'] = true; }
+      if (ny < -15) { keys['w'] = true; keys['arrowup'] = true; }
+      if (ny > 15) { keys['s'] = true; keys['arrowdown'] = true; }
     }
   };
 
@@ -154,9 +156,10 @@ const touchMap = { 'btn-punch': 'j', 'btn-kick': 'k', 'btn-special': 'l', 'btn-b
 Object.entries(touchMap).forEach(([btnId, key]) => {
   const btn = document.getElementById(btnId);
   if (btn) {
-    btn.addEventListener('pointerdown', e => { e.preventDefault(); keys[key] = true; });
-    btn.addEventListener('pointerup', e => { e.preventDefault(); keys[key] = false; });
-    btn.addEventListener('pointerleave', e => { keys[key] = false; });
+    // V16 Responsive touch classes for instant button feedback
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); keys[key] = true; btn.classList.add('active'); });
+    btn.addEventListener('pointerup', e => { e.preventDefault(); keys[key] = false; btn.classList.remove('active'); });
+    btn.addEventListener('pointerleave', e => { keys[key] = false; btn.classList.remove('active'); });
   }
 });
 

@@ -16,25 +16,52 @@ let framesThisSecond = 0;
 // FX MIXBOARD (BYPASS SYSTEM)
 // =========================================================================
 const FX_BYPASS = {
-  // Visual FX
-  screenShake: false,     // false = Effect Active. true = Bypassed
-  hitFlash: false,        // White screen flash on heavy hits
-  particles: false,       // Blood, sparks, dirt
-  heavyGlow: false,       // The expensive globalCompositeOperation glow
-  crtOverlay: false,      // The retro CRT scanline overlay
-  lightning: false,       // Main menu dynamic lightning background
-  stageProps: false,      // false = Props spawnen. true = Props komplett deaktiviert
-  attackSmear: false,     // false = Agile Phantom Strikes active. true = off
-  canvasFilters: false,   // false = Saturate/Contrast filters ON. true = Filters OFF (Performance jump)
+  // Visual FX (1.0 = 100% Intensity, 0.0 = Off/Bypassed)
+  screenShake: 0.85,      // 85% - Punchy and weighty without causing motion sickness
+  hitFlash: 0.75,         // 75% - Reduced whitewash for better combat visibility
+  particles: 1.35,        // 135% - Boosted for juicier arcade prop destruction
+  heavyGlow: 1.0,         // 100% - Global Composite Glow ON
+  crtOverlay: 0.80,       // 80% - Subtle reduction to keep pixel art crisp
+  lightning: 1.0,         // 100% - Menu lightning active
+  stageProps: 1.0,        // 100% - Props spawn
+  attackSmear: 0.65,      // 65% - The phantom strikes glow elegantly but remain surgical
+  canvasFilters: 1.0,     // 100% - Saturate/Contrast filters ON
+  menuFx: 1.0,            // 100% - Enhanced menu FX
 
-  // Gameplay/Feel FX (Coming soon)
-  hitStop: false,         // Mini slow-mo on heavy impacts
-  combatAI: false,        // false = Dynamic AI Scaling based on difficulty. true = Vanilla AI
+  // Gameplay/Feel FX
+  hitStop: 1.15,          // 115% - Increased hit freezing for a crunchier, heavier impact feel
+  combatAI: 0.95,         // 95% - Slightly tuned down AI aggression for a fair 100HP brawl
+  limbs: 1.0,             // 100% - Draw rect limbs during attacks
+  animSprite: 1.0,        // 100% - Enable subtle idle breathing animation
+
+  // Physics & Advanced Anim Flags
+  gravityControl: 1.0,    // Multiplier for gravity/jump height caps
+  advancedSlicing: 1.0,   // 100% - Split sprite drawing ON
+  playerImpactFeel: 1.0,  // Multiplier for squash/stretch intensity
+
+  // Game Balance
+  gameBalance: 1.0,       // Multiplier for damage output scaling
+  strictGrounding: 1.0,   // Multiplier reducing jump limits
+  koOverhaul: 1.0,        // 100% - Cinematic KOs ON
+  heroAura: 1.0,          // 100% - Golden aura ON
+
+  // Capcom 2.0 / Post-Review 7 & 8 & 9 (False/0.0 = Aktiv)
+  voiceReverb: 1.0,       // 0.0 = +25% Voice Reverb
+  magneticGround: 1.0,    // 0.0 = 100% Y-Axis lock to ground
+  bodyKoGlow: 1.0,        // 0.0 = Glow locked to KO body instead of world particles
+  specialVariations: 1.0, // 0.0 = Element-specific projectile behaviors
+  shootingStars: 1.0,     // 0.0 = Render shooting stars in menus and cutscenes
+
+  // Final "Gold Master" Harmonics
+  fades: 0.65,            // 65% - Cinematic fade durations reduced for snappier, responsive transitions
+  combatHarmonics: 0.88,  // 88% - Super tight responsive friction, retaining 12% classic retro slide
 
   // Audio FX
-  music: false,
-  sfx: false,
-  voice: false
+  music: 0.75,            // 75% Volume - Drops backing tracks slightly so voices dominate the mix
+  sfx: 1.15,              // 115% Volume - Extremely punchy impact and swing sounds
+  voice: 1.0,             // 100% Volume - Clear voice lines
+  voiceDistortion: 0.35,  // 35% Severity - Adds a subtle gritty, vintage arcade radio crackle
+  masterEQ: 1.0           // 100% HQ - No high cut. Full spectrum clarity.
 };
 
 
@@ -69,7 +96,33 @@ function insertCoin() {
   }
 }
 
-// Resize Handle
-function resize() { C.width = window.innerWidth; C.height = window.innerHeight; }
+// V15 Mobile Fix: 16:9 Letterbox Resize Handle
+function resize() {
+  const targetRatio = 16 / 9;
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+  const winRatio = winW / winH;
+
+  // We keep the internal Canvas resolution fixed to 1920x1080 for high-res AI Art consistency
+  C.width = 1920;
+  C.height = 1080;
+
+  // CSS scaling to fit the window with Letterboxing (Black Bars)
+  if (winRatio > targetRatio) {
+    // Window is too wide (e.g. Ultrawide or some mobile landscapes) -> Pillarbox (bars left/right)
+    const scaledWidth = winH * targetRatio;
+    C.style.width = Math.floor(scaledWidth) + 'px';
+    C.style.height = winH + 'px';
+    C.style.left = Math.floor((winW - scaledWidth) / 2) + 'px';
+    C.style.top = '0px';
+  } else {
+    // Window is too tall (e.g. Mobile Portrait or iPad) -> Letterbox (bars top/bottom)
+    const scaledHeight = winW / targetRatio;
+    C.style.width = winW + 'px';
+    C.style.height = Math.floor(scaledHeight) + 'px';
+    C.style.left = '0px';
+    C.style.top = Math.floor((winH - scaledHeight) / 2) + 'px';
+  }
+}
 window.addEventListener('resize', resize); resize();
 

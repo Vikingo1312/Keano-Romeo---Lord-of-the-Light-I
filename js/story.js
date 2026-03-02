@@ -51,12 +51,8 @@ const epilogLines = [
   { text: 'Und dennoch unerschütterlich.', style: 'bold', color: '#ffffff' },
   { text: '(Lange, ruhige Pause)', style: 'gap' },
   { text: '', style: 'gap' },
-  { text: '· · · · · · ·', style: 'divider', color: '#444' },
-  { text: '', style: 'gap' },
-  { text: '=====================', style: 'gap' },
-  { text: 'PROD. BY CAESAR', style: 'producer' },
+  { text: 'KEANO ROMEO - LORD OF THE LIGHT', style: 'producer' },
   { text: '© 2026', style: 'narr' },
-  { text: '=====================', style: 'gap' },
   { text: '', style: 'gap' },
   { text: '', style: 'gap' }
 ];
@@ -101,8 +97,6 @@ const reflexionLines = [
   { text: 'Manche Dimensionen werden sich widersetzen...', style: 'narr' },
   { text: 'Aber der Fluss lässt sich nicht aufhalten.', style: 'bold', color: '#aaddff' },
   { text: '(Lange, ausklingende Pause)', style: 'gap' },
-
-  { text: '· · · · · · ·', style: 'divider', color: '#444' },
   { text: '', style: 'gap' }
 ];
 
@@ -130,10 +124,8 @@ const birthdayLines = [
   { text: 'In Liebe, Papa ❤️', style: 'glow', color: '#ffcc00' },
   { text: '', style: 'gap' },
   { text: '', style: 'gap' },
-  { text: '=====================', style: 'gap' },
-  { text: 'PROD. BY CAESAR', style: 'producer' },
+  { text: 'KEANO ROMEO - LORD OF THE LIGHT', style: 'producer' },
   { text: '© 2026', style: 'narr' },
-  { text: '=====================', style: 'gap' },
   { text: '', style: 'gap' }
 ];
 
@@ -152,7 +144,7 @@ function initVoiceEffects() {
   if (voiceAudioCtx) return;
   voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // Wärme (Bass Boost & Low-Mid Warmth)
+  // Wärme (Bass Boost & Low-Mid Warmth) - PET Pad Restauration
   voiceFilter = voiceAudioCtx.createBiquadFilter();
   voiceFilter.type = 'lowshelf';
   voiceFilter.frequency.value = 180; // Tiefer ansetzen für echte Stimmwärme
@@ -208,7 +200,20 @@ function playEpicVoice(linesArray, type) {
     if (SFX.startAmbientPad) SFX.startAmbientPad();
     currentAudioTrack.currentTime = 0;
 
-    currentAudioTrack.addEventListener('ended', () => { SFX.restoreBGM(); }, { once: true });
+    // Track ending triggers next scene AND clears pad (Capcom Sequence Fix)
+    currentAudioTrack.addEventListener('ended', () => {
+      SFX.restoreBGM();
+      if (SFX.stopAmbientPad) SFX.stopAmbientPad();
+
+      // Auto-jump to next state when voice sequence is completely done
+      if (window.gameState === 'prologue' || window.gameState === 'midpoint_reflexion' || window.gameState === 'epilogue' || window.gameState === 'victory') {
+        // This syncs the transition exactly to the end of the voice track instead of a random timer
+        setTimeout(() => {
+          if (typeof keys !== 'undefined') keys[' '] = true;
+          setTimeout(() => { if (typeof keys !== 'undefined') keys[' '] = false; }, 100);
+        }, 500);
+      }
+    }, { once: true });
 
     currentAudioTrack.play().catch(e => {
       console.warn("Could not play MP3, using browser TTS fallback:", e);

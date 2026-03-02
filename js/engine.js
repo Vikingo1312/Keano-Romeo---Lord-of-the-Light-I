@@ -65,14 +65,14 @@ function startRound() {
 
   projectiles = [];
   stageObjects = [];
-  if (!FX_BYPASS.stageProps && ld && ld.objType) {
+  if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.stageProps : 1.0) > 0.0 && ld && ld.objType) {
     const isBossOrSecret = ['dark_vikingo', 'supreme_keano', 'hyper_keano', 'vikingo_coat', 'jay_x', 'gargamel_hoodie'].includes(ld.id);
     const count = isBossOrSecret ? 2 : (2 + Math.floor(Math.random() * 2)); // 2 to 3 objects
 
     for (let i = 0; i < count; i++) {
-      // Spawn at edges: Left side (50 to 250), Right side (Width-250 to Width-50)
+      // Spawn further inward to ensure they are destructible (not hugging the literal edge)
       const isLeftEdge = (i % 2 === 0);
-      let ox = isLeftEdge ? (50 + Math.random() * 200) : (C.width - 250 + Math.random() * 200);
+      let ox = isLeftEdge ? (250 + Math.random() * 100) : (C.width - 350 + Math.random() * 100);
       stageObjects.push(new StageObject(ld.objType, ox, GROUND()));
     }
   }
@@ -80,6 +80,10 @@ function startRound() {
   gameState = 'intro'; stateTimer = 3.0;
   roundTimerNum = defaultRoundTime;
   comboCount = 0; comboTimer = 0;
+
+  // Reset BGM Tension Speed
+  const bgmEl = document.getElementById('bgm-player');
+  if (bgmEl) bgmEl.playbackRate = 1.0;
 
   // V4 AUDIO MANAGER: Play the stage specific BGM!
   if (ld && ld.bgm) {
@@ -91,6 +95,82 @@ function startRound() {
     player.shout(player.shoutText || "Let's go!", 2.0, "intro");
   } else if (enemy._getVoiceId()) {
     setTimeout(() => enemy.shout(enemy.shoutText || "Prepare!", 2.0, "intro"), 800); // slight delay for dramatic effect
+  }
+}
+// Post-Review 9 & V12: Shooting Stars Pool (Diagonal & Natural)
+let shootingStarsPool = [];
+function updateAndDrawShootingStars(dt) {
+  let starFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.shootingStars : 1.0;
+  if (starFader <= 0.01) return;
+
+  // Spawn very rare, single stars (max 5 at a time)
+  if (Math.random() < 0.02 && shootingStarsPool.length < 5) {
+    const isLeftToRight = Math.random() > 0.5;
+
+    // Start high up, slightly off-screen near top corners
+    const startX = isLeftToRight ? -50 - Math.random() * 100 : C.width + 50 + Math.random() * 100;
+    const startY = -50 - Math.random() * 100;
+
+    // Diagonal towards opposite bottom corner for natural perspective
+    const targetX = isLeftToRight ? C.width + 200 : -200;
+    const targetY = C.height + 200;
+    const angle = Math.atan2(targetY - startY, targetX - startX);
+
+    shootingStarsPool.push({
+      x: startX,
+      y: startY,
+      speed: 40 + Math.random() * 60,  // Very slow, gentle drift
+      length: 80 + Math.random() * 120, // Long elegant tails
+      angle: angle,
+      alpha: 0,                         // Start completely invisible
+      targetAlpha: 0.15 + Math.random() * 0.25, // Very subtle peak brightness
+      life: 0,
+      maxLife: 15 + Math.random() * 15  // Takes 15-30 seconds to cross/fade (huge arc)
+    });
+  }
+
+  for (let i = shootingStarsPool.length - 1; i >= 0; i--) {
+    const s = shootingStarsPool[i];
+    s.life += dt;
+
+    s.x += Math.cos(s.angle) * s.speed * dt;
+    s.y += Math.sin(s.angle) * s.speed * dt;
+
+    // Smooth parabola fade in and out based on its exact maxLife. 
+    // 0 -> fades in to peak -> fades out -> 0
+    let lifeRatio = s.life / s.maxLife;
+    if (lifeRatio >= 1 || s.y > C.height + 200 || s.x < -300 || s.x > C.width + 300) {
+      shootingStarsPool.splice(i, 1);
+      continue;
+    }
+
+    // Perfect sine-wave fade in and out over its life duration
+    s.alpha = s.targetAlpha * Math.sin(lifeRatio * Math.PI);
+
+    X.save();
+    X.globalCompositeOperation = 'screen';
+    X.translate(s.x, s.y);
+    X.rotate(s.angle);
+
+    // Apply global FX_BYPASS fader and natural shimmer
+    const shimmer = s.alpha * starFader * (0.8 + 0.2 * Math.sin(s.life * 4));
+
+    const grad = X.createLinearGradient(0, 0, -s.length, 0);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${shimmer})`);
+    grad.addColorStop(0.2, `rgba(150, 240, 255, ${shimmer * 0.5})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    X.fillStyle = grad;
+    X.fillRect(-s.length, -1.0, s.length, 2);
+
+    X.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
+    X.shadowBlur = 15;
+    X.shadowColor = '#00ffff';
+    X.beginPath();
+    X.arc(0, 0, 1.2, 0, Math.PI * 2);
+    X.fill();
+
+    X.restore();
   }
 }
 
@@ -115,7 +195,7 @@ function gameLoop(ts) {
     time += dt;
 
     // --- Main Menu Lightning Effect ---
-    if (!FX_BYPASS.lightning && gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
+    if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.lightning : 1.0) > 0.0 && gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
       if (time > nextLightning) {
         document.getElementById('main-menu').classList.add('lightning-active');
         SFX.hitHeavy(); // Using a heavy hit sound to simulate thunder rumble
@@ -130,8 +210,9 @@ function gameLoop(ts) {
     X.clearRect(0, 0, C.width, C.height);
     X.save();
     if (screenShake > 0) {
-      if (!FX_BYPASS.screenShake) {
-        X.translate((Math.random() - 0.5) * screenShake * 3, (Math.random() - 0.5) * screenShake * 3);
+      let shakeFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.screenShake : 1.0;
+      if (shakeFader > 0.0) {
+        X.translate((Math.random() - 0.5) * screenShake * 3 * shakeFader, (Math.random() - 0.5) * screenShake * 3 * shakeFader);
       }
       screenShake *= 0.85; if (screenShake < 0.5) screenShake = 0;
     }
@@ -152,31 +233,39 @@ function gameLoop(ts) {
       // Draw Black Background
       X.fillStyle = '#000000'; X.fillRect(0, 0, C.width, C.height);
 
-      // Draw CAESAR logo with fade in and slight scale
+      // Draw CAESAR/KEANO logo with soft breathing pulse
       if (window._caesarDarkImg && window._caesarDarkImg.complete) {
         const cx = C.width / 2;
         const cy = C.height / 2;
         const targetWidth = C.width * 0.4;
         const targetHeight = targetWidth * (window._caesarDarkImg.height / window._caesarDarkImg.width);
 
-        let alpha = Math.min(1.0, stateTimer / 0.8);
-        let scale = 1.0 + (stateTimer * 0.05); // Slight slowly growing scale
+        // V12 Polish: Soft Breathing Pulsation instead of starr math
+        // Breathing cycle: full cycle every ~4 seconds. Math.PI * 2 = 1 cycle.
+        const breath = 1.0 + Math.sin(time * (Math.PI / 2)) * 0.05; // +/- 5% scale breathing
+        const glowPulse = 0.6 + Math.sin(time * (Math.PI / 2)) * 0.4; // 20% to 100% glow intensity
 
-        if (stateTimer > 2.0) {
-          alpha = Math.max(0.0, 1.0 - ((stateTimer - 2.0) / 0.5)); // Fade out
+        let alpha = Math.min(1.0, stateTimer / 1.2); // Slower fade in
+        let scale = breath + (stateTimer * 0.02); // Breathing + Slow overall growth
+
+        if (stateTimer > 4.0) { // Keep splashing screen longer for effect
+          alpha = Math.max(0.0, 1.0 - ((stateTimer - 4.0) / 1.0)); // 1 second gentle fade out
         }
 
         X.save();
         X.globalAlpha = alpha;
         X.translate(cx, cy);
         X.scale(scale, scale);
-        // glowing effect
-        X.shadowBlur = 40; X.shadowColor = 'rgba(0, 255, 255, 0.5)';
+
+        // V12 Polish: Breathing Glow
+        X.shadowBlur = 40 + (glowPulse * 20);
+        X.shadowColor = `rgba(0, 255, 255, ${glowPulse * 0.6})`;
         X.drawImage(window._caesarDarkImg, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
         X.restore();
       }
 
-      if (stateTimer > 2.8 || keys[' ']) {
+      // Splash screen stays longer now (5 seconds)
+      if (stateTimer > 5.0 || keys[' ']) {
         gameState = 'menu';
         document.getElementById('main-menu').classList.remove('hidden');
         SFX.playBGM('assets/audio/music/main_menu.mp3');
@@ -379,6 +468,38 @@ function gameLoop(ts) {
         TransitionManager.fadeScreen(600, 200, 600, () => { startLevel(7); });
       }
     }
+    else if (gameState === 'loading_screen') {
+      stateTimer += dtRaw;
+
+      // Pitch black atmosphere
+      X.fillStyle = '#050011'; // Deep dark void
+      X.fillRect(0, 0, C.width, C.height);
+
+      // Calculate dot animation (0, 1, 2, or 3 dots depending on time)
+      const dotCount = Math.floor(stateTimer * 2) % 4;
+      const dots = ".".repeat(dotCount);
+
+      // Draw centered LOADING text
+      X.save();
+      const cx = C.width / 2;
+      const cy = C.height / 2;
+
+      // Soft breathing пульс
+      const alpha = 0.5 + 0.5 * Math.sin(stateTimer * Math.PI);
+      X.globalAlpha = alpha;
+
+      X.textAlign = 'center';
+      X.textBaseline = 'middle';
+      X.font = `bold ${C.height * 0.08}px "Orbitron"`;
+      X.fillStyle = '#ffffff';
+
+      // Cyber glow
+      X.shadowBlur = 20;
+      X.shadowColor = '#00ffff';
+
+      X.fillText(`LOADING${dots}`, cx, cy);
+      X.restore();
+    }
     else if (gameState === 'vs_screen') {
       const vsBg = rawImgs['assets/UX_Main_Menu_Nexus.png'];
       if (vsBg && vsBg.complete) {
@@ -486,6 +607,14 @@ function gameLoop(ts) {
       if (gameTimerStyle !== 'infinite') {
         roundTimerNum -= simDt;
         if (roundTimerNum <= 0) roundTimerNum = 0;
+
+        // V16 TENSION MUSIC: Timer falls below 30% -> speed up music!
+        if (gameTimerStyle !== 'infinite' && roundTimerNum > 0 && roundTimerNum < (defaultRoundTime * 0.3)) {
+          const bgmEl = document.getElementById('bgm-player');
+          if (bgmEl && bgmEl.playbackRate < 1.15) {
+            bgmEl.playbackRate = 1.15; // Smooth acceleration for tension
+          }
+        }
       }
 
       player.update(simDt, enemy); enemy.update(simDt, player);
@@ -500,7 +629,8 @@ function gameLoop(ts) {
       if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
       else { player.draw(); enemy.draw(); }
 
-      stageObjects.forEach(obj => { obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
+      stageObjects.forEach(obj => { obj.update(dt); obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
+      stageObjects = stageObjects.filter(obj => !obj.deleted);
 
       projectiles.forEach(p => p.draw());
 
@@ -541,19 +671,37 @@ function gameLoop(ts) {
 
         if (winner === 'p1') {
           p1Wins++; p1WonLast = true;
-          enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = 0.15; // Slo-Mo
+          enemy.state = 'ko';
+          enemy.stateTimer = 99;
+
+          let koSloMoBase = 0.15;
+          let koOverhaulFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.koOverhaul : 1.0;
+          let finalKoTimeScale = koSloMoBase - (0.1 * koOverhaulFader); // Approaches 0.05 when fader is 1.0
+
+          enemy.timeScale = finalKoTimeScale;
           player.timeScale = 1.0; player.state = 'idle'; // Sieger bleibt stehen
           player.shout("Victory.", 3.0, "win");
         }
         else if (winner === 'p2') {
           p2Wins++; p1WonLast = false;
-          player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15; // Slo-Mo
+          player.state = 'ko';
+          player.stateTimer = 99;
+
+          let koSloMoBase = 0.15;
+          let koOverhaulFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.koOverhaul : 1.0;
+          let finalKoTimeScale = koSloMoBase - (0.1 * koOverhaulFader);
+
+          player.timeScale = finalKoTimeScale;
           enemy.timeScale = 1.0; enemy.state = 'idle'; // Sieger bleibt stehen
           enemy.shout("Too weak.", 3.0, "win");
         }
         if (winner === 'draw') {
-          player.state = 'ko'; player.stateTimer = 99; player.timeScale = 0.15;
-          enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = 0.15;
+          let koSloMoBase = 0.15;
+          let koOverhaulFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.koOverhaul : 1.0;
+          let finalKoTimeScale = koSloMoBase - (0.1 * koOverhaulFader);
+
+          player.state = 'ko'; player.stateTimer = 99; player.timeScale = finalKoTimeScale;
+          enemy.state = 'ko'; enemy.stateTimer = 99; enemy.timeScale = finalKoTimeScale;
         }
 
         // Massive KO Impact Vibration
@@ -564,7 +712,8 @@ function gameLoop(ts) {
       // Allow independent updates for post-KO cinematic slow-motion logic
       player.update(dt, enemy); enemy.update(dt, player);
 
-      stageObjects.forEach(obj => { obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
+      stageObjects.forEach(obj => { obj.update(dt); obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
+      stageObjects = stageObjects.filter(obj => !obj.deleted);
 
       player.draw(); enemy.draw(); drawHUD(player, enemy, ld);
 
@@ -602,10 +751,9 @@ function gameLoop(ts) {
               document.getElementById('btn-versus').textContent = 'VERSUS MODUS';
             }
             TransitionManager.fadeScreen(800, 300, 600, () => {
-              gameState = 'victory'; stateTimer = 0;
-              SFX.stopMusic();
+              // SFX.stopMusic(); // User Request: Keep Boss Theme playing!
               // Studio Polish: Epic Epilogue Theme
-              SFX.playBGM('assets/audio/music/end_theme.mp3');
+              // SFX.playBGM('assets/audio/music/end_theme.mp3');
 
               document.getElementById('btn-hamburger').classList.add('hidden');
               if (isMobile) document.getElementById('mobile-controls').classList.add('hidden');
@@ -648,7 +796,7 @@ function gameLoop(ts) {
       X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
 
       if (stateTimer > 9.9 && !this._announcedCont) {
-        SFX.playCharacterVoice('announcer', 'continue');
+        // SFX.playCharacterVoice('announcer', 'continue'); // Removed for final polish
         this._announcedCont = true;
       }
 
@@ -664,10 +812,11 @@ function gameLoop(ts) {
       X.fillText(`🪙 CREDITS: ${arcadeCredits}`, C.width / 2, C.height * 0.92);
 
       if (keys[' '] && stateTimer < 9.5) {
-        keys[' '] = false;
+        keys[' '] = false; // Consume purely
         if (arcadeCredits > 0) {
           useCredit();
           p1Wins = 0; p2Wins = 0; roundNum = 1;
+          SFX.stopMusic(); // Stop continue music
           startLevel(currentLevel);
         } else {
           SFX.hitBlock(); // Error sound if no credits
@@ -813,7 +962,20 @@ function gameLoop(ts) {
 
       if (playingHappyBirthday) {
         X.save();
-        let fireworksTriggered = false;
+
+        // 1. Keano Victor Background Fade-In
+        const vImg = rawImgs['assets/fighter/keano/_epic.png'];
+        if (vImg) {
+          X.globalAlpha = Math.min(0.3, stateTimer * 0.05); // Very slow, majestic fade
+          const scale = Math.max(C.width / vImg.naturalWidth, C.height / vImg.naturalHeight);
+          const w = vImg.naturalWidth * scale;
+          const h = vImg.naturalHeight * scale;
+          X.drawImage(vImg, (C.width - w) / 2, (C.height - h) / 2, w, h);
+          X.fillStyle = 'rgba(0,0,0,0.5)'; // Darken overlay so text is readable
+          X.fillRect(0, 0, C.width, C.height);
+        }
+        X.globalAlpha = 1.0;
+
         const cx = C.width / 2;
         const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
         const scrollSpeed = 22;
@@ -847,13 +1009,29 @@ function gameLoop(ts) {
             X.fillText(line.text, cx, yPos);
             if (line.style === 'producer') X.strokeText(line.text, cx, yPos);
 
-            if (line.text.includes('Lichtkristall') && distFromCenter < C.height * 0.1 && !fireworksTriggered && Math.random() < 0.2) {
-              for (let i = 0; i < 30; i++) {
+            if (line.text.includes('Lichtkristall') && distFromCenter < C.height * 0.1 && !window._fwT) {
+              window._fwT = true;
+              if (SFX.magicHit) SFX.magicHit(); // Explosive present
+              // Massive Starburst Effect
+              for (let i = 0; i < 200; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 30; // fast burst
                 particles.push({
-                  x: cx + (Math.random() - 0.5) * C.width * 0.5, y: yPos + (Math.random() - 0.5) * 50,
-                  vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30,
-                  life: 1.5 + Math.random(), color: Math.random() > 0.5 ? '#00ffff' : '#ffcc00',
-                  size: 3 + Math.random() * 5, isSpark: Math.random() > 0.7
+                  x: cx, y: yPos,
+                  vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                  life: 2.0 + Math.random() * 3,
+                  color: ['#00ffff', '#ffcc00', '#ff0033'][Math.floor(Math.random() * 3)],
+                  size: 4 + Math.random() * 8, isSpark: true
+                });
+              }
+            } else if (line.text.includes('Lichtkristall') && distFromCenter < C.height * 0.1 && window._fwT && Math.random() < 0.2) {
+              // Residual dripping sparks off the crystal text
+              for (let i = 0; i < 15; i++) {
+                particles.push({
+                  x: cx + (Math.random() - 0.5) * C.width * 0.4, y: yPos + (Math.random() - 0.5) * 30,
+                  vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+                  life: 1.0 + Math.random(), color: Math.random() > 0.5 ? '#00ffff' : '#ffcc00',
+                  size: 2 + Math.random() * 4, isSpark: Math.random() > 0.5
                 });
               }
             }
@@ -870,9 +1048,15 @@ function gameLoop(ts) {
       }
     }
 
+    // Post-Review 9: Render Shooting Stars overlay in cinematics
+    if (['splash', 'menu', 'prologue', 'midpoint_reflexion', 'credits'].includes(gameState)) {
+      updateAndDrawShootingStars(dtRaw);
+    }
+
     if (flashTimer > 0) {
-      if (!FX_BYPASS.hitFlash) {
-        X.save(); X.globalAlpha = flashTimer * 2; X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore();
+      let flashFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.hitFlash : 1.0;
+      if (flashFader > 0) {
+        X.save(); X.globalAlpha = Math.min(1.0, flashTimer * 2 * flashFader); X.fillStyle = '#fff'; X.fillRect(0, 0, C.width, C.height); X.restore();
       }
       flashTimer -= dt;
     }

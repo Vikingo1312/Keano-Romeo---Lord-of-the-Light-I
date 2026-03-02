@@ -76,6 +76,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding-bottom: 120px;
+      /* Center buttons specifically above the bottom coin slot */
       background: url('assets/UX_Cosmic_Shimmer.png') center/cover no-repeat;
     }
 
@@ -122,7 +124,7 @@
       animation: thunder-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
     }
 
-    /* ===== LIGHTNING CANVAS ===== */
+    /* ===== LIGHTNING CANVAS & GLIMMER ===== */
     #lightning-canvas {
       position: absolute;
       top: 0;
@@ -131,6 +133,28 @@
       height: 100%;
       pointer-events: none;
       z-index: -1;
+    }
+
+    .glimmer-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, transparent 30%, rgba(0, 230, 255, 0.15) 100%);
+      pointer-events: none;
+      z-index: 1;
+      animation: menuGlimmer 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes menuGlimmer {
+      0% {
+        opacity: 0.2;
+      }
+
+      100% {
+        opacity: 0.9;
+      }
     }
 
     .caesar-branding-logo {
@@ -146,34 +170,60 @@
     }
 
     .main-title {
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Press Start 2P', monospace;
       font-weight: 900;
-      font-size: clamp(3rem, 8vw, 6rem);
-      letter-spacing: 5px;
-      margin-bottom: -10px;
-      text-transform: uppercase;
-      background: repeating-linear-gradient(0deg, #00ffff 0px, #00ffff 4px, #0088cc 4px, #0088cc 6px);
-      background-clip: text;
+      font-size: clamp(3.0rem, 8vw, 6.0rem);
+      background: repeating-linear-gradient(0deg,
+          #00ffff 0px,
+          #00ffff 4px,
+          #0088cc 4px,
+          #0088cc 8px);
       -webkit-background-clip: text;
-      color: transparent;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
-      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
-      filter: drop-shadow(0px 0px 10px rgba(0, 255, 255, 0.8));
-      line-height: 1.1;
-      animation: pulsate-title 3s infinite alternate;
+      color: transparent;
+      /* 3D Stack: White border -> Purple extrusion -> Black drop shadow */
+      filter:
+        drop-shadow(2px 2px 0px #ffffff) drop-shadow(-2px -2px 0px #ffffff) drop-shadow(2px -2px 0px #ffffff) drop-shadow(-2px 2px 0px #ffffff) drop-shadow(4px 4px 0px #6600cc) drop-shadow(6px 6px 0px #6600cc) drop-shadow(8px 8px 0px #6600cc) drop-shadow(10px 10px 5px rgba(0, 0, 0, 0.8));
+      margin-bottom: 25px;
+      letter-spacing: 2px;
       text-align: center;
+      line-height: 1.2;
+      z-index: 10;
+      position: relative;
+      animation: title-glow 3s infinite alternate;
+      /* New: Schimmer Glow */
+    }
+
+    @keyframes title-glow {
+      0% {
+        filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.4)) drop-shadow(2px 2px 0px #ffffff) drop-shadow(-2px -2px 0px #ffffff) drop-shadow(4px 4px 0px #6600cc) drop-shadow(8px 8px 0px #6600cc);
+      }
+
+      100% {
+        filter: drop-shadow(0 0 35px rgba(0, 255, 255, 0.9)) drop-shadow(2px 2px 0px #ffffff) drop-shadow(-2px -2px 0px #ffffff) drop-shadow(4px 4px 0px #6600cc) drop-shadow(8px 8px 0px #6600cc);
+      }
     }
 
     .sub-title {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: clamp(1.2rem, 3vw, 2.2rem);
-      color: #fff;
-      -webkit-text-stroke: 1px #000;
-      letter-spacing: 12px;
-      text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
-      margin-bottom: 40px;
+      font-family: 'Press Start 2P', monospace;
+      font-weight: 900;
+      font-size: clamp(1.2rem, 3vw, 2.5rem);
+      background: #ffffff;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      letter-spacing: 8px;
+      text-transform: uppercase;
       text-align: center;
+      display: block;
+      margin-top: 40px;
+      /* Lowered by ~1 centimeter as requested */
+      margin-bottom: 15px;
+      /* 3D Stack for Subtitle */
+      filter:
+        drop-shadow(2px 2px 0px #000000) drop-shadow(-2px -2px 0px #000000) drop-shadow(2px -2px 0px #000000) drop-shadow(-2px 2px 0px #000000) drop-shadow(4px 4px 0px #6600cc) drop-shadow(6px 6px 5px rgba(0, 0, 0, 0.8));
     }
 
     /* Capcom Style Arcade Buttons */
@@ -182,6 +232,7 @@
       flex-direction: column;
       gap: 20px;
       z-index: 102;
+      transform: translateY(80px);
     }
 
     .capcom-btn {
@@ -634,6 +685,30 @@
       color: #fff;
     }
 
+    #btn-home {
+      position: absolute;
+      top: 15px;
+      right: 70px;
+      z-index: 80;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 1.5rem;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: 0.2s;
+    }
+
+    #btn-home:hover {
+      background: #fff;
+      color: #000;
+      box-shadow: 0 0 15px #fff;
+    }
+
     #btn-hamburger {
       position: absolute;
       top: 15px;
@@ -695,16 +770,19 @@
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.3);
     }
 
+    /* V16 Mobile Ergonomics: Classic Diamond Layout for Action Buttons */
     .action-btn-group {
       position: relative;
-      width: 180px;
-      height: 180px;
+      width: 220px;
+      /* Wider spacing to prevent mis-clicks */
+      height: 220px;
     }
 
     .action-btn {
       position: absolute;
-      width: 65px;
-      height: 65px;
+      width: 75px;
+      /* Larger hit area */
+      height: 75px;
       border-radius: 50%;
       font-family: 'Orbitron', sans-serif;
       font-weight: bold;
@@ -716,41 +794,49 @@
       justify-content: center;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255, 255, 255, 0.2);
       text-shadow: 1px 1px 2px #000;
+      /* Prevent text selection when tapping wildly */
+      user-select: none;
+      -webkit-user-select: none;
     }
 
-    .action-btn:active {
-      transform: scale(0.95);
-      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.8);
+    .action-btn:active,
+    .action-btn.active {
+      transform: scale(0.9);
+      box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.9);
     }
 
+    /* Top Node (Punch) */
     #btn-punch {
       top: 0;
-      left: 55px;
+      left: 72px;
       background: radial-gradient(circle, #0088ff, #004488);
       border-color: #00aaff;
     }
 
+    /* Bottom Node (Kick) */
     #btn-kick {
       bottom: 0;
-      left: 55px;
+      left: 72px;
       background: radial-gradient(circle, #ff3300, #881100);
       border-color: #ff5533;
     }
 
+    /* Left Node (Block) */
     #btn-block {
       left: 0;
-      top: 55px;
+      top: 72px;
       background: radial-gradient(circle, #888, #444);
       border-color: #aaa;
       color: #ddd;
     }
 
+    /* Right Node (Special) */
     #btn-special {
       right: 0;
-      top: 55px;
+      top: 72px;
       background: radial-gradient(circle, #ffcc00, #886600);
       border-color: #ffee33;
-      color: #fff;
+      color: #000;
     }
 
     @media (min-width: 1025px) {
@@ -768,11 +854,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(ellipse at center,
-          rgba(0, 0, 0, 1) 40%,
-          rgba(0, 30, 60, 0.98) 60%,
-          rgba(0, 180, 255, 0.15) 80%,
-          rgba(120, 0, 255, 0.1) 100%);
+      background: rgba(15, 0, 30, 1);
+      /* Dark cosmic purple instead of hard black */
       z-index: 9999;
       pointer-events: none;
       opacity: 0;
@@ -817,9 +900,11 @@
     <!-- STATE 1: Main Menu -->
     <div id="main-menu">
       <canvas id="lightning-canvas"></canvas>
+      <div id="menu-glimmer" class="glimmer-overlay"></div>
+
       <div class="menu-logo-container">
         <h1 class="main-title">KEANO ROMEO</h1>
-        <h2 class="sub-title">LORD OF THE LIGHT 1</h2>
+        <h2 class="sub-title">LORD OF THE LIGHT I</h2>
       </div>
 
       <div class="btn-group">
@@ -928,14 +1013,37 @@
 
         // Hide the overlay after interaction
         document.getElementById('audio-unlock-overlay').style.display = 'none';
+
+        // 4. Force Mobile Fullscreen Request
+        const docElm = document.documentElement;
+        if (docElm.requestFullscreen) {
+          docElm.requestFullscreen().catch(e => console.log("Fullscreen refused:", e));
+        } else if (docElm.mozRequestFullScreen) { // Firefox
+          docElm.mozRequestFullScreen();
+        } else if (docElm.webkitRequestFullScreen) { // Chrome, Safari and Opera
+          docElm.webkitRequestFullScreen();
+        } else if (docElm.msRequestFullscreen) { // IE/Edge
+          docElm.msRequestFullscreen();
+        }
       }, { once: true });
     </script>
   </div>
 
+  <button id="btn-home" style="display:none;">⌂</button>
+  <button id="btn-hamburger">☰</button>
+
   <!-- STATE 3: Character Select -->
   <div id="char-select" class="hidden">
     <div class="cs-left">
-      <div id="cs-title">SELECT YOUR FIGHTER</div>
+      <div id="cs-title">
+        <button id="btn-cs-back" class="menu-btn"
+          style="position: absolute; left: 20px; top: 20px; font-size: 0.8rem; padding: 10px; z-index: 100;">BACK TO
+          MENU</button>
+        <button id="btn-random-fighter" class="menu-btn capcom-btn"
+          style="position: absolute; right: 20px; top: 20px; font-size: 0.8rem; padding: 10px; z-index: 100; font-family: 'Press Start 2P';">🎲
+          RANDOM</button>
+        SELECT YOUR FIGHTER
+      </div>
       <div class="cs-grid" id="cs-grid">
         <!-- Populated by JS -->
       </div>
@@ -946,6 +1054,9 @@
         <div id="cs-flag" style="font-size:2rem;">🌍</div>
         <div id="cs-name">???</div>
         <div id="cs-title-label">...</div>
+        <div id="cs-style-label"
+          style="font-weight:bold; color:#00ffff; font-size:0.9rem; text-transform:uppercase; margin-top:5px; letter-spacing:1px;">
+          ...</div>
         <div id="cs-desc" style="font-size:0.7rem; color:#aaa; text-align:center; margin:5px 0 10px;">Wähle deinen
           Kämpfer</div>
         <button class="btn-select-confirm" id="btn-confirm-fighter">FIGHT!</button>
@@ -983,6 +1094,18 @@
       <div class="slider-row">
         <span>🗣 Voice:</span>
         <input type="range" id="vol-voice" min="0" max="1" step="0.1" value="0.9">
+      </div>
+      <div class="slider-row">
+        <span>🎵 Music:</span>
+        <input type="range" id="vol-music" min="0" max="1" step="0.1" value="0.25">
+      </div>
+      <div class="slider-row">
+        <span>💥 SFX:</span>
+        <input type="range" id="vol-sfx" min="0" max="1" step="0.1" value="0.4">
+      </div>
+      <div class="slider-row">
+        <span>🎚️ Master EQ:</span>
+        <input type="range" id="vol-eq" min="0" max="1" step="0.1" value="1.0">
       </div>
       <div class="slider-row">
         <span>⚔ Difficulty:</span>
@@ -1058,16 +1181,16 @@
   </div>
 
   <!-- V10 MODULAR ARCHITECTURE: Ordered Script Loading -->
-  <script src="js/globals.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/assets.js"></script>
-  <script src="js/entities.js"></script>
-  <script src="js/fighter.js"></script>
-  <script src="js/story.js"></script>
-  <script src="js/hud.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/globals.js?v=9"></script>
+  <script src="js/audio.js?v=9"></script>
+  <script src="js/data.js?v=9"></script>
+  <script src="js/assets.js?v=9"></script>
+  <script src="js/entities.js?v=9"></script>
+  <script src="js/fighter.js?v=9"></script>
+  <script src="js/story.js?v=9"></script>
+  <script src="js/hud.js?v=9"></script>
+  <script src="js/engine.js?v=9"></script>
+  <script src="js/main.js?v=9"></script>
 
 </body>
 

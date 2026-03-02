@@ -11,14 +11,25 @@ window.openCharacterSelect = function (mode) {
   const grid = document.getElementById('cs-grid');
   grid.innerHTML = '';
 
-  // Build roster: Keano first, then story fighters (0-13), then variant slots at end
-  const storyFighters = LEVELS.slice(0, 14); // Original story roster (no Cyber-Commando)
+  // Listen for the Back Button
+  const backBtn = document.getElementById('btn-cs-back');
+  if (backBtn) {
+    backBtn.onclick = () => {
+      SFX.uiSelect();
+      document.getElementById('char-select').classList.add('hidden');
+      document.getElementById('main-menu').classList.remove('hidden');
+      SFX.playBGM('assets/audio/music/main_soundtrack.mp3');
+    };
+  }
+
+  // Build roster
+  const storyFighters = LEVELS.slice(0, 14);
   const variantFighters = LEVELS.slice(14);   // Supreme, Hyper, Jay X, Vikingo Prime, Dark Gargamel
   const roster = [KEANO, ...storyFighters, ...variantFighters];
 
   roster.forEach((fighter, idx) => {
     const div = document.createElement('div');
-    const isVariant = idx > 14;
+    const isVariant = idx > 13;
     div.className = 'cs-portrait' + (fighter.name === 'DARK VIKINGO' ? ' boss' : '') + (isVariant ? ' variant' : '');
     const img = document.createElement('img');
 
@@ -57,10 +68,12 @@ window.openCharacterSelect = function (mode) {
       document.getElementById('cs-flag').textContent = fighter.flag;
       document.getElementById('cs-name').textContent = fighter.name;
       document.getElementById('cs-title-label').textContent = fighter.title || 'STREET FIGHTER';
+      const styleLabel = document.getElementById('cs-style-label');
+      if (styleLabel) styleLabel.textContent = fighter.style || 'BRAWLER';
       document.getElementById('cs-desc').textContent = fighter.desc || '';
 
-      // Stats: Use the `str` object (spd/pow/def on a scale of 1-7)
-      const maxStat = 7;
+      // Stats: Use the `str` object (spd/pow/def on a scale of 1-10)
+      const maxStat = 10;
       document.getElementById('stat-spd').style.width = Math.min((fighter.str?.spd || 3) / maxStat * 100, 100) + '%';
       document.getElementById('stat-pow').style.width = Math.min((fighter.str?.pow || 3) / maxStat * 100, 100) + '%';
       document.getElementById('stat-def').style.width = Math.min((fighter.str?.def || 3) / maxStat * 100, 100) + '%';
@@ -87,40 +100,57 @@ document.getElementById('btn-confirm-fighter').addEventListener('click', () => {
   // Must have selected a fighter
   if (!arcadeSelectedFighter) return;
 
+  // Instantiate the Fighter Objects BEFORE setting properties
+  const keanoStats = KEANO.str;
+  player = new HybridFighter(100, GROUND(), true, '#00aaff', Object.assign({}, arcadeSelectedFighter, {
+    hpScale: 1, dmgScale: 1
+  }));
+
   if (gameMode === 'arcade') {
-    const keanoStats = KEANO.str;
-    player = new HybridFighter(100, GROUND(), true, '#00aaff', Object.assign({}, KEANO, {
-      hpScale: 1, dmgScale: 1
-    }));
-    enemy = new HybridFighter(500, GROUND(), false, '#ff4400', Object.assign({}, LEVELS[currentLevel], {
+    enemy = new HybridFighter(100, GROUND(), false, '#ff4400', Object.assign({}, LEVELS[currentLevel], {
       hpScale: gameDifficulty === 'hard' ? 1.5 : (gameDifficulty === 'easy' ? 0.7 : 1),
       dmgScale: gameDifficulty === 'hard' ? 1.5 : (gameDifficulty === 'easy' ? 0.8 : 1)
     }));
-    enemy.x = C.width - 150;
-  } else if (gameMode === 'versus') {
-    // Assuming P1 and P2 selection logic is handled elsewhere, the selected characters are in `player` and `enemy` variables
-    player.x = 100;
-    enemy.x = C.width - 150;
-    // Ensure they face each other
-    player.facingRight = true;
-    enemy.facingRight = false;
+  } else {
+    // Versus Mode (Random opponent for now if P2 selector not built yet, fallback to Level 0)
+    enemy = new HybridFighter(100, GROUND(), false, '#ff4400', Object.assign({}, LEVELS[0], {
+      hpScale: 1, dmgScale: 1
+    }));
   }
+
+  // Now safely set X positions
+  player.x = C.width * 0.22;
+  enemy.x = C.width * 0.78;
+  player.facingRight = true;
+  enemy.facingRight = false;
 
   SFX.uiSelect();
 
   TransitionManager.switchState({
     hideDOM: ['char-select'],
-    setGameState: 'vs_screen',
-    fadeIn: 500, wait: 200, fadeOut: 500,
+    setGameState: 'loading_screen',
+    fadeIn: 400, wait: 200, fadeOut: 400,
     onSwap: () => {
-      SFX.playBGM('assets/audio/music/vs_screen.mp3');
+      SFX.playBGM('assets/audio/music/vs_loading.mp3'); // V13: Loading Screen 4-8 Bar Harmonic Loop
       stateTimer = 0;
-      // Trigger epic VS Voice or effect here if desired!
+
+      // Auto-transition to VS Screen after 4.5 seconds of breathing room
+      setTimeout(() => {
+        TransitionManager.switchState({
+          setGameState: 'vs_screen',
+          fadeIn: 500, wait: 200, fadeOut: 500,
+          onSwap: () => {
+            SFX.playBGM('assets/audio/music/vs_screen.mp3');
+            stateTimer = 0;
+          }
+        });
+      }, 4500);
     }
   });
 });
 
 window.toggleOptions = function () {
+  console.log("toggleOptions triggered from state:", gameState);
   const panel = document.getElementById('pause-menu');
   if (!panel) return;
   const isVisible = !panel.classList.contains('hidden');
@@ -153,79 +183,14 @@ window.quitToMenu = function () {
     document.getElementById('char-select').classList.add('hidden');
     SFX.stopMusic();
     if (typeof stopEpicVoice === 'function') stopEpicVoice(); // Force stop any running voice-overs
-    // --- V7 QA AUTORUN HARNESS ---
-    if (window.location.search.includes('qa=true')) {
-      console.log("[QA] Initializing Automated Test Run...");
-      qaLogger.style.display = 'block';
-      qaLogger.innerHTML += '<strong>[QA] AUTORUN ENGAGED.</strong><br>';
 
-      gameMode = 'arcade';
-      currentLevel = 0;
-      arcadeSelectedName = 'KEANO';
-
-      // Force instantaneous transitions for QA
-      TransitionManager.switchState({
-        hideDOM: ['main-menu', 'char-select'],
-        setGameState: 'versus', // Skip select, go straight to fight prep
-        fadeIn: 10, wait: 10, fadeOut: 10,
-        onSwap: () => {
-          player = new HybridFighter(C.width * 0.22, GROUND(), true, KEANO.col, KEANO);
-          enemy = new HybridFighter(C.width * 0.78, GROUND(), false, ld.col, ld);
-
-          startRound();
-
-          // QA Master Bot Loop - Persists across matches!
-          let fCount = 0;
-          let isFinished = false;
-          setInterval(() => {
-            if (isFinished) return;
-            fCount++;
-
-            // Track frame drops - roughly if loop missed ticks (rudimentary measure placed here for heartbeat)
-
-            if (gameState === 'fighting') {
-              if (fCount % 20 === 0) { // Every 20 ticks
-                // Simulate P1
-                const p1actions = ['punch', 'kick', 'jump', 'right', 'special', 'super', 'evade_back'];
-                handleAction(p1actions[Math.floor(Math.random() * p1actions.length)], true);
-                // Simulate P2
-                const p2actions = ['punch', 'kick', 'jump', 'left', 'special', 'super', 'roll_forward'];
-                handleAction(p2actions[Math.floor(Math.random() * p2actions.length)], false);
-              }
-            }
-            else if (gameState === 'continue' || gameState === 'gameOver' || gameState === 'prologue' || gameState === 'epilogue' || gameState === 'midpoint_reflexion') {
-              if (fCount % 30 === 0) {
-                keys[' '] = true; // Auto-skip / auto-continue
-                setTimeout(() => keys[' '] = false, 50);
-              }
-            }
-            else if (gameState === 'victory' && stateTimer > 5.0) {
-              isFinished = true;
-              qaLogger.style.display = 'block';
-              qaLogger.style.width = '80%';
-              qaLogger.style.top = '10%';
-              qaLogger.style.left = '10%';
-              qaLogger.innerHTML = QATracker.print();
-            }
-          }, 16);
-        }
-      });
-      return; // Block standard boot
-    }
-    // --- END QA HARNESS ---
 
     document.getElementById('main-menu').classList.remove('hidden');
     gameState = 'menu';
-    document.getElementById('btn-start-menu').addEventListener('click', () => {
+    if (typeof SFX !== 'undefined') {
       SFX.init();
       SFX.playBGM('assets/audio/music/main_soundtrack.mp3');
-
-      // Bind UI Sounds to all interactive elements
-      document.querySelectorAll('.menu-btn, .action-btn, .slot-container, input[type="range"], input[type="checkbox"]').forEach(el => {
-        el.addEventListener('mouseenter', () => SFX.uiHover());
-        el.addEventListener('click', () => SFX.uiSelect());
-      });
-    });
+    }
   });
 };
 
@@ -272,20 +237,7 @@ function bootGame() {
   requestAnimationFrame(gameLoop);
 }
 
-// Bind story mode directly
-document.getElementById('btn-story').addEventListener('click', () => {
-  gameMode = 'story';
-  TransitionManager.switchState({
-    hideDOM: ['main-menu'],
-    setGameState: 'prologue',
-    fadeIn: 600, wait: 200, fadeOut: 800,
-    onSwap: () => {
-      SFX.playBGM('assets/audio/music/prologue.mp3');
-      stateTimer = 0;
-      playEpicVoice(prologueLines, 'prologue');
-    }
-  });
-});
+// Story Mode is managed inside the DOMContentLoaded block below
 
 document.getElementById('btn-arcade').addEventListener('click', () => {
   if (!document.getElementById('btn-arcade').disabled) {
@@ -293,7 +245,7 @@ document.getElementById('btn-arcade').addEventListener('click', () => {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
     }
-    SFX.playBGM('assets/audio/music/char_select.mp3');
+    SFX.playBGM('assets/audio/music/vs_theme.mp3'); // V12: Separate VS Theme
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
       showDOM: ['char-select'],
@@ -312,7 +264,7 @@ document.getElementById('btn-versus').addEventListener('click', () => {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
     }
-    SFX.playBGM('assets/audio/music/char_select.mp3');
+    SFX.playBGM('assets/audio/music/vs_theme.mp3'); // V12: Separate VS Theme
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
       showDOM: ['char-select'],
@@ -327,6 +279,37 @@ document.getElementById('btn-versus').addEventListener('click', () => {
 
 document.getElementById('btn-options-menu').addEventListener('click', toggleOptions);
 document.getElementById('btn-hamburger').addEventListener('click', toggleOptions);
+document.getElementById('btn-home').addEventListener('click', quitToMenu);
+
+// V13: Random Character Select (Roulette Effect)
+const btnRandomFighter = document.getElementById('btn-random-fighter');
+if (btnRandomFighter) {
+  btnRandomFighter.addEventListener('click', () => {
+    const portraits = Array.from(document.querySelectorAll('.cs-portrait'));
+    if (portraits.length === 0) return;
+
+    // Disable button during animation
+    btnRandomFighter.disabled = true;
+
+    let spins = 0;
+    const maxSpins = 15 + Math.floor(Math.random() * 10);
+    const spinDelay = 80; // ms
+
+    const spinInterval = setInterval(() => {
+      const randIdx = Math.floor(Math.random() * portraits.length);
+      SFX.uiHover(); // click sound
+      portraits[randIdx].click();
+
+      spins++;
+      // Gradually slow down
+      if (spins >= maxSpins) {
+        clearInterval(spinInterval);
+        SFX.uiSelect(); // final selection sound
+        btnRandomFighter.disabled = false;
+      }
+    }, spinDelay);
+  });
+}
 
 // INSERT COIN: Click to refill credits when empty
 if (document.getElementById('insert-coin-bar')) {
@@ -344,6 +327,7 @@ document.getElementById('btn-quit').addEventListener('click', () => {
 
 // Show hamburger button in main menu too (so OPTIONS always works)
 document.getElementById('btn-hamburger').classList.remove('hidden');
+document.getElementById('btn-home').style.display = 'flex';
 
 // SKIP button: triggers space key to skip voice sequences
 document.getElementById('btn-skip-sequence').addEventListener('click', () => {
@@ -438,11 +422,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStory = document.getElementById('btn-story');
   const btnArcade = document.getElementById('btn-arcade');
   const btnVersus = document.getElementById('btn-versus');
+  const btnOptions = document.getElementById('btn-options-menu');
 
-  // Check if Arcade is unlocked, else disable buttons initially
-  if (localStorage.getItem('arcadeUnlocked') !== 'true') {
-    if (btnArcade) { btnArcade.disabled = true; btnArcade.style.color = '#555'; btnArcade.style.borderColor = '#555'; btnArcade.textContent = '???'; }
-    if (btnVersus) { btnVersus.disabled = true; btnVersus.style.color = '#555'; btnVersus.style.borderColor = '#555'; btnVersus.textContent = '???'; }
+  // Check if Arcade is unlocked, else disable buttons initially (Temporarily unlocked for testing/polish)
+  // if (localStorage.getItem('arcadeUnlocked') !== 'true') {
+  //   if (btnArcade) { btnArcade.disabled = true; btnArcade.style.color = '#555'; btnArcade.style.borderColor = '#555'; btnArcade.textContent = '???'; }
+  //   if (btnVersus) { btnVersus.disabled = true; btnVersus.style.color = '#555'; btnVersus.style.borderColor = '#555'; btnVersus.textContent = '???'; }
+  // }
+
+  // Handle VFX Bypasses for HTML overlays
+  if (typeof FX_BYPASS !== 'undefined' && FX_BYPASS.menuFx) {
+    const glimmer = document.getElementById('menu-glimmer');
+    if (glimmer) glimmer.style.display = 'none';
+  }
+
+  if (btnOptions) {
+    btnOptions.addEventListener('click', () => {
+      if (typeof window.toggleOptions === 'function') window.toggleOptions();
+    });
   }
 
   if (btnStory) {
@@ -452,9 +449,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
       }
       gameMode = 'story';
-      bootGame();
+
+      TransitionManager.switchState({
+        hideDOM: ['main-menu'],
+        setGameState: 'prologue',
+        fadeIn: 600, wait: 200, fadeOut: 800,
+        onSwap: () => {
+          // Play only the epic voice track without the overlapping music file
+          stateTimer = 0;
+          playEpicVoice(prologueLines, 'prologue');
+        }
+      });
+
     });
   }
+
 
   if (btnArcade) {
     btnArcade.addEventListener('click', () => {
@@ -463,11 +472,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
       }
       gameMode = 'arcade';
-      bootGame();
     });
   }
 
+
   // CHEAT: SKIP TO ENDING
+  bootGame();
+
   window.forceEnding = function () {
     const panel = document.getElementById('pause-menu');
     if (panel) panel.classList.add('hidden');
@@ -498,6 +509,31 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('sel-difficulty')) {
     document.getElementById('sel-difficulty').addEventListener('change', (e) => {
       window.gameDifficulty = e.target.value;
+    });
+  }
+
+  // Audio Volume Sync
+  if (document.getElementById('vol-music')) {
+    document.getElementById('vol-music').addEventListener('input', (e) => SFX.setMusicVol(parseFloat(e.target.value)));
+  }
+  if (document.getElementById('vol-sfx')) {
+    document.getElementById('vol-sfx').addEventListener('input', (e) => SFX.setSFXVol(parseFloat(e.target.value)));
+  }
+  if (document.getElementById('vol-voice')) {
+    document.getElementById('vol-voice').addEventListener('input', (e) => SFX.setVoiceVol(parseFloat(e.target.value)));
+  }
+
+  // Custom V14 Master EQ Wiring (Live WebAudio Filter Adjustment)
+  if (document.getElementById('vol-eq')) {
+    document.getElementById('vol-eq').addEventListener('input', (e) => {
+      if (typeof FX_BYPASS !== 'undefined') {
+        FX_BYPASS.masterEQ = parseFloat(e.target.value);
+        if (SFX.bgmMasterEQ && SFX.bgmAudioCtx) {
+          // At 1.0 (100%), frequency is 20000Hz (Bypass/Open)
+          // At 0.0 (0%), frequency drops to 2000Hz (Heavy muffled radio effect)
+          SFX.bgmMasterEQ.frequency.setTargetAtTime(2000 + (18000 * FX_BYPASS.masterEQ), SFX.bgmAudioCtx.currentTime, 0.1);
+        }
+      }
     });
   }
 
@@ -540,9 +576,16 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i].x, points[i].y);
       }
-      ctx.strokeStyle = depth > 2 ? 'rgba(200,220,255,0.9)' : 'rgba(150,180,255,0.5)';
-      ctx.lineWidth = depth > 2 ? 3 : 1.5;
-      ctx.shadowBlur = depth > 2 ? 25 : 10;
+
+      if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.menuFx : 1.0) > 0.0) {
+        ctx.strokeStyle = depth > 2 ? 'rgba(200,255,255,1)' : 'rgba(150,220,255,0.8)';
+        ctx.lineWidth = depth > 2 ? 6 : 3;
+        ctx.shadowBlur = depth > 2 ? 40 : 20;
+      } else {
+        ctx.strokeStyle = depth > 2 ? 'rgba(200,220,255,0.9)' : 'rgba(150,180,255,0.5)';
+        ctx.lineWidth = depth > 2 ? 3 : 1.5;
+        ctx.shadowBlur = depth > 2 ? 25 : 10;
+      }
       ctx.shadowColor = '#4488ff';
       ctx.stroke();
 
@@ -564,23 +607,54 @@ document.addEventListener('DOMContentLoaded', () => {
       const startX = Math.random() * canvas.width;
       const endX = startX + (Math.random() - 0.5) * 300;
       const endY = canvas.height * (0.3 + Math.random() * 0.3);
-      bolts.push({ x1: startX, y1: 0, x2: endX, y2: endY, life: 0.15 + Math.random() * 0.1 });
+      bolts.push({ x1: startX, y1: 0, x2: endX, y2: endY, life: 0.15 + Math.random() * 0.1 }); // Comes from Top
+    }
+
+    // Post Review 9 & V12: Twinkling Menu Stars
+    let menuStars = [];
+    for (let i = 0; i < 100; i++) {
+      menuStars.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight * 0.7, // Top 70% of screen mostly
+        size: 0.5 + Math.random() * 1.5,
+        blinkSpeed: 1 + Math.random() * 4,
+        offset: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.8 ? '#aaddff' : (Math.random() > 0.8 ? '#ccaaff' : '#ffffff')
+      });
     }
 
     function animate() {
       requestAnimationFrame(animate);
       // Only draw when menu is visible
       const menu = document.getElementById('main-menu');
-      if (FX_BYPASS.lightning || !menu || menu.classList.contains('hidden')) return;
+      if (!menu || menu.classList.contains('hidden')) return; // Check if hidden early
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const now = performance.now() / 1000;
-      if (now >= nextBoltTime) {
-        spawnBolt();
-        // Sometimes double-strike
-        if (Math.random() < 0.2) setTimeout(spawnBolt, 50 + Math.random() * 100);
-        nextBoltTime = now + 1.5 + Math.random() * 4; // every 1.5-5.5 seconds
+
+      // Draw Twinkling Stars (V12 FX Polish)
+      if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.starTwinkle : 1.0) > 0.0) {
+        ctx.save();
+        menuStars.forEach(star => {
+          const twinkle = 0.2 + 0.8 * Math.abs(Math.sin(now * star.blinkSpeed + star.offset));
+          ctx.globalAlpha = twinkle;
+          ctx.fillStyle = star.color;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+
+      // Handle Lightning Strikes
+      if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.menuFx : 1.0) > 0.0) {
+        if (now >= nextBoltTime) {
+          spawnBolt();
+          // Sometimes double-strike
+          if (Math.random() < 0.2) setTimeout(spawnBolt, 50 + Math.random() * 100);
+          nextBoltTime = now + 1.5 + Math.random() * 4; // every 1.5-5.5 seconds
+        }
       }
 
       // Draw active bolts
@@ -609,4 +683,69 @@ document.addEventListener('DOMContentLoaded', () => {
     if (crt) crt.style.display = 'none';
   }
 
+});
+
+
+// RUN QA HARNESS OUTSIDE OF QUIT-TO-MENU
+document.addEventListener("DOMContentLoaded", () => {
+  // --- V7 QA AUTORUN HARNESS ---
+  if (window.location.search.includes('qa=true')) {
+    console.log("[QA] Initializing Automated Test Run...");
+    qaLogger.style.display = 'block';
+    qaLogger.innerHTML += '<strong>[QA] AUTORUN ENGAGED.</strong><br>';
+
+    gameMode = 'arcade';
+    currentLevel = 0;
+    arcadeSelectedName = 'KEANO';
+
+    // Force instantaneous transitions for QA
+    TransitionManager.switchState({
+      hideDOM: ['main-menu', 'char-select'],
+      setGameState: 'versus', // Skip select, go straight to fight prep
+      fadeIn: 10, wait: 10, fadeOut: 10,
+      onSwap: () => {
+        player = new HybridFighter(C.width * 0.22, GROUND(), true, KEANO.col, KEANO);
+        enemy = new HybridFighter(C.width * 0.78, GROUND(), false, ld.col, ld);
+
+        startRound();
+
+        // QA Master Bot Loop - Persists across matches!
+        let fCount = 0;
+        let isFinished = false;
+        setInterval(() => {
+          if (isFinished) return;
+          fCount++;
+
+          // Track frame drops - roughly if loop missed ticks (rudimentary measure placed here for heartbeat)
+
+          if (gameState === 'fighting') {
+            if (fCount % 20 === 0) { // Every 20 ticks
+              // Simulate P1
+              const p1actions = ['punch', 'kick', 'jump', 'right', 'special', 'super', 'evade_back'];
+              handleAction(p1actions[Math.floor(Math.random() * p1actions.length)], true);
+              // Simulate P2
+              const p2actions = ['punch', 'kick', 'jump', 'left', 'special', 'super', 'roll_forward'];
+              handleAction(p2actions[Math.floor(Math.random() * p2actions.length)], false);
+            }
+          }
+          else if (gameState === 'continue' || gameState === 'gameOver' || gameState === 'prologue' || gameState === 'epilogue' || gameState === 'midpoint_reflexion') {
+            if (fCount % 30 === 0) {
+              keys[' '] = true; // Auto-skip / auto-continue
+              setTimeout(() => keys[' '] = false, 50);
+            }
+          }
+          else if (gameState === 'victory' && stateTimer > 5.0) {
+            isFinished = true;
+            qaLogger.style.display = 'block';
+            qaLogger.style.width = '80%';
+            qaLogger.style.top = '10%';
+            qaLogger.style.left = '10%';
+            qaLogger.innerHTML = QATracker.print();
+          }
+        }, 16);
+      }
+    });
+    return; // Block standard boot
+  }
+  // --- END QA HARNESS ---
 });
