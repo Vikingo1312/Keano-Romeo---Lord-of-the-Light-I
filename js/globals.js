@@ -1,12 +1,6 @@
 // Globals
 const C = document.getElementById('gameCanvas');
-const mainCtx = C.getContext('2d', { alpha: false }); // Render context
-
-// V19 ARCHITECTURE: Offscreen Canvas (Double Buffering) for Mobile FPS stability
-const offCanvas = document.createElement('canvas');
-offCanvas.width = 1920;
-offCanvas.height = 1080;
-const X = offCanvas.getContext('2d', { alpha: false }); // Core logic drawing context
+const X = C.getContext('2d', { alpha: false }); // Optimize for no transparency behind canvas
 let gameState = 'init'; // init, splash, menu, prologue, select, vs_screen, fighting, ko, reflexion, epilogue, credits
 let time = 0, lastTime = performance.now(), stateTimer = 0;
 let nextLightning = 4000; // Initialize first thunder rumble for Main Menu
@@ -102,42 +96,33 @@ function insertCoin() {
   }
 }
 
-// V19 Architecture: Screen Resize with DPR (Device Pixel Ratio) Scaling
+// V15 Mobile Fix: 16:9 Letterbox Resize Handle
 function resize() {
   const targetRatio = 16 / 9;
   const winW = window.innerWidth;
   const winH = window.innerHeight;
   const winRatio = winW / winH;
 
-  // DPR Scaling for tack-sharp Retina/Mobile rendering
-  const dpr = window.devicePixelRatio || 1;
+  // We keep the internal Canvas resolution fixed to 1920x1080 for high-res AI Art consistency
+  C.width = 1920;
+  C.height = 1080;
 
-  let cssWidth, cssHeight;
-
-  // Calculate CSS boundary based on Letterboxing
+  // CSS scaling to fit the window with Letterboxing (Black Bars)
   if (winRatio > targetRatio) {
-    cssHeight = winH;
-    cssWidth = winH * targetRatio;
-    C.style.width = Math.floor(cssWidth) + 'px';
+    // Window is too wide (e.g. Ultrawide or some mobile landscapes) -> Pillarbox (bars left/right)
+    const scaledWidth = winH * targetRatio;
+    C.style.width = Math.floor(scaledWidth) + 'px';
     C.style.height = winH + 'px';
-    C.style.left = Math.floor((winW - cssWidth) / 2) + 'px';
+    C.style.left = Math.floor((winW - scaledWidth) / 2) + 'px';
     C.style.top = '0px';
   } else {
-    cssWidth = winW;
-    cssHeight = winW / targetRatio;
+    // Window is too tall (e.g. Mobile Portrait or iPad) -> Letterbox (bars top/bottom)
+    const scaledHeight = winW / targetRatio;
     C.style.width = winW + 'px';
-    C.style.height = Math.floor(cssHeight) + 'px';
+    C.style.height = Math.floor(scaledHeight) + 'px';
     C.style.left = '0px';
-    C.style.top = Math.floor((winH - cssHeight) / 2) + 'px';
+    C.style.top = Math.floor((winH - scaledHeight) / 2) + 'px';
   }
-
-  // Physical Canvas Hardware pixels
-  C.width = Math.floor(cssWidth * dpr);
-  C.height = Math.floor(cssHeight * dpr);
-
-  // We keep the internal Offscreen Game Canvas resolution fixed to 1920x1080
-  // and simply scale the main context to draw it seamlessly!
-  mainCtx.scale(C.width / 1920, C.height / 1080);
 }
 window.addEventListener('resize', resize); resize();
 

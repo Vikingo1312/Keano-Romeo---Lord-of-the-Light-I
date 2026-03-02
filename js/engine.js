@@ -1207,9 +1207,7 @@ function gameLoop(ts) {
     }
   }
 
-  // V19 ARCHITECTURE: Draw offscreen buffer to real DOM canvas at end of frame
-  mainCtx.clearRect(0, 0, C.width, C.height);
-  mainCtx.drawImage(offCanvas, 0, 0, 1920, 1080);
+  // V18: Direct canvas rendering (no offscreen buffer needed)
 }
 
 // ===== MENU LOGIC =====
