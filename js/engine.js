@@ -1,10 +1,29 @@
 // ===== GAME STATE =====
+// V19 CAPCOM AUDIT: Deterministic Physics Accumulator
+const FIXED_STEP = 1 / 60;
+let accumulator = 0;
+
 let player, enemy, currentLevel = 0, fwTimer = 0;
 window._caesarWhiteImg = new Image(); window._caesarWhiteImg.src = 'assets/logo_white.png';
 let roundNum = 1, p1Wins = 0, p2Wins = 0, roundTimerNum = defaultRoundTime;
 let p1WonLast = false;
 let seenMidpoint = false, playingOutro = false, playingHappyBirthday = false;
 
+// V19 CAPCOM AUDIT: Global State Machine Helpers
+let victoryGradientCache = null;
+function enterState(newState, duration = 0) {
+  gameState = newState;
+  stateTimer = duration;
+}
+
+function handleGameOverInput() {
+  if (gameState === 'gameOver') {
+    if (keys[' '] && stateTimer <= 2.5) {
+      keys[' '] = false;
+      quitToMenu();
+    }
+  }
+}
 function startLevel(idx, forceEpilogue = false) {
   if (gameMode === 'story' && idx === 7 && !seenMidpoint) {
     seenMidpoint = true;
@@ -89,7 +108,10 @@ function startRound() {
 
   gameState = 'intro'; stateTimer = 3.0;
   roundTimerNum = defaultRoundTime;
-  comboCount = 0; comboTimer = 0;
+  // V19.5 COMBO SYSTEM: Reset per-fighter combo state + HUD display
+  comboDisplayCount = 0; comboDisplayTimer = 0;
+  if (player) { player.comboCount = 0; player.comboTimer = 0; player.juggleCount = 0; }
+  if (enemy) { enemy.comboCount = 0; enemy.comboTimer = 0; enemy.juggleCount = 0; }
 
   // Reset BGM Tension Speed
   const bgmEl = document.getElementById('bgm-player');
@@ -203,6 +225,12 @@ function gameLoop(ts) {
     const dt = Math.min(dtRaw, 0.05) * dtMult;
     lastTime = ts;
     time += dt;
+
+    // V19 CAPCOM AUDIT: Decouple Game Over input and decrement State Timer safely
+    handleGameOverInput();
+    if (gameState === 'gameOver' && stateTimer === 0) {
+      quitToMenu();
+    }
 
     // --- Main Menu Lightning Effect ---
     if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.lightning : 1.0) > 0.0 && gameState === 'menu' && !document.getElementById('main-menu').classList.contains('hidden')) {
@@ -562,8 +590,11 @@ function gameLoop(ts) {
       const slideIn2 = Math.max(0, (stateTimer - 2.5) * C.width);
 
       X.save(); X.translate(-slideIn1 + C.width * 0.25, C.height * 0.55);
-      const p1ImgSrc = player.fighterDir + '/_right.png';
-      const kCanv = processedSprites[p1ImgSrc] || rawImgs[p1ImgSrc];
+      // V19 CAPCOM AUDIT: Always load the isolated vs_portrait.png for the VS screen
+      const p1ImgSrc = player.fighterDir + '/vs_portrait.png';
+      const p1fallback = player.fighterDir + '/_right.png';
+      const kCanv = processedSprites[p1ImgSrc] || rawImgs[p1ImgSrc] || processedSprites[p1fallback] || rawImgs[p1fallback];
+
       if (kCanv && kCanv.complete !== false && (kCanv.naturalWidth !== 0 || kCanv.width > 0)) {
         const scale = (C.height * 0.7) / kCanv.height;
         X.scale(scale, scale);
@@ -572,11 +603,14 @@ function gameLoop(ts) {
       X.restore();
 
       X.save(); X.translate(C.width + slideIn2 - C.width * 0.25, C.height * 0.55);
-      const eImgSrc = enemy.fighterDir + '/_left.png';
-      const eCanv = processedSprites[eImgSrc] || rawImgs[eImgSrc];
+      const eImgSrc = enemy.fighterDir + '/vs_portrait.png';
+      const eFallback = enemy.fighterDir + '/_left.png';
+      const eCanv = processedSprites[eImgSrc] || rawImgs[eImgSrc] || processedSprites[eFallback] || rawImgs[eFallback];
+
       if (eCanv && eCanv.complete !== false && (eCanv.naturalWidth !== 0 || eCanv.width > 0)) {
         const scale = (C.height * 0.7) / eCanv.height;
         X.scale(scale, scale);
+        // V19 CAPCOM AUDIT: We do NOT use scale(-1, 1). For VS screen, if the portrait faces right, it faces right.
         X.drawImage(eCanv, -eCanv.width / 2, -eCanv.height / 2, eCanv.width, eCanv.height);
       }
       X.restore();
@@ -665,37 +699,47 @@ function gameLoop(ts) {
       }
     }
     else if (gameState === 'fighting') {
-      const simDt = dt * gameSpeedMult;
+      // V19 CAPCOM AUDIT: Fixed Timestep Accumulator
+      accumulator += dt;
+      let simDt = 0;
 
-      if (gameTimerStyle !== 'infinite') {
-        roundTimerNum -= simDt;
-        if (roundTimerNum <= 0) roundTimerNum = 0;
+      while (accumulator >= FIXED_STEP) {
+        simDt = FIXED_STEP * gameSpeedMult;
 
-        // V16 TENSION MUSIC: Timer falls below 30% -> speed up music!
-        if (gameTimerStyle !== 'infinite' && roundTimerNum > 0 && roundTimerNum < (defaultRoundTime * 0.3)) {
-          const bgmEl = document.getElementById('bgm-player');
-          if (bgmEl && bgmEl.playbackRate < 1.15) {
-            bgmEl.playbackRate = 1.15; // Smooth acceleration for tension
+        if (gameTimerStyle !== 'infinite') {
+          roundTimerNum -= simDt;
+          if (roundTimerNum <= 0) roundTimerNum = 0;
+          if (gameTimerStyle !== 'infinite' && roundTimerNum > 0 && roundTimerNum < (defaultRoundTime * 0.3)) {
+            const bgmEl = document.getElementById('bgm-player');
+            if (bgmEl && bgmEl.playbackRate < 1.15) bgmEl.playbackRate = 1.15;
           }
         }
+
+        player.update(simDt, enemy);
+        enemy.update(simDt, player);
+
+        projectiles = projectiles.filter(p => {
+          const alive = p.update(simDt);
+          if (p.fromPlayer && p.checkHit(enemy)) return false;
+          if (!p.fromPlayer && p.checkHit(player)) return false;
+          return alive;
+        });
+
+        stageObjects.forEach(obj => { obj.update(FIXED_STEP); obj.checkHit(player); obj.checkHit(enemy); });
+        stageObjects = stageObjects.filter(obj => !obj.deleted);
+
+        accumulator -= FIXED_STEP;
       }
 
-      player.update(simDt, enemy); enemy.update(simDt, player);
-
-      projectiles = projectiles.filter(p => {
-        const alive = p.update(simDt);
-        if (p.fromPlayer && p.checkHit(enemy)) return false;
-        if (!p.fromPlayer && p.checkHit(player)) return false;
-        return alive;
+      // Draw Phase (Decoupled from Fixed Physics Update)
+      // V19 CAPCOM AUDIT: True Z-Sorting for crisp overlaps 
+      let fighters = [player, enemy];
+      fighters.sort((a, b) => a.y - b.y);
+      fighters.forEach(f => {
+        if (f) f.draw();
       });
 
-      // V17.2: Draw stageObjects FIRST so they appear BEHIND the characters (Z-Index fix)
-      stageObjects.forEach(obj => { obj.update(dt); obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
-      stageObjects = stageObjects.filter(obj => !obj.deleted);
-
-      if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
-      else { player.draw(); enemy.draw(); }
-
+      stageObjects.forEach(obj => { obj.draw(); });
       projectiles.forEach(p => p.draw());
 
       // Studio Polish 5: Action UI for Specials
@@ -726,9 +770,46 @@ function gameLoop(ts) {
 
       drawHUD(player, enemy, ld);
 
+      // V19.5 COMBO SYSTEM: Combo HUD Display (Fix 6)
+      if (comboDisplayTimer > 0) {
+        comboDisplayTimer -= dtRaw;
+        if (comboDisplayCount > 1) {
+          X.save();
+          const comboX = player.comboCount >= comboDisplayCount ? C.width * 0.2 : C.width * 0.8;
+          const comboY = C.height * 0.35;
+
+          // Scale-in pop animation
+          const popScale = Math.min(1.0, (1.5 - comboDisplayTimer) * 4);
+          const breathe = 1 + Math.sin(comboDisplayTimer * 8) * 0.05;
+          X.translate(comboX, comboY);
+          X.scale(popScale * breathe, popScale * breathe);
+
+          X.textAlign = 'center';
+          X.textBaseline = 'middle';
+          X.font = `italic 900 ${Math.min(60, 30 + comboDisplayCount * 4)}px "Orbitron"`;
+
+          // Color escalation based on combo size
+          let comboColor = '#ffcc00';
+          let comboShadow = '#ff6600';
+          if (comboDisplayCount >= 5) { comboColor = '#ff3300'; comboShadow = '#ff0000'; }
+          if (comboDisplayCount >= 8) { comboColor = '#ff00ff'; comboShadow = '#8800ff'; }
+
+          X.fillStyle = comboColor;
+          X.shadowBlur = 25;
+          X.shadowColor = comboShadow;
+          X.strokeStyle = '#000';
+          X.lineWidth = 4;
+
+          const comboText = comboDisplayCount + ' HIT COMBO!';
+          X.strokeText(comboText, 0, 0);
+          X.fillText(comboText, 0, 0);
+          X.restore();
+        }
+      }
+
       const timeOver = gameTimerStyle !== 'infinite' && roundTimerNum <= 0;
       if (enemy.hp <= 0 || player.hp <= 0 || timeOver) {
-        gameState = 'ko'; stateTimer = 3.5;
+        enterState('ko', 3.5); // V19 CAPCOM AUDIT
         let winner = 'draw';
         if (player.hp > enemy.hp) winner = 'p1';
         else if (enemy.hp > player.hp) winner = 'p2';
@@ -806,8 +887,7 @@ function gameLoop(ts) {
           const isFinale = (gameMode === 'story' && currentLevel >= 13) || (gameMode === 'arcade' && currentLevel >= LEVELS.length - 1);
 
           if (isFinale) {
-            gameState = 'victory'; // Fixes infinite loop
-            stateTimer = 0;
+            enterState('victory', 0); // V19 CAPCOM AUDIT
             if (gameMode === 'story') {
               localStorage.setItem('arcadeUnlocked', 'true');
               ['btn-arcade', 'btn-versus'].forEach(id => {
@@ -829,11 +909,11 @@ function gameLoop(ts) {
             });
           } else {
             TransitionManager.fadeScreen(400, 150, 400, () => {
-              gameState = 'nextLevel'; stateTimer = 1.5;
+              enterState('nextLevel', 1.5); // V19 CAPCOM AUDIT
             });
           }
         } else if (p2Wins >= roundsToWin) {
-          gameState = 'continue'; stateTimer = 9.99;
+          enterState('continue', 9.99); // V19 CAPCOM AUDIT
         } else {
           roundNum++; startRound();
         }
@@ -871,7 +951,7 @@ function gameLoop(ts) {
       X.save(); X.font = 'bold 120px "Orbitron"'; X.fillStyle = '#fff'; X.textAlign = 'center';
       X.fillText(Math.ceil(stateTimer), C.width / 2, C.height * 0.65);
       stateTimer -= dt;
-      if (stateTimer <= 0) { useCredit(); gameState = 'gameOver'; stateTimer = 3; this._announcedCont = false; }
+      if (stateTimer <= 0) { useCredit(); enterState('gameOver', 3.0); this._announcedCont = false; }
       X.font = '20px "Orbitron"'; X.globalAlpha = 0.5 + Math.sin(time * 5) * 0.5;
       X.fillText('PRESS SPACE OR TAP TO CONTINUE', C.width / 2, C.height * 0.85);
       // Show remaining credits
@@ -906,26 +986,26 @@ function gameLoop(ts) {
       X.fillStyle = arcadeCredits > 0 ? '#00ffff' : '#ff0033';
       X.fillText(arcadeCredits > 0 ? `🪙 CREDITS: ${arcadeCredits}` : '🪙 NO CREDITS!', C.width / 2, C.height * 0.78);
 
-      if (keys[' '] && stateTimer <= 2.5) {
-        keys[' '] = false;
-        quitToMenu();
-      }
-
-      stateTimer -= dt; // Ensure this ticks down if we want the 3s delay
-      if (stateTimer <= 0 && !keys[' ']) {
-        this._announcedGameOver = false;
-        quitToMenu();
+      // V19 CAPCOM AUDIT: Input is now safely handled globally (handleGameOverInput)
+      // V19 CAPCOM AUDIT: Return logic is safely global. We only decrement safely here:
+      if (stateTimer > 0) {
+        stateTimer -= dt;
+        if (stateTimer < 0) stateTimer = 0;
       }
 
       X.restore();
     }
     else if (gameState === 'victory') {
-      stateTimer += dt; fwTimer -= dt;
+      // V19 CAPCOM AUDIT: Decoupled update logic
+      stateTimer += dt;
+      fwTimer -= dt;
       if (fwTimer <= 0) {
         fireworks.push(new Firework(C.width * 0.2 + Math.random() * C.width * 0.6, C.height * 0.1 + Math.random() * C.height * 0.4));
         fwTimer = 0.5 + Math.random() * 1.5;
       }
-      fireworks.forEach(f => { f.update(); f.draw(); });
+      fireworks.forEach(f => { f.update(); });
+      fireworks = fireworks.filter(f => !f.dead && f.y < C.height); // Basic cleanup
+      fireworks.forEach(f => { f.draw(); });
 
       let linesToUse = epilogLines;
       let scrollSpeedMultiplier = 1.0; // Calibrated for true 1:1 Sync
@@ -934,33 +1014,17 @@ function gameLoop(ts) {
         X.save();
         const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
         X.textAlign = 'center';
+
+        // V19 CAPCOM AUDIT: Gradient caching optimizations
+        if (!victoryGradientCache) {
+          victoryGradientCache = X.createLinearGradient(0, 0, C.width, C.height);
+          victoryGradientCache.addColorStop(0, 'rgba(255,200,50,0.2)');
+          victoryGradientCache.addColorStop(1, 'rgba(0,255,255,0.15)');
+        }
         X.fillStyle = 'rgba(0,0,0,0.85)'; X.fillRect(0, 0, C.width, C.height);
 
-        // Shimmer: golden/cyan nebula for victory
-        for (let n = 0; n < 3; n++) {
-          X.save();
-          X.globalAlpha = 0.03 + Math.sin(stateTimer * 0.25 + n * 2) * 0.015;
-          const vGrad = X.createLinearGradient(0, 0, C.width, C.height);
-          const hue1 = (40 + n * 50 + stateTimer * 3) % 360;
-          vGrad.addColorStop(0, `hsla(${hue1}, 80%, 55%, 0.3)`);
-          vGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
-          vGrad.addColorStop(1, `hsla(${(hue1 + 80) % 360}, 70%, 45%, 0.2)`);
-          X.fillStyle = vGrad;
-          X.fillRect(0, 0, C.width, C.height);
-          X.restore();
-        }
-        // Golden light beam
-        X.save();
-        X.globalAlpha = 0.05 + Math.sin(stateTimer * 0.5) * 0.025;
-        const vBeam = X.createLinearGradient(C.width * 0.43, 0, C.width * 0.57, 0);
-        vBeam.addColorStop(0, 'rgba(0,0,0,0)');
-        vBeam.addColorStop(0.35, 'rgba(255,200,50,0.2)');
-        vBeam.addColorStop(0.5, 'rgba(0,255,255,0.15)');
-        vBeam.addColorStop(0.65, 'rgba(255,200,50,0.2)');
-        vBeam.addColorStop(1, 'rgba(0,0,0,0)');
-        X.fillStyle = vBeam;
+        X.fillStyle = victoryGradientCache;
         X.fillRect(0, 0, C.width, C.height);
-        X.restore();
 
         const lineHeight = fs(0.04);
 
@@ -1142,6 +1206,10 @@ function gameLoop(ts) {
       window._loopErrLogged = true; console.error('GAMELOOP ERROR:', err.message, err.stack);
     }
   }
+
+  // V19 ARCHITECTURE: Draw offscreen buffer to real DOM canvas at end of frame
+  mainCtx.clearRect(0, 0, C.width, C.height);
+  mainCtx.drawImage(offCanvas, 0, 0, 1920, 1080);
 }
 
 // ===== MENU LOGIC =====

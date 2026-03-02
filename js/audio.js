@@ -25,7 +25,23 @@ const SFX = {
   bgmSource: null,
   bgmMasterEQ: null,
 
+  // V19 Capcom Arcade Audio Refactor: Dynamics Control
+  masterCompressor: null,
+  _initialized: false,
+
   init() {
+    if (this._initialized) return; // Prevent Memory Leaks on multi-calls
+    this._initialized = true;
+
+    // V19 Master Dynamics Compressor (Soft Knee, Arcade Limiting)
+    this.masterCompressor = AC.createDynamicsCompressor();
+    this.masterCompressor.threshold.value = -12; // Start compressing at -12dB
+    this.masterCompressor.knee.value = 30; // Soft knee for musical compression
+    this.masterCompressor.ratio.value = 4; // 4:1 Ratio (Punchy)
+    this.masterCompressor.attack.value = 0.005; // 5ms Attack (Fast transients pass)
+    this.masterCompressor.release.value = 0.1; // 100ms Release (Snappy recovery)
+    this.masterCompressor.connect(AC.destination);
+
     this._musicGain = AC.createGain(); this._musicGain.gain.value = 0.5;
 
     // Add an EQ Filter (Lowpass) for Epic Cinematic Voice Overs
@@ -34,27 +50,28 @@ const SFX = {
     this._bgmFilter.frequency.value = 20000; // Open initially
     this._bgmFilter.Q.value = 1.2; // Slight resonance for epic feel
 
-    // Connect Chain: Gain -> Filter -> Destination (For generated synths)
+    // Connect Chain: Gain -> Filter -> MASTER COMPRESSOR -> Destination
     this._musicGain.connect(this._bgmFilter);
-    this._bgmFilter.connect(AC.destination);
+    this._bgmFilter.connect(this.masterCompressor);
 
     // V15 Global Mix Polish: Halved SFX volume to prevent clipping/deafening
-    this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.4; this._sfxGain.connect(AC.destination);
+    this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.4;
+    this._sfxGain.connect(this.masterCompressor); // Route through Master Comp
 
     // Contexts for HTML Media Elements (BGM and Voice)
     this.bgmAudioCtx = AC;
     this.voiceAudioCtx = AC;
 
-    // Create Master BGM EQ (-25% High Cut = roughly 5000Hz instead of 20000Hz)
+    // Create Master BGM EQ (V19: Lifted from dumpy 5kHz to 15kHz for clarity)
     this.bgmMasterEQ = this.bgmAudioCtx.createBiquadFilter();
     this.bgmMasterEQ.type = 'lowpass';
-    this.bgmMasterEQ.frequency.value = typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.masterEQ : 1.0) > 0.0 ? 5000 : 20000;
-    this.bgmMasterEQ.connect(this.bgmAudioCtx.destination);
+    this.bgmMasterEQ.frequency.value = typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.masterEQ : 1.0) > 0.0 ? 15000 : 20000;
+    this.bgmMasterEQ.connect(this.masterCompressor);
 
-    // Create Voice FX Chain: Distortion -> EQ -> Destination
+    // Create Voice FX Chain: Distortion -> EQ -> Compressor
     this.voiceDistortion = this.voiceAudioCtx.createWaveShaper();
-    // V16 Arcade Voice Mix: Increased distortion base from 50 to 200 for a noticeable "crunch"
-    this.voiceDistortion.curve = this._makeDistortionCurve(typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.voiceDistortion : 1.0) > 0.0 ? 200 : 0);
+    // V19 Arcade Voice Mix: Reduced to 40-60 for musical saturation instead of digital clipping
+    this.voiceDistortion.curve = this._makeDistortionCurve(typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.voiceDistortion : 1.0) > 0.0 ? 50 : 0);
     this.voiceDistortion.oversample = '4x';
 
     this.voiceFilter = this.voiceAudioCtx.createBiquadFilter();
@@ -82,12 +99,12 @@ const SFX = {
     }
     this.voiceReverbNode.buffer = impulse;
 
-    // Chain: Distortion -> Filter -> (Dry to Dest | Wet to Reverb -> Gain -> Dest)
+    // Chain: Distortion -> Filter -> (Dry to Comp | Wet to Reverb -> Gain -> Comp)
     this.voiceDistortion.connect(this.voiceFilter);
-    this.voiceFilter.connect(this.voiceAudioCtx.destination); // Dry
+    this.voiceFilter.connect(this.masterCompressor); // Dry -> Comp
     this.voiceFilter.connect(this.voiceReverbNode); // Send to Reverb
     this.voiceReverbNode.connect(this.voiceReverbGain);
-    this.voiceReverbGain.connect(this.voiceAudioCtx.destination);
+    this.voiceReverbGain.connect(this.masterCompressor); // Wet -> Comp
   },
 
   _makeDistortionCurve(amount) {
@@ -175,7 +192,7 @@ const SFX = {
     // V12 Strict Ducking Restore: Return BGM Element Filter back to bypass-defined state
     if (this.bgmMasterEQ) {
       let eqFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.masterEQ : 1.0;
-      let targetFreq = 5000 + (15000 * eqFader);
+      let targetFreq = 15000 + (5000 * eqFader); // V19 Refactor: 15khz instead of 5khz
       this.bgmMasterEQ.frequency.cancelScheduledValues(this.bgmAudioCtx.currentTime);
       this.bgmMasterEQ.frequency.setTargetAtTime(targetFreq, this.bgmAudioCtx.currentTime, timeToFade * 0.4);
     }
@@ -238,9 +255,9 @@ const SFX = {
 
     // Update live MasterEQ based on bypass
     if (this.bgmMasterEQ) {
-      // 1.0 = Default (no cut, 20000Hz), 0.0 = Aggressive cut (5000Hz)
+      // 1.0 = Default (no cut, 20000Hz), 0.0 = V19 Gentle Arcade Cut (15000Hz)
       let eqFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.masterEQ : 1.0;
-      this.bgmMasterEQ.frequency.value = 5000 + (15000 * eqFader);
+      this.bgmMasterEQ.frequency.value = 15000 + (5000 * eqFader);
     }
 
     bgmEl.play().catch(e => console.warn("BGM Playblock:", e));
