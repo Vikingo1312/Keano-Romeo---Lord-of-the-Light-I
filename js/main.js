@@ -245,7 +245,7 @@ document.getElementById('btn-arcade').addEventListener('click', () => {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
     }
-    SFX.playBGM('assets/audio/music/vs_theme.mp3'); // V12: Separate VS Theme
+    SFX.playBGM('assets/audio/music/selectmenu_theme.mp3'); // V17: Character Select Theme
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
       showDOM: ['char-select'],
@@ -264,7 +264,7 @@ document.getElementById('btn-versus').addEventListener('click', () => {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(e => console.log('FS blocked'));
     }
-    SFX.playBGM('assets/audio/music/vs_theme.mp3'); // V12: Separate VS Theme
+    SFX.playBGM('assets/audio/music/selectmenu_theme.mp3'); // V17: Character Select Theme
     TransitionManager.switchState({
       hideDOM: ['main-menu'],
       showDOM: ['char-select'],

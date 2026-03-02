@@ -303,12 +303,12 @@ class StageObject {
   checkHit(f) {
     if (this.broken) return;
     // Expanded range to ensure flying bodies always trigger the break
-    if ((f.state === 'hit' || f.state === 'ko' || f.state === 'dash' || f.state === 'special_roll' || f.state === 'kick' || f.state === 'punch') && Math.abs(f.knockVX || 0) > 2) {
+    // V17.2: Decoupled logic. Props break if a body goes flying INTO them OR if they are punched/kicked directly.
+    const isFlyingBody = (f.state === 'hit' || f.state === 'ko' || f.state === 'dash' || f.state === 'special_roll') && Math.abs(f.knockVX || 0) > 2;
+    const isDirectAttack = (f.state === 'kick' || f.state === 'punch' || f.state === 'super') && f.hasHit;
+
+    if (isFlyingBody || isDirectAttack) {
       if (Math.abs(this.x - f.x) < f.w * 1.5 && f.y >= GROUND() - this.h * 1.5) {
-        // Did the strike hit or did a body fly into it?
-        if (f.state === 'kick' || f.state === 'punch') {
-          if (!f.hasHit) return; // Only break if an actual attack landed near it
-        }
 
         this.broken = true;
         SFX.hitHeavy();

@@ -40,6 +40,7 @@ function startLevel(idx, forceEpilogue = false) {
   ld.fighterDir = ld.activeFighter;
 
   gameState = 'vs_screen';
+  SFX.playBGM('assets/audio/music/vs_theme.mp3'); // V17: Trigger VS Theme exactly when VS logic begins
   stateTimer = 4.5; // Auto VS transition after 4.5s matches master plan!
 
   let pData;
@@ -652,11 +653,12 @@ function gameLoop(ts) {
         return alive;
       });
 
-      if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
-      else { player.draw(); enemy.draw(); }
-
+      // V17.2: Draw stageObjects FIRST so they appear BEHIND the characters (Z-Index fix)
       stageObjects.forEach(obj => { obj.update(dt); obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
       stageObjects = stageObjects.filter(obj => !obj.deleted);
+
+      if (player.state === 'punch' || player.state === 'kick' || player.state === 'super') { enemy.draw(); player.draw(); }
+      else { player.draw(); enemy.draw(); }
 
       projectiles.forEach(p => p.draw());
 
@@ -738,6 +740,7 @@ function gameLoop(ts) {
       // Allow independent updates for post-KO cinematic slow-motion logic
       player.update(dt, enemy); enemy.update(dt, player);
 
+      // V17.2: Draw stageObjects FIRST (KO State Z-Index Fix)
       stageObjects.forEach(obj => { obj.update(dt); obj.draw(); obj.checkHit(player); obj.checkHit(enemy); });
       stageObjects = stageObjects.filter(obj => !obj.deleted);
 
