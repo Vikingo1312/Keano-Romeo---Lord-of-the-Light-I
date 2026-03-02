@@ -106,14 +106,15 @@ const SFX = {
   },
 
   setMusicVol(v) {
-    const clampedV = v * 0.15; // V15 Global Mix Polish: Max Music limit deeply reduced
-    if (this._musicGain) this._musicGain.gain.value = clampedV;
+    const clampedV = v * 0.5 * ((typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.music : 1.0); // Allow up to 50% max
+    if (this._musicGain) this._musicGain.gain.cancelScheduledValues(AC.currentTime);
+    if (this._musicGain) this._musicGain.gain.linearRampToValueAtTime(clampedV, AC.currentTime + 0.1);
     if (this.bgmNode) this.bgmNode.volume = clampedV;
   },
   setSFXVol(v) { if (this._sfxGain) this._sfxGain.gain.value = v; },
 
   setVoiceVol(v) {
-    if (this.voiceNode) this.voiceNode.volume = v;
+    if (this.voiceNode) this.voiceNode.volume = v * 0.85 * ((typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.voice : 1.0);
   },
 
   duckBGM(targetVol = 0.08, durationMs = 800) {
@@ -255,9 +256,10 @@ const SFX = {
 
     voiceEl.pause();
     voiceEl.src = url;
+    this.voiceNode = voiceEl; // crucial for live slider updates
 
     // "Weiter nach hinten mischen": Default to 85% of set voice volume
-    const voiceVol = document.getElementById('vol-voice') ? parseFloat(document.getElementById('vol-voice').value) : 1.0;
+    const voiceVol = document.getElementById('vol-voice') ? parseFloat(document.getElementById('vol-voice').value) : 0.7;
     let voiceFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.voice : 1.0;
     voiceEl.volume = voiceVol * 0.85 * voiceFader;
 

@@ -10,6 +10,8 @@ function startLevel(idx, forceEpilogue = false) {
     seenMidpoint = true;
     gameState = 'midpoint_reflexion';
     stateTimer = 0;
+    SFX.stopMusic();
+    SFX.playBGM('assets/audio/music/main_soundtrack.mp3');
     playEpicVoice(reflexionLines, 'reflexion');
     return;
   }
@@ -63,6 +65,13 @@ function startRound() {
   const ld = LEVELS[currentLevel];
   player.x = C.width * 0.22; player.y = GROUND(); player.hp = player.maxHP; player.state = 'idle';
   enemy.x = C.width * 0.78; enemy.y = GROUND(); enemy.hp = enemy.maxHP; enemy.state = 'idle';
+
+  // Full states reset to prevent FX bleeding (Bug 11 / KO Bubble fixes)
+  [player, enemy].forEach(f => {
+    f.shoutText = ""; f.shoutTimer = 0;
+    f.timeScale = 1.0; f.hitStop = 0; f.hitFlash = 0;
+    f.knockVX = 0; f.vy = 0;
+  });
 
   projectiles = [];
   stageObjects = [];
@@ -350,7 +359,11 @@ function gameLoop(ts) {
         safeDuration = currentAudioTrack.duration;
       }
 
-      const totalHeight = Array.from(prologueLines).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+      const totalHeight = Array.from(prologueLines).reduce((acc, line) => {
+        if (!line.text) return acc + lineHeight * 0.6;
+        if (line.text.startsWith('(')) return acc + lineHeight * 0.5;
+        return acc + lineHeight;
+      }, 0);
 
       // Audio Calibration: Perfect Sync Multiplier
       scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
@@ -360,10 +373,10 @@ function gameLoop(ts) {
       if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
         currentPlaybackTime = currentAudioTrack.currentTime;
       }
-      const scrollOff = currentPlaybackTime * (scrollSpeed * 0.72); // Reduced speed for better audio sync
+      const scrollOff = currentPlaybackTime * scrollSpeed; // Clean 1:1 sync
 
       // startY anchors the first line block. Start slightly higher than mid-screen.
-      const startY = C.height * 0.55 - scrollOff;
+      const startY = C.height * 0.65 - scrollOff;
 
       let yPos = startY;
       for (const line of prologueLines) {
@@ -457,15 +470,19 @@ function gameLoop(ts) {
         safeDuration = currentAudioTrack.duration;
       }
 
-      const totalHeight = Array.from(reflexionLines).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+      const totalHeight = Array.from(reflexionLines).reduce((acc, line) => {
+        if (!line.text) return acc + lineHeight * 0.6;
+        if (line.text.startsWith('(')) return acc + lineHeight * 0.5;
+        return acc + lineHeight;
+      }, 0);
       scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
 
       let currentPlaybackTime = stateTimer;
       if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
         currentPlaybackTime = currentAudioTrack.currentTime;
       }
-      const scrollOff = currentPlaybackTime * (scrollSpeed * 0.85); // 15% reduction for audio sync
-      const startY = C.height * 0.75 - scrollOff;
+      const scrollOff = currentPlaybackTime * scrollSpeed; // Clean 1:1 sync
+      const startY = C.height * 0.65 - scrollOff;
 
       let yPos = startY;
       for (const line of reflexionLines) {
@@ -591,6 +608,25 @@ function gameLoop(ts) {
       }
       X.textAlign = 'right';
       X.fillText(`${ld.activeName} ${ld.activeFlag || ''}`, C.width - 20, barY + 35);
+
+      // --- STAGE DISPLAY (Bug 6) ---
+      X.textAlign = 'center';
+      X.fillStyle = '#ffcc00';
+      X.font = `bold ${Math.min(30, C.width * 0.04)}px "Orbitron"`;
+      X.shadowBlur = 15; X.shadowColor = '#ff0000';
+
+      let stageText = `STAGE ${currentLevel + 1}`;
+      if (gameMode !== 'arcade' && gameMode !== 'story') stageText = "EXHIBITION MATCH";
+
+      X.fillText(stageText, C.width / 2, C.height * 0.15);
+
+      X.fillStyle = '#ffffff';
+      X.font = `italic ${Math.min(20, C.width * 0.025)}px "Orbitron"`;
+      X.shadowBlur = 10; X.shadowColor = '#0000ff';
+      // Format filename into readable location
+      let locName = ld.stage.split('/').pop().replace('.png', '').replace(/^\d+(_|\.)?/, '').replace(/_/g, ' ').toUpperCase();
+      X.fillText(locName, C.width / 2, C.height * 0.15 + 35);
+      // -------------------------------
 
       stateTimer -= dt;
       if (stateTimer <= 0) {
@@ -770,6 +806,8 @@ function gameLoop(ts) {
           const isFinale = (gameMode === 'story' && currentLevel >= 13) || (gameMode === 'arcade' && currentLevel >= LEVELS.length - 1);
 
           if (isFinale) {
+            gameState = 'victory'; // Fixes infinite loop
+            stateTimer = 0;
             if (gameMode === 'story') {
               localStorage.setItem('arcadeUnlocked', 'true');
               ['btn-arcade', 'btn-versus'].forEach(id => {
@@ -890,7 +928,7 @@ function gameLoop(ts) {
       fireworks.forEach(f => { f.update(); f.draw(); });
 
       let linesToUse = epilogLines;
-      let scrollSpeedMultiplier = 0.85; // Calibrated reduction
+      let scrollSpeedMultiplier = 1.0; // Calibrated for true 1:1 Sync
 
       if (!playingHappyBirthday) {
         X.save();
@@ -926,7 +964,7 @@ function gameLoop(ts) {
 
         const lineHeight = fs(0.04);
 
-        if (playingOutro) { linesToUse = outroLines; scrollSpeedMultiplier = 0.80; } // slightly slower for Outro
+        if (playingOutro) { linesToUse = outroLines; scrollSpeedMultiplier = 1.0; } // Sync exact length
 
         let scrollSpeed = 35;
         let safeDuration = 45;
@@ -934,15 +972,23 @@ function gameLoop(ts) {
           safeDuration = currentAudioTrack.duration;
         }
 
-        const totalHeight = Array.from(linesToUse).reduce((acc, line) => acc + (line.text && !line.text.startsWith('(') ? lineHeight : 0), 0);
+        const totalHeight = Array.from(linesToUse).reduce((acc, line) => {
+          if (!line.text) return acc + lineHeight * 0.6;
+          if (line.text.startsWith('(')) return acc + lineHeight * 0.5;
+          if (line.style === 'producer' && window._caesarWhiteImg && window._caesarWhiteImg.complete) {
+            const iw = C.width * 0.45;
+            return acc + (iw * (window._caesarWhiteImg.height / window._caesarWhiteImg.width)) * 0.6;
+          }
+          return acc + lineHeight;
+        }, 0);
         scrollSpeed = ((C.height * 0.8) + totalHeight) / safeDuration;
 
         let currentPlaybackTime = stateTimer;
         if (currentAudioTrack && currentAudioTrack.currentTime > 0) {
           currentPlaybackTime = currentAudioTrack.currentTime;
         }
-        const scrollOff = currentPlaybackTime * (scrollSpeed * scrollSpeedMultiplier);
-        const startY = C.height * 0.75 - scrollOff; // Start lower down
+        const scrollOff = currentPlaybackTime * scrollSpeed; // Exact Match
+        const startY = C.height * 0.65 - scrollOff; // Start lower down
         let yPos = startY;
 
         for (const line of linesToUse) {

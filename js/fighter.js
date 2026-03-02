@@ -235,7 +235,7 @@ class HybridFighter {
     // V10: Advanced Physics & Gravity Control
     if (typeof FX_BYPASS !== 'undefined' && ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.gravityControl : 1.0) > 0.0 || (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.strictGrounding : 1.0) > 0.0)) {
       // V12 Polish: Let the player jump organically! The "Magnet" only grabs them when they aren't actively in an aerial state
-      const airborneStates = ['jump', 'hit', 'ko', 'special_roll', 'special_flip', 'special'];
+      const airborneStates = ['jump', 'hit', 'ko', 'special_roll', 'special_flip', 'special', 'punch', 'kick', 'super', 'finisher'];
       if (!airborneStates.includes(this.state)) {
         this.y = GROUND();
         this.vy = 0;
@@ -246,8 +246,9 @@ class HybridFighter {
 
     // V12: Magnetic Ground (Post-Review 7 + Polish 12)
     if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.magneticGround : 1.0) > 0.0) {
-      // Absolut feste Fixierung am Boden für ALLE Bewegungen außer Hit/Special/Jumping
-      if (this.state !== 'jump' && this.state !== 'hit' && this.state !== 'special_roll' && this.state !== 'special_flip' && this.state !== 'special') {
+      // Absolut feste Fixierung am Boden für ALLE Bewegungen außer Hit/Special/Jumping/Mid-Air Attacks
+      const airborneStates2 = ['jump', 'hit', 'ko', 'special_roll', 'special_flip', 'special', 'punch', 'kick', 'super', 'finisher'];
+      if (!airborneStates2.includes(this.state)) {
         this.y = GROUND();
         this.vy = 0;
       }
@@ -446,66 +447,73 @@ class HybridFighter {
   }
 
   updateAI(dt, opponent) {
-    if (!opponent || this.hp <= 0) return;
+    if (!opponent || this.hp <= 0 || this.state === 'ko') return;
+
+    // --- CONTINUOUS MOVEMENT (Every Frame) ---
+    const dist = Math.abs(this.x - opponent.x);
+    const spdMult = this.ld?.speedMult || 1.0;
+    const charType = this.ld?.special || 'fire';
+    const projFreq = this.ld?.projFreq || 1.0;
+    const jumpFreq = this.ld?.jumpFreq || 1.0;
+
+    // Match player walk speed calculation for fairness
+    let walkSpd = 10 - (2 * (1.0 - ((typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.combatHarmonics : 1.0)));
+    walkSpd *= (window.gameDifficulty === 'easy' ? 0.5 : (window.gameDifficulty === 'hard' ? 1.0 : 0.8)) * spdMult;
+
+    let idealZoningDist = this.w * 0.5;
+    if (charType === 'ice') idealZoningDist = this.w * 1.5;
+    else if (charType === 'dark' || charType === 'earth') idealZoningDist = this.w * 0.4;
+    if (projFreq > 1.5) idealZoningDist += this.w;
+
+    const jitterDeadzone = 50;
+    let aiMoving = false;
+
+    // Move smoothly if idle or walking
+    if (this.state === 'idle' || this.state === 'walk') {
+      if (dist > idealZoningDist + jitterDeadzone) {
+        this.x += (opponent.x > this.x ? walkSpd : -walkSpd);
+        if (this.state !== 'walk') this.state = 'walk';
+        aiMoving = true;
+      } else if (dist < idealZoningDist - jitterDeadzone) {
+        this.x += (opponent.x > this.x ? -walkSpd : walkSpd);
+        if (this.state !== 'walk') this.state = 'walk';
+        aiMoving = true;
+      }
+
+      // Stop walking if we reached ideal distance
+      if (!aiMoving && this.state === 'walk') {
+        this.state = 'idle';
+      }
+    }
+
+    // --- DISCRETE DECISION MAKING (Reaction Timer) ---
     this.aiTimer -= dt;
     if (this.aiTimer > 0) return;
 
-    // V14 COMBAT REBALANCE: AI Timer Reaction Speed based on Difficulty!
-    let diffMult = window.gameDifficulty === 'easy' ? 0.3 : (window.gameDifficulty === 'hard' ? 1.5 : 0.8);
+    let diffMult = window.gameDifficulty === 'easy' ? 0.4 : (window.gameDifficulty === 'hard' ? 1.5 : 1.0);
     if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.combatAI : 1.0) > 0.0) {
       diffMult *= FX_BYPASS.combatAI;
     }
 
-    // Reaction time gets shorter (harder) as diffMult increases. 
-    // Easy: ~1.2s to 2.5s delay. Normal: ~0.5s to 1.1s. Hard: ~0.2s to 0.4s.
-    const baseTimerDelay = (0.6 + Math.random() * 0.7) / diffMult;
+    const baseTimerDelay = (0.3 + Math.random() * 0.4) / diffMult;
     this.aiTimer = this.isBoss ? baseTimerDelay * 0.7 : baseTimerDelay;
 
-    const distLineX = Math.abs(this.x - opponent.x);
-    // AI decisions are made at discrete timer ticks
-    // this.aiTimer -= dt; // Removed, now handled above
-    // if (this.state !== 'idle' && this.state !== 'walk' && this.aiTimer <= 0) return; // Removed, now handled above
-
-    const dist = Math.abs(this.x - opponent.x);
-    const spdMult = this.ld?.speedMult || 1.0;
-    const jumpFreq = this.ld?.jumpFreq || 1.0;
-    const projFreq = this.ld?.projFreq || 1.0;
-    const charType = this.ld?.special || 'fire';
-    const walkSpd = (gameDifficulty === 'easy' ? 4.0 : (gameDifficulty === 'hard' ? 6.0 : 5.0)) * spdMult;
-
-    const isOpponentAttacking = (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'proj' || opponent.state === 'special');
+    const isOpponentAttacking = (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'proj' || opponent.state === 'special' || opponent.state === 'super');
     const r = Math.random();
+    const canAct = (this.state === 'idle' || this.state === 'walk');
 
-    // 1. Block incoming hits
-    if (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'super' || opponent.state === 'special' || opponent.state === 'finisher') {
-      const incDist = Math.abs(opponent.x - this.x);
-      // Increased blocking distance awareness & probability for CPU
-      if (incDist < this.w * 1.5 && r < 0.4 * diffMult && this.state !== 'block') {
+    // 1. Block Incoming Attacks
+    if (isOpponentAttacking && dist < this.w * 1.8) {
+      if (r < 0.4 * diffMult && canAct) {
         this.state = 'block';
-        this.stateTimer = Math.max(0.3, opponent.stateTimer);
+        this.stateTimer = Math.max(0.3, opponent.stateTimer + 0.1);
         return;
       }
     }
 
-    // 1. Evade / Defense (Highest Priority Reflex) - Old logic, partially replaced by new block logic
-    if (isOpponentAttacking && dist < this.w * 1.5) {
-      if (r < 0.35 * diffMult) {
-        this.state = 'evade_back';
-        this.stateTimer = 0.4;
-        this.knockVX = (this.x > opponent.x) ? 25 : -25;
-        SFX.dash();
-        return;
-      }
-      // else if (r < blockChance) { // Old blockChance logic removed
-      //   this.state = 'block';
-      //   this.stateTimer = 0.5;
-      //   return;
-      // }
-    }
-
-    // 2. Punish / Counter (Exploit player misses)
-    if ((opponent.state === 'evade_back' || opponent.state === 'hit' || opponent.state === 'roll') && dist < this.w * 1.8) {
-      if (r < 0.3 * diffMult) {
+    // 2. Dash/Evade/Punish Setup
+    if ((opponent.state === 'evade_back' || opponent.state === 'hit' || opponent.state === 'roll') && dist < this.w * 1.5) {
+      if (r < 0.4 * diffMult && canAct) {
         this.state = 'dash';
         this.stateTimer = 0.4;
         this.knockVX = (this.x < opponent.x) ? 22 : -22;
@@ -514,74 +522,43 @@ class HybridFighter {
       }
     }
 
-    // 3. Tactical Retreat (Low HP Survival)
-    if (this.hp < this.maxHP * 0.25 && dist < this.w * 1.2 && r < 0.05) {
-      this.state = 'evade_back';
-      this.stateTimer = 0.4;
-      this.knockVX = (this.x > opponent.x) ? 20 : -20;
-      return;
-    }
-
-    // 4. Super Attack (Always use if full)
-    let superChance = 0.10 * diffMult;
-    if (charType === 'fire' || charType === 'lightning') superChance *= 1.5;
-    if (this.super >= 100 && dist < this.w * 2 && r < superChance) {
+    // 3. Super Attacks
+    let superChance = 0.20 * diffMult;
+    if (this.super >= 100 && dist < this.w * 2 && r < superChance && canAct) {
       this.doSuper(opponent);
       return;
     }
 
-    // 5. Normal Aggression & Zoning
-    let idealZoningDist = this.w * 0.4;
-    if (charType === 'ice') idealZoningDist = this.w * 1.5;
-    else if (charType === 'dark' || charType === 'earth') idealZoningDist = this.w * 0.3;
-    if (projFreq > 1.5) idealZoningDist += this.w;
-
-    let aiMoving = false;
-    // Introduce a wider deadzone (hysteresis) to prevent AI jittering back and forth
-    const jitterDeadzone = 45; // Increased greatly to prevent 'zappeln'
-
-    if (dist > idealZoningDist + jitterDeadzone) {
-      this.x += (opponent.x > this.x ? walkSpd : -walkSpd);
-      if (this.state !== 'walk') { this.state = 'walk'; this.stateTimer = 0.2; }
-      aiMoving = true;
-    } else if (dist < idealZoningDist - jitterDeadzone) {
-      this.x += (opponent.x > this.x ? -walkSpd : walkSpd);
-      if (this.state !== 'walk') { this.state = 'walk'; this.stateTimer = 0.2; }
-      aiMoving = true;
-    }
-
-    if (!aiMoving && this.state === 'walk' && this.stateTimer <= 0) {
-      this.state = 'idle';
-    }
-
-    // 6. Strategic Attacks
-    if (!aiMoving) {
-      if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 0.6) {
-        if (r < 0.20 * diffMult * spdMult) {
+    // 4. Combat / Aggression
+    if (!aiMoving && canAct) {
+      if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 1.0) {
+        if (r < 0.5 * diffMult) {
           this.doAttack('punch', opponent);
           setTimeout(() => { if (this.hp > 0 && opponent.hp > 0 && this.state !== 'ko') this.doAttack('kick', opponent); }, 250);
-        } else if (r < 0.25 * diffMult * jumpFreq && this.specialCD <= 0) {
+        } else if (r < 0.8 * diffMult && this.specialCD <= 0) {
           this.doSpecialFlip(opponent);
-        }
-      } else if (charType === 'ice' && dist > this.w * 0.8) {
-        if (r < 0.3 * diffMult * projFreq && this.specialCD <= 0) {
-          this.fireProj();
-        } else if (r < 0.4 && opponent.state === 'jump') {
+        } else {
           this.doAttack('kick', opponent);
         }
-      } else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 0.5) {
-        if (r < 0.15 * diffMult) {
+      } else if (charType === 'ice' && dist > this.w * 0.8) {
+        if (r < 0.5 * diffMult * projFreq && this.specialCD <= 0) {
+          this.fireProj();
+        } else if (opponent.state === 'jump') {
+          this.doAttack('kick', opponent);
+        }
+      } else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 0.8) {
+        if (r < 0.6 * diffMult) {
           this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
-        } else if (r < 0.2 * diffMult && this.specialCD <= 0) {
+        } else if (r < 0.8 * diffMult && this.specialCD <= 0) {
           this.doSpecialRoll(opponent);
         }
-      } else if (dist < this.w * 0.55 && r < 0.12 * diffMult) {
+      } else if (dist < this.w * 1.1 && r < 0.5 * diffMult) {
         this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
       }
     }
 
-    // 7. Random Mobility (Agility injections)
-    if (r < (0.015 * jumpFreq)) {
+    // 5. Agility / Random Jump / Roll
+    if (r < (0.05 * jumpFreq) && canAct) {
       if ((charType === 'dark' || charType === 'lightning') && dist > this.w * 0.8) {
         this.state = 'roll_forward'; this.stateTimer = 0.5;
         this.knockVX = (opponent.x > this.x) ? 18 : -18;
@@ -591,8 +568,8 @@ class HybridFighter {
       }
     }
 
-    // 8. Anti-Air Reaction
-    if (opponent.y < GROUND() - 50 && dist < this.w * 0.8 && r < 0.5 * diffMult) {
+    // 6. Anti-Air
+    if (opponent.y < GROUND() - 50 && dist < this.w * 1.2 && r < 0.8 * diffMult && canAct) {
       this.doAttack('punch', opponent);
     }
   }
