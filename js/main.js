@@ -25,16 +25,7 @@ window.openCharacterSelect = function (mode) {
   // Build roster
   const storyFighters = LEVELS.slice(0, 14);
   const variantFighters = LEVELS.slice(14);   // Supreme, Hyper, Jay X, Vikingo Prime, Dark Gargamel
-
-  // V19 CAPCOM AUDIT: Filter out Bonus characters (like "03. Shadow") if in story mode
-  function isBonusFighter(name) {
-    return name && name.includes('.');
-  }
-
-  let roster = [KEANO, ...storyFighters, ...variantFighters];
-  if (gameMode === 'story') {
-    roster = roster.filter(f => !isBonusFighter(f.fighterDir)); // Filter based on Directory name having a dot
-  }
+  const roster = [KEANO, ...storyFighters, ...variantFighters];
 
   roster.forEach((fighter, idx) => {
     const div = document.createElement('div');
@@ -42,13 +33,10 @@ window.openCharacterSelect = function (mode) {
     div.className = 'cs-portrait' + (fighter.name === 'DARK VIKINGO' ? ' boss' : '') + (isVariant ? ' variant' : '');
     const img = document.createElement('img');
 
-    // Grid thumbnails: Use clean front_card.png from fighter directories
-    const frontPath = fighter.fighterDir + '/front_card.png';
-    const fallbackPath = fighter.fighterDir + '/_front.png';
+    // Grid thumbnails: Use clean _front.png from fighter directories
+    const frontPath = fighter.fighterDir + '/_front.png';
     if (rawImgs[frontPath] && rawImgs[frontPath].src) {
       img.src = rawImgs[frontPath].src;
-    } else if (rawImgs[fallbackPath] && rawImgs[fallbackPath].src) {
-      img.src = rawImgs[fallbackPath].src;
     } else {
       img.src = frontPath;
     }
@@ -72,16 +60,11 @@ window.openCharacterSelect = function (mode) {
 
       // Right preview: Use epic portrait (full wallpaper) or fallback to _front.png
       const previewImg = document.getElementById('cs-preview-img');
-      const selectFullPath = fighter.fighterDir + '/select_full.png';
-
-      if (rawImgs[selectFullPath] && rawImgs[selectFullPath].src) {
-        previewImg.src = rawImgs[selectFullPath].src;
-      } else if (fighter.portrait) {
+      if (fighter.portrait) {
         previewImg.src = fighter.portrait;
       } else {
-        previewImg.src = img.src; // Fall back to thumbnail
+        previewImg.src = img.src;
       }
-
       document.getElementById('cs-flag').textContent = fighter.flag;
       document.getElementById('cs-name').textContent = fighter.name;
       document.getElementById('cs-title-label').textContent = fighter.title || 'STREET FIGHTER';

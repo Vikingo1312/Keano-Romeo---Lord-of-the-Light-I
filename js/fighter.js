@@ -2,8 +2,7 @@
 // FIGHTER CLASS (V3 Clean Rendering)
 // ============================================================
 let screenShake = 0, flashTimer = 0, finisherTint = 0;
-// V19.5 COMBO SYSTEM: Globals moved to per-fighter. These remain for HUD display only.
-let comboDisplayCount = 0, comboDisplayTimer = 0;
+let comboCount = 0, comboTimer = 0;
 let gameTimerStyle = 'normal';
 let defaultRoundTime = 99;
 let gameDifficulty = 'normal';
@@ -115,13 +114,6 @@ class HybridFighter {
     this.t = Math.random() * Math.PI * 2;
     this.hitFlash = 0;
     this.hitStop = 0;
-    this.hasHit = false;
-
-    // V19.5 COMBO SYSTEM: Per-fighter combo tracking
-    this.comboCount = 0;
-    this.comboTimer = 0;
-    this.hitstun = 0;
-    this.juggleCount = 0;
 
     // Voicelines
     this.shoutTimer = 0;
@@ -129,7 +121,6 @@ class HybridFighter {
 
     this.inputBuffer = [];
     this.inputTimer = 0;
-    this.actionQueue = []; // V19 Arcade Polish: Action Buffer for true combo feel
     this.timeScale = 1.0;
     this.companion = null;
     if (this.id === 'vikingo_coat' || this.id === 'dark_vikingo') {
@@ -188,20 +179,10 @@ class HybridFighter {
       this.hitStop = isHeavy ? 0.15 : 0.08;
       SFX.hitBlock();
     } else {
-      // V19.5 COMBO SYSTEM: Air Juggle Limit (Fix 5)
-      if (this.y < GROUND() - 10) {
-        this.juggleCount++;
-        if (this.juggleCount > 3) return; // Max 3 air hits, then whiff
-      }
-
       const wasAlive = this.hp > 0;
       this.hp -= dmg;
       this.state = 'hit';
-
-      // V19.5 COMBO SYSTEM: Hitstun Timer (Fix 1)
-      const stunDuration = isHeavy ? 0.65 : 0.40;
-      this.stateTimer = stunDuration;
-      this.hitstun = stunDuration;
+      this.stateTimer = isHeavy ? 0.65 : 0.40;
 
       // Studio Polish 1: Reduced Pushback to allow combos instead of pushing opponents out of range
       let pushBase = isHeavy ? 14 : 6;
@@ -211,9 +192,6 @@ class HybridFighter {
       this.hitFlash = 1 * (typeof FX_BYPASS !== 'undefined' ? FX_BYPASS.hitFlash : 1.0);
       this.hitStop = (isHeavy ? 0.22 : 0.12) * (typeof FX_BYPASS !== 'undefined' ? FX_BYPASS.hitStop : 1.0);
       screenShake = (isHeavy ? 15 : 8) * (typeof FX_BYPASS !== 'undefined' ? FX_BYPASS.screenShake : 1.0);
-
-      // V19.5 COMBO SYSTEM: Set combo window on the victim (Fix 2)
-      this.comboTimer = 1.2;
 
       SFX.hitHeavy(); // Impact thud
       if (Math.random() > 0.3) this.shout('', 0.1, 'hit'); // Character "Oof" 70% of time
@@ -239,6 +217,7 @@ class HybridFighter {
 
         this.shout("KO...", 2.0, "ko"); // Play physical KO sound file
       }
+      if (this.isPlayer) { comboCount = 0; comboTimer = 0; }
     }
     this.hp = Math.max(0, this.hp);
   }
@@ -249,25 +228,6 @@ class HybridFighter {
       this.hitStop -= dt;
       return;
     }
-
-    // V19.5 COMBO SYSTEM: Hitstun tick-down (Fix 1)
-    if (this.hitstun > 0) {
-      this.hitstun -= dt;
-      if (this.hitstun < 0) this.hitstun = 0;
-    }
-
-    // V19.5 COMBO SYSTEM: Combo timer tick-down (Fix 2)
-    if (this.comboTimer > 0) {
-      this.comboTimer -= dt;
-      if (this.comboTimer <= 0) {
-        this.comboCount = 0;
-        this.comboTimer = 0;
-      }
-    }
-
-    // V19 CAPCOM AUDIT: Physics Anti-Tunneling
-    this.prevX = this.x;
-    this.prevY = this.y;
 
     this.y += this.vy * this.timeScale;
     this.vy += GRAV * 1.35 * this.timeScale;
@@ -297,9 +257,6 @@ class HybridFighter {
     if (this.y > GROUND()) {
       this.y = GROUND();
       this.vy = 0;
-
-      // V19.5 COMBO SYSTEM: Juggle Reset on ground contact (Fix 5)
-      this.juggleCount = 0;
 
       if (this.state === 'roll' || this.state === 'hit' || this.state === 'ko') {
         if (this.state === 'ko') {
@@ -369,16 +326,6 @@ class HybridFighter {
         if (this.y < GROUND()) this.state = 'jump';
         else this.state = 'idle';
         this.hasHit = false; // Reset hit flag when animation ends
-
-        // V19 Action Buffer Execution (Only when we return to an actionable state)
-        if (this.isPlayer && this.actionQueue.length > 0 && this.state !== 'jump') {
-          const nextAct = this.actionQueue.shift();
-          if (nextAct === 'punch' || nextAct === 'kick') {
-            this.doAttack(nextAct, opponent);
-          } else if (nextAct === 'super') {
-            this.doSuper(opponent);
-          }
-        }
       }
     }
     if (this.specialCD > 0) this.specialCD -= dt;
@@ -390,96 +337,13 @@ class HybridFighter {
       const dist = Math.abs(this.x - opponent.x);
       const range = this.w * (this.state === 'special_roll' ? 0.9 : (this.state === 'special_flip' ? 1.2 : 0.8)); // Adjusted range for 'special'
       const isOppInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
-      // V19 CAPCOM AUDIT: Added !hasHit lock to special moves to prevent multi-hit shredding inside the update frame
-      if (dist < range && Math.sin(this.t * 5) > 0.8 && !isOppInvincible && !this.hasHit) {
-        this.hasHit = true;
-        let baseDmg = this.state === 'special_roll' ? 6 : (this.state === 'special_flip' ? 8 : 5);
-
-        // V19.5 COMBO SYSTEM: Damage Scaling (Fix 3)
-        if (opponent.comboTimer > 0) {
-          this.comboCount++;
-        } else {
-          this.comboCount = 1;
-        }
-        let comboScale = Math.max(0.4, 1 - (this.comboCount * 0.1));
-        baseDmg *= comboScale;
-        opponent.comboTimer = 1.2;
-
+      if (dist < range && Math.sin(this.t * 5) > 0.8 && !isOppInvincible) {
+        const baseDmg = this.state === 'special_roll' ? 6 : (this.state === 'special_flip' ? 8 : 5); // Adjusted damage for 'special'
         const dir = this.facingRight ? 1 : -1;
         opponent.takeHit(baseDmg, dir, false);
         this.hitStop = 0.03;
-
-        // V19.5 COMBO SYSTEM: HUD Trigger (Fix 6)
-        comboDisplayCount = this.comboCount;
-        comboDisplayTimer = 1.5;
-      }
-    }
-
-    // V19 CAPCOM AUDIT: 1-Hit Strict Frame-Locked Hurtbox/Hitbox Intersection
-    // Evaluated directly in the update physics tick, NOT instantly upon keypress (doAttack).
-    this.hurtbox = {
-      x: this.x - this.w * 0.3,
-      y: this.y - this.h * 0.9,
-      w: this.w * 0.6,
-      h: this.h * 0.9
-    };
-
-    if (opponent && (this.state === 'punch' || this.state === 'kick') && !this.hasHit) {
-      // Only active during the exact middle intersection frames of the animation (Startup -> ACTIVE -> Recovery)
-      const animPct = 1.0 - (this.stateTimer / (this.state === 'punch' ? 0.25 : 0.4));
-      const isActiveFrame = animPct > 0.3 && animPct < 0.7;
-
-      if (isActiveFrame) {
-        this.hitbox = {
-          x: this.facingRight ? this.x : this.x - (this.w * 0.8),
-          y: this.y - this.h * 0.75,
-          w: this.w * 0.8,
-          h: this.h * 0.4
-        };
-
-        const opHurt = opponent.hurtbox;
-        if (opHurt) {
-          const intersectX = this.hitbox.x < opHurt.x + opHurt.w && this.hitbox.x + this.hitbox.w > opHurt.x;
-          const intersectY = this.hitbox.y < opHurt.y + opHurt.h && this.hitbox.y + this.hitbox.h > opHurt.y;
-          const isOppInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
-
-          if (intersectX && intersectY && !isOppInvincible) {
-            this.hasHit = true;
-
-            let baseDmg = this.state === 'punch' ? 4 + Math.random() * 3 : 8 + Math.random() * 4;
-            if (!this.isPlayer) {
-              baseDmg *= (this.ld?.hitPow || 1);
-              if (window.gameDifficulty === 'hard') baseDmg *= 1.3;
-              else if (window.gameDifficulty === 'easy') baseDmg *= 0.6;
-            }
-
-            // V19.5 COMBO SYSTEM: Per-Fighter Combo Tracking + Damage Scaling (Fix 2 + Fix 3)
-            if (opponent.comboTimer > 0) {
-              this.comboCount++;
-            } else {
-              this.comboCount = 1;
-            }
-            let comboScale = Math.max(0.4, 1 - (this.comboCount * 0.1));
-            baseDmg *= comboScale;
-            opponent.comboTimer = 1.2;
-
-            const isHeavyHit = this.state === 'kick';
-            const dir = this.facingRight ? 1 : -1;
-
-            opponent.takeHit(baseDmg, dir, isHeavyHit);
-            this.hitStop = isHeavyHit ? 0.15 : 0.08;
-            if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) {
-              this.hitStop *= 2.0;
-            }
-
-            this.super = Math.min(100, this.super + 8 + this.comboCount * 2);
-
-            // V19.5 COMBO SYSTEM: HUD Trigger (Fix 6)
-            comboDisplayCount = this.comboCount;
-            comboDisplayTimer = 1.5;
-
-            if (QATracker.active) { QATracker.misses--; QATracker.hits++; }
-          }
+        if (this.isPlayer) {
+          comboCount++; comboTimer = 1.0;
         }
       }
     }
@@ -560,17 +424,7 @@ class HybridFighter {
             this.doAttack('kick', opponent);
           }
         }
-      } else if (this.state === 'punch' || this.state === 'kick') {
-        // V19 Arcade Feel: Input Buffer. If pressing attack near the end of the current attack (last 150ms leeway), queue it!
-        if (this.stateTimer < 0.15 && this.actionQueue.length < 1) {
-          if (inPunch && !keys['k']) this.actionQueue.push('punch');
-          else if (inKick && !keys['j']) this.actionQueue.push('kick');
-          // Hard block so rapid fire doesn't spam the queue
-          if (inPunch) keys['j'] = false;
-          if (inKick) keys['k'] = false;
-        }
       }
-
       if (keys['u'] || inDown) { this.state = 'block'; this.stateTimer = 0.3; }
 
       const fw = this.facingRight ? 'd' : 'a';
@@ -730,11 +584,65 @@ class HybridFighter {
     if (type === 'punch') SFX.dash();
 
     this.hitStop = 0.05;
-    this.hasHit = false; // V19 CAPCOM AUDIT: 1-Hit KO Fix (Lock)
+    this.hasHit = false; // 1-Hit KO Fix: Reset attack flag on start
+
+    if (opponent) {
+      // Capcom 2.0 / V12 "Surgical" Hitboxes: Calculate strict absolute center proximity
+      const distX = Math.abs(this.x - opponent.x);
+      const distY = Math.abs(this.y - opponent.y);
+
+      // V12 Polish: Dynamic Hitbox Extension ("Phantom Reach")
+      // Reach extends based on the state timer to match the Houdini stretch visually
+      const pulseProgress = Math.sin(this.stateTimer * Math.PI * 10);
+      const dynamicReach = Math.max(0, pulseProgress) * (this.w * 0.4);
+
+      // A punch is roughly 90% of the character width reaching forward, kick 100% PLUS dynamic reach
+      const baseRangeX = type === 'punch' ? this.w * 0.9 : this.w * 1.0;
+      const rangeX = baseRangeX + dynamicReach;
+
+      // Capcom 2.0 Y-Axis Constraint: High/Mid strikes shouldn't easily hit crouchers or jumpers
+      const rangeY = this.h * 0.75; // V12: Slightly increased vertical tolerance (was 0.65) to fix clunky misses
+
+      const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
+      // Require both X and Y axis overlap for intersection
+      if (distX < rangeX && distY < rangeY && !isOpponentInvincible && !this.hasHit) {
+        this.hasHit = true; // Mark as hit to prevent multi-frame damage
+        // Damage scaled strictly for 100 HP Energy Bar for Capcom-style pacing
+        let baseDmg = type === 'punch' ? 4 + Math.random() * 3 : 8 + Math.random() * 4;
+
+        // V14 Game Balance: Removed the excessive -65% player damage nerf from older versions.
+        // We now rely purely on the 4-6 (Punch) and 8-12 (Kick) standardization for a fair Street Fighter feel.
+        if (!this.isPlayer) {
+          baseDmg *= (this.ld?.hitPow || 1); // Only CPU gets the character-specific damage boost to act as bosses
+          if (window.gameDifficulty === 'hard') baseDmg *= 1.3;
+          else if (window.gameDifficulty === 'easy') baseDmg *= 0.6;
+        }
+
+        const dir = this.facingRight ? 1 : -1;
+        const isHeavyHit = type === 'kick';
+
+        opponent.takeHit(baseDmg, dir, isHeavyHit);
+        this.hitStop = isHeavyHit ? 0.15 : 0.08;
+        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) {
+          this.hitStop *= 2.0; // Doppelte Hitstop-Wucht für den echten Spieler
+        }
+
+        if (this.isPlayer) {
+          comboCount++; comboTimer = 1.2;
+          this.super = Math.min(100, this.super + 8 + comboCount * 2);
+        } else {
+          this.super = Math.min(100, this.super + 10);
+        }
+
+        if (QATracker.active) { QATracker.misses--; QATracker.hits++; }
+
+        const ptType = isHeavyHit ? 'super_spark' : 'hitspark';
+      }
+    }
   }
 
   fireProj() {
-    if (this.isPlayer && this.comboCount < 3) return;
+    if (this.isPlayer && comboCount < 3) return;
     if (QATracker.active) QATracker.specials++;
     this.state = 'special'; this.stateTimer = 0.4; this.specialCD = 1.2;
     const dir = this.facingRight ? 1 : -1;
@@ -742,7 +650,7 @@ class HybridFighter {
     projectiles.push(new Projectile(this.x + dir * this.w * 0.4, this.y - this.h * 0.4, dir, type, this.isPlayer));
     screenShake = 5;
     this.shout('', 1.5, 'special'); // Voice play
-    if (this.isPlayer) this.comboCount = 0;
+    if (this.isPlayer) comboCount = 0;
 
     if (this.companion) {
       const opp = (this === player) ? enemy : player;
@@ -784,12 +692,12 @@ class HybridFighter {
   }
 
   doSuper(opponent) {
-    if (this.isPlayer && this.comboCount < 5) return;
+    if (this.isPlayer && comboCount < 5) return;
     if (QATracker.active) QATracker.specials++;
     this.super = 0; this.state = 'super'; this.stateTimer = 0.9;
     screenShake = 25; flashTimer = 0.4;
     const dir = this.facingRight ? 1 : -1;
-    if (this.isPlayer) this.comboCount = 0;
+    if (this.isPlayer) comboCount = 0;
 
     const projType = this.isPlayer ? 'super' : (this.ld?.special || 'fire');
     projectiles.push(new Projectile(this.x + dir * this.w * 0.3, this.y - this.h * 0.5, dir, projType, this.isPlayer));
@@ -830,7 +738,8 @@ class HybridFighter {
       if (this.hitFlash > 0) X.globalAlpha = 0.5; // Cheap fallback for hit visibility
     }
 
-    // V19 CAPCOM AUDIT: Removed dangerous X.scale(-1, 1) flip completely to maintain coordinate stability.
+    X.scale(faceScale, 1);
+
 
     // ==========================================
     // V11 GLOW SYSTEM (Master-Prompt: Only Main Heroes)
@@ -902,15 +811,6 @@ class HybridFighter {
 
     X.translate(this._lerpOX, this._lerpOY); X.rotate(this._lerpRot); X.scale(this._lerpSX, this._lerpSY);
 
-    // V19 CAPCOM AUDIT: Global DrawFunc for deterministic drawing without scale flips.
-    const drawFunc = (img, ox, oy, dw, dh) => {
-      if (faceScale === -1) {
-        X.drawImage(img, ox + dw, oy, -dw, dh);
-      } else {
-        X.drawImage(img, ox, oy, dw, dh);
-      }
-    };
-
     // ========== V9: CONDITIONAL SHADER GLOW ==========
     // Studio Polish 6: Aura & Fire Shimmer Fix for all variants
     const dStr = (this.fighterDir || '').toLowerCase();
@@ -974,16 +874,16 @@ class HybridFighter {
           X.drawImage(imgCanvas, cutX, 0, imgCanvas.width - cutX, imgCanvas.height, 0, -dH + Math.abs(armPivotY), dW * (1 - cutRatio), dH);
           X.restore();
         } else {
-          // Front Arm (Links) (Flipped coordinates)
+          // Front Arm (Links)
           X.save();
-          const armPivotX = -dW / 2 + dW; // Start from right
+          const armPivotX = -dW / 2 + (dW * cutRatio);
           const armPivotY = -dH * 0.75;
-          X.translate(armPivotX - (dW * cutRatio), armPivotY);
+          X.translate(armPivotX, armPivotY);
           X.rotate(-Math.sin(performance.now() / 350) * 0.06);
-          X.drawImage(imgCanvas, 0, 0, cutX, imgCanvas.height, 0, -dH + Math.abs(armPivotY), -(dW * cutRatio), dH);
+          X.drawImage(imgCanvas, 0, 0, cutX, imgCanvas.height, -dW * cutRatio, -dH + Math.abs(armPivotY), dW * cutRatio, dH);
           X.restore();
-          // Body (Rechts) Flipped
-          X.drawImage(imgCanvas, cutX, 0, imgCanvas.width - cutX, imgCanvas.height, armPivotX, -dH, -(dW * (1 - cutRatio)), dH);
+          // Body (Rechts)
+          X.drawImage(imgCanvas, cutX, 0, imgCanvas.width - cutX, imgCanvas.height, armPivotX, -dH, dW * (1 - cutRatio), dH);
         }
       } else {
         // ==========================================
@@ -1001,17 +901,8 @@ class HybridFighter {
           const magnetOffset = pulseProgress * (dW * 0.35) * smearFader;
           const directionMult = isRight ? 1 : -1;
 
-          // V19 CAPCOM AUDIT: Stable Draw Function 
-          const drawFunc = (img, ox, oy, dw, dh) => {
-            if (faceScale === -1) {
-              X.drawImage(img, ox + dw, oy, -dw, dh);
-            } else {
-              X.drawImage(img, ox, oy, dw, dh);
-            }
-          };
-
           // 1. Draw the Base Character WHOLE (no destructive clipping)
-          drawFunc(imgCanvas, -dW / 2, -dH, dW, dH);
+          X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
 
           // 2. Draw the Phantom Smear (Duplicate shifted forward)
           X.save();
@@ -1031,7 +922,7 @@ class HybridFighter {
 
           // Draw the physical shifted phantom
           X.translate(magnetOffset * directionMult, 0);
-          drawFunc(imgCanvas, -dW / 2, -dH, dW, dH);
+          X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
           X.restore();
 
           // 3. Draw "Surgical" Laser-Cuts (Static visual cues, 1px lines at joints to hint at speed)
@@ -1059,11 +950,7 @@ class HybridFighter {
 
         } else {
           // Normal Rendering (No Smear/Slice Active)
-          if (faceScale === -1) {
-            X.drawImage(imgCanvas, -dW / 2 + dW, -dH, -dW, dH);
-          } else {
-            X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
-          }
+          X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH);
         }
       }
     }
@@ -1220,9 +1107,10 @@ class HybridFighter {
     if (this.state === 'dash') {
       X.save(); X.globalAlpha = 0.25; X.translate(cX - faceScale * dW * 0.4, fY);
       if (imgCanvas && imgCanvas.complete !== false && (imgCanvas.naturalWidth !== 0 || imgCanvas.width !== 0)) {
-        drawFunc(imgCanvas, -dW / 2, -dH, dW, dH);
+        X.scale(faceScale, 1); X.drawImage(imgCanvas, -dW / 2, -dH, dW, dH); X.restore();
+      } else {
+        X.restore();
       }
-      X.restore();
     }
   }
 }
