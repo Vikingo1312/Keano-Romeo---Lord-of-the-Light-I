@@ -314,15 +314,29 @@ function gameLoop(ts) {
       X.fillRect(0, 0, C.width, C.height);
       X.restore();
 
-      // Stars with twinkle
+      // V17: Beautiful Diagonal Drifting Stars with soft glow
       for (let i = 0; i < 60; i++) {
-        const sx = ((i * 173.7 + stateTimer * 4) % C.width);
-        const sy = ((i * 97.3 + stateTimer * (1 + i % 3)) % C.height);
-        const twinkle = 0.2 + 0.8 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
+        // Pseudo-random direction for each star based on its index (drifting down diagonally)
+        const dirX = (i % 2 === 0 ? 1 : -1) * (0.5 + (i % 3) * 0.5);
+        const dirY = 1.0 + (i % 4) * 0.3; // Gentle downward drift
+
+        const sx = (i * 173.7 + stateTimer * 15 * dirX);
+        const sy = (i * 97.3 + stateTimer * 15 * dirY);
+
+        // Endless wrap-around logic
+        const wrappedX = ((sx % C.width) + C.width) % C.width;
+        const wrappedY = ((sy % C.height) + C.height) % C.height;
+
+        const twinkle = 0.3 + 0.7 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
         X.globalAlpha = twinkle;
         X.fillStyle = i % 5 === 0 ? '#aaddff' : (i % 7 === 0 ? '#ccaaff' : '#ffffff');
-        X.beginPath(); X.arc(sx, sy, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2); X.fill();
-      } X.globalAlpha = 1;
+        X.beginPath(); X.arc(wrappedX, wrappedY, 1.2 + (i % 3) * 0.6, 0, Math.PI * 2);
+        X.shadowBlur = 8;
+        X.shadowColor = X.fillStyle;
+        X.fill();
+      }
+      X.globalAlpha = 1;
+      X.shadowBlur = 0;
 
       const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
       X.save(); X.textAlign = 'center'; const lineHeight = fs(0.04);
@@ -412,15 +426,27 @@ function gameLoop(ts) {
       X.fillRect(0, 0, C.width, C.height);
       X.restore();
 
-      // Stars with purple/pink twinkle
+      // V17: Beautiful Diagonal Purple/Pink Drifting Stars
       for (let i = 0; i < 60; i++) {
-        const sx = ((i * 173.7 + stateTimer * 4) % C.width);
-        const sy = ((i * 97.3 + stateTimer * (1 + i % 3)) % C.height);
-        const twinkle = 0.2 + 0.8 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
+        const dirX = (i % 2 === 0 ? 1 : -1) * (0.5 + (i % 3) * 0.5);
+        const dirY = 1.0 + (i % 4) * 0.3;
+
+        const sx = (i * 173.7 + stateTimer * 15 * dirX);
+        const sy = (i * 97.3 + stateTimer * 15 * dirY);
+
+        const wrappedX = ((sx % C.width) + C.width) % C.width;
+        const wrappedY = ((sy % C.height) + C.height) % C.height;
+
+        const twinkle = 0.3 + 0.7 * Math.abs(Math.sin(stateTimer * (0.3 + i * 0.1) + i));
         X.globalAlpha = twinkle;
-        X.fillStyle = i % 4 === 0 ? '#ffaaff' : (i % 6 === 0 ? '#ccaaff' : '#ff88ff');
-        X.beginPath(); X.arc(sx, sy, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2); X.fill();
-      } X.globalAlpha = 1;
+        X.fillStyle = i % 2 === 0 ? '#ffccff' : (i % 3 === 0 ? '#cc88ff' : '#ee00ff');
+        X.beginPath(); X.arc(wrappedX, wrappedY, 1.5 + (i % 3) * 0.6, 0, Math.PI * 2);
+        X.shadowBlur = 10;
+        X.shadowColor = X.fillStyle;
+        X.fill();
+      }
+      X.globalAlpha = 1;
+      X.shadowBlur = 0;
 
       const cx = C.width / 2; const fs = (pct) => Math.min(C.width * pct, C.height * pct * 1.8);
       X.save(); X.textAlign = 'center'; const lineHeight = fs(0.04);
