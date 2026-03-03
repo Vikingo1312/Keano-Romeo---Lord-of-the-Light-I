@@ -1025,9 +1025,13 @@ class HybridFighter {
     }
 
     // Draw Voice / Shout Bubble globally un-rotated
-    if (this.shoutTimer > 0 && this.shoutText !== "") {
+    // V19: Suppress bubble during jump/ko/hit to prevent floating text
+    const bubbleBlocked = (this.state === 'jump' || this.state === 'ko' || this.state === 'hit');
+    if (this.shoutTimer > 0 && this.shoutText !== "" && !bubbleBlocked) {
       X.save();
-      X.translate(cX, fY - dH - 40); // Above the head
+      // V19: Anchor bubble to ground-level Y so it doesn't fly up during jumps
+      const bubbleY = Math.min(fY, typeof GROUND === 'function' ? GROUND() : fY);
+      X.translate(cX, bubbleY - dH - 40); // Above the head
       X.textAlign = "center";
       X.textBaseline = "middle";
       X.font = "bold 18px Courier New, monospace";

@@ -150,7 +150,7 @@ document.getElementById('btn-confirm-fighter').addEventListener('click', () => {
 });
 
 window.toggleOptions = function () {
-  console.log("toggleOptions triggered from state:", gameState);
+  // Options toggle
   const panel = document.getElementById('pause-menu');
   if (!panel) return;
   const isVisible = !panel.classList.contains('hidden');
