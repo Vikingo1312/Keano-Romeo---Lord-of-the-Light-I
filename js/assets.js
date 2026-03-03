@@ -20,11 +20,15 @@ function removeWhiteBackground(imgObj, src) {
 }
 
 // Force load strictly _front.png, _left.png, _right.png for EVERY character
+// V19 SF Alpha: Also load pose sprites (_punch, _kick, _hit, _ko) if they exist
+const POSE_SPRITES = ['_punch.png', '_kick.png', '_hit.png', '_ko.png'];
 const allSrcs = new Set();
 [KEANO, ...LEVELS].forEach(l => {
   allSrcs.add(l.fighterDir + '/_front.png');
   allSrcs.add(l.fighterDir + '/_left.png');
   allSrcs.add(l.fighterDir + '/_right.png');
+  // V19: Attempt to load pose sprites (will silently fail if not present)
+  POSE_SPRITES.forEach(pose => allSrcs.add(l.fighterDir + '/' + pose));
   if (l.stage) allSrcs.add(l.stage);
   if (l.objType) {
     allSrcs.add(`assets/props/${l.objType}.png`);
@@ -46,7 +50,7 @@ Promise.all(Array.from(allSrcs).map(s => {
     i.onload = () => {
       // Tunnel the loaded image directly into the global object so Canvas can find it instantly
       rawImgs[s] = i;
-      if (s.includes('_left.png') || s.includes('_right.png') || s.includes('_front.png') || s.includes('simba')) {
+      if (s.includes('_left.png') || s.includes('_right.png') || s.includes('_front.png') || s.includes('simba') || s.includes('_punch.png') || s.includes('_kick.png') || s.includes('_hit.png') || s.includes('_ko.png')) {
         removeWhiteBackground(i, s);
       }
       assetsLoaded++;

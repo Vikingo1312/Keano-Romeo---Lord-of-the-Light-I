@@ -727,7 +727,19 @@ class HybridFighter {
   }
 
   draw() {
-    const imgCanvas = processedSprites[this.cleanImgSrc] || rawImgs[this.cleanImgSrc] || this.img;
+    // V19 SF Alpha: State-based sprite switching
+    // Try to load pose-specific sprite before falling back to idle _left/_right
+    let activeSrc = this.cleanImgSrc;
+    const POSE_MAP = { 'punch': '_punch.png', 'kick': '_kick.png', 'hit': '_hit.png', 'ko': '_ko.png' };
+    const poseFile = POSE_MAP[this.state];
+    if (poseFile) {
+      const poseSrc = this.fighterDir + '/' + poseFile;
+      const poseImg = processedSprites[poseSrc] || rawImgs[poseSrc];
+      if (poseImg && (poseImg.naturalWidth > 0 || poseImg.width > 0)) {
+        activeSrc = poseSrc;
+      }
+    }
+    const imgCanvas = processedSprites[activeSrc] || rawImgs[activeSrc] || processedSprites[this.cleanImgSrc] || rawImgs[this.cleanImgSrc] || this.img;
     if (!imgCanvas) return;
 
     if (this.companion && this.hp > 0) this.companion.draw();
@@ -784,6 +796,10 @@ class HybridFighter {
       this._lerpOX = 0; this._lerpOY = 0;
     }
 
+    // V19 SF Alpha: If pose sprite is loaded, reduce canvas deformation
+    // (the sprite already shows the pose, no need for extreme stretch)
+    const hasPoseSprite = (activeSrc !== this.cleanImgSrc);
+
     switch (this.state) {
       case 'idle':
         if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.animSprite : 1.0) > 0.0) {
@@ -797,17 +813,29 @@ class HybridFighter {
       case 'walk': offY = Math.abs(Math.sin(this.t * 12)) * 10; rot = Math.sin(this.t * 6) * 0.05; break;
       case 'roll': offY = dH * 0.4; rot = this.t * 15; sX = 0.7; sY = 0.7; break;
       case 'punch':
-        offX = dW * 0.45; rot = 0.2; sX = 1.15; sY = 0.9;
-        // V19: Reduced player stretch (was 1.4/0.7 → 1.2/0.85) to prevent sprite split
-        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 1.2; sY = 0.85; offX = dW * 0.55; }
+        if (hasPoseSprite) {
+          offX = dW * 0.15; rot = 0.02; sX = 1.0; sY = 1.0; // Minimal deformation – pose sprite does the work
+        } else {
+          offX = dW * 0.45; rot = 0.2; sX = 1.15; sY = 0.9;
+          if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 1.2; sY = 0.85; offX = dW * 0.55; }
+        }
         break;
       case 'kick':
-        offX = dW * 0.35; rot = -0.2; sX = 0.85; sY = 1.15; offY = -dH * 0.06;
-        // V19: Reduced player stretch (was 0.6/1.5 → 0.75/1.3) to prevent sprite split
-        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 0.75; sY = 1.3; offY = -dH * 0.1; }
+        if (hasPoseSprite) {
+          offX = dW * 0.1; rot = -0.02; sX = 1.0; sY = 1.0; // Minimal deformation
+        } else {
+          offX = dW * 0.35; rot = -0.2; sX = 0.85; sY = 1.15; offY = -dH * 0.06;
+          if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 0.75; sY = 1.3; offY = -dH * 0.1; }
+        }
         break;
       case 'jump': sX = 0.9; sY = 1.1; rot = this.vy > 0 ? 0.1 : -0.1; break;
-      case 'hit': rot = -0.3; offX = -dW * 0.2; sX = 0.85; sY = 1.15; break;
+      case 'hit':
+        if (hasPoseSprite) {
+          offX = -dW * 0.1; rot = -0.05; sX = 1.0; sY = 1.0; // Minimal deformation
+        } else {
+          rot = -0.3; offX = -dW * 0.2; sX = 0.85; sY = 1.15;
+        }
+        break;
       case 'block': rot = -0.1; sX = 1.1; sY = 0.9; offX = -dW * 0.1; break;
       case 'ko':
         if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.magneticGround : 1.0) > 0.0) {
