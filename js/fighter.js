@@ -341,7 +341,8 @@ class HybridFighter {
       const range = this.w * (this.state === 'special_roll' ? 0.9 : (this.state === 'special_flip' ? 1.2 : 0.8)); // Adjusted range for 'special'
       const isOppInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
       if (dist < range && Math.sin(this.t * 5) > 0.8 && !isOppInvincible) {
-        const baseDmg = this.state === 'special_roll' ? 6 : (this.state === 'special_flip' ? 8 : 5); // Adjusted damage for 'special'
+        // V19: Halved special damage (was 6/8/5, now 3/5/3)
+        const baseDmg = this.state === 'special_roll' ? 3 : (this.state === 'special_flip' ? 5 : 3);
         const dir = this.facingRight ? 1 : -1;
         opponent.takeHit(baseDmg, dir, false);
         this.hitStop = 0.03;
@@ -624,10 +625,12 @@ class HybridFighter {
     const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
     if (distX < rangeX && distY < rangeY && !isOpponentInvincible) {
       this.hasHit = true;
-      let baseDmg = type === 'punch' ? 4 + Math.random() * 3 : 8 + Math.random() * 4;
+      // V19: Halved base damage (was P:4-7, K:8-12, now P:2-4, K:4-6)
+      let baseDmg = type === 'punch' ? 2 + Math.random() * 2 : 4 + Math.random() * 2;
 
       if (!this.isPlayer) {
-        baseDmg *= (this.ld?.hitPow || 1);
+        // V19: Cap hitPow at 1.5 to prevent boss one-shots
+        baseDmg *= Math.min(1.5, this.ld?.hitPow || 1);
         if (window.gameDifficulty === 'hard') baseDmg *= 1.3;
         else if (window.gameDifficulty === 'easy') baseDmg *= 0.6;
       }
@@ -718,8 +721,8 @@ class HybridFighter {
     this.shout("SUPER!", 2.0, "super"); // Trigger MP3
 
     if (opponent && Math.abs(this.x - opponent.x) < this.w * 1.3) {
-      // V19: Reduced Super melee (was 45/30, now 25/18) to prevent 1-hit kills
-      opponent.takeHit(this.isPlayer ? 25 : 18, dir);
+      // V19: Halved Super melee (was 25/18, now 12/10)
+      opponent.takeHit(this.isPlayer ? 12 : 10, dir);
     }
   }
 

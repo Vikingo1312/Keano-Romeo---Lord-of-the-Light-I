@@ -92,13 +92,13 @@ class Projectile {
     }
 
     if (Math.abs(this.x - fighter.x) < hitRadius && Math.abs(this.y - (fighter.y - fighter.h * 0.4)) < hitHeight) {
-      // V19: Reduced super/dark proj from 25→15 (total Super ~40HP instead of 70HP)
-      let dmg = this.type === 'super' || this.type === 'dark' ? 15 : 12;
+      // V19: Halved projectile damage (was 15/12, now 8/6)
+      let dmg = this.type === 'super' || this.type === 'dark' ? 8 : 6;
 
       if (typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.specialVariations : 1.0) > 0.0) {
-        if (this.type === 'electric') dmg = 8; // Fast but weak
-        if (this.type === 'fire') dmg = 15; // Burn
-        if (this.type === 'ice') dmg = 10;
+        if (this.type === 'electric') dmg = 4; // Fast but weak
+        if (this.type === 'fire') dmg = 8; // Burn
+        if (this.type === 'ice') dmg = 5;
       }
 
       fighter.takeHit(dmg, this.dir);
