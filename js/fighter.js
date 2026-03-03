@@ -495,8 +495,9 @@ class HybridFighter {
       diffMult *= FX_BYPASS.combatAI;
     }
 
-    const baseTimerDelay = (0.3 + Math.random() * 0.4) / diffMult;
-    this.aiTimer = this.isBoss ? baseTimerDelay * 0.7 : baseTimerDelay;
+    // V19: Faster AI decisions (was 0.3-0.7s, now 0.2-0.5s)
+    const baseTimerDelay = (0.2 + Math.random() * 0.3) / diffMult;
+    this.aiTimer = this.isBoss ? baseTimerDelay * 0.6 : baseTimerDelay;
 
     const isOpponentAttacking = (opponent.state === 'punch' || opponent.state === 'kick' || opponent.state === 'proj' || opponent.state === 'special' || opponent.state === 'super');
     const r = Math.random();
@@ -530,29 +531,31 @@ class HybridFighter {
     }
 
     // 4. Combat / Aggression
+    // V19: More aggressive AI – wider attack range, higher probability, no setTimeout
     if (!aiMoving && canAct) {
-      if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 1.0) {
-        if (r < 0.5 * diffMult) {
+      if ((charType === 'fire' || charType === 'lightning') && dist < this.w * 1.3) {
+        if (r < 0.7 * diffMult) {
           this.doAttack('punch', opponent);
-          setTimeout(() => { if (this.hp > 0 && opponent.hp > 0 && this.state !== 'ko') this.doAttack('kick', opponent); }, 250);
-        } else if (r < 0.8 * diffMult && this.specialCD <= 0) {
+        } else if (r < 0.85 * diffMult && this.specialCD <= 0) {
           this.doSpecialFlip(opponent);
         } else {
           this.doAttack('kick', opponent);
         }
       } else if (charType === 'ice' && dist > this.w * 0.8) {
-        if (r < 0.5 * diffMult * projFreq && this.specialCD <= 0) {
+        if (r < 0.6 * diffMult * projFreq && this.specialCD <= 0) {
           this.fireProj();
         } else if (opponent.state === 'jump') {
           this.doAttack('kick', opponent);
+        } else if (dist < this.w * 1.5 && r < 0.5 * diffMult) {
+          this.doAttack('punch', opponent);
         }
-      } else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 0.8) {
-        if (r < 0.6 * diffMult) {
+      } else if ((charType === 'dark' || charType === 'earth') && dist < this.w * 1.0) {
+        if (r < 0.7 * diffMult) {
           this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
-        } else if (r < 0.8 * diffMult && this.specialCD <= 0) {
+        } else if (r < 0.85 * diffMult && this.specialCD <= 0) {
           this.doSpecialRoll(opponent);
         }
-      } else if (dist < this.w * 1.1 && r < 0.5 * diffMult) {
+      } else if (dist < this.w * 1.5 && r < 0.7 * diffMult) {
         this.doAttack(r > 0.5 ? 'punch' : 'kick', opponent);
       }
     }
@@ -705,7 +708,8 @@ class HybridFighter {
     this.shout("SUPER!", 2.0, "super"); // Trigger MP3
 
     if (opponent && Math.abs(this.x - opponent.x) < this.w * 1.3) {
-      opponent.takeHit(this.isPlayer ? 45 : 30, dir);
+      // V19: Reduced Super melee (was 45/30, now 25/18) to prevent 1-hit kills
+      opponent.takeHit(this.isPlayer ? 25 : 18, dir);
     }
   }
 
@@ -780,12 +784,14 @@ class HybridFighter {
       case 'walk': offY = Math.abs(Math.sin(this.t * 12)) * 10; rot = Math.sin(this.t * 6) * 0.05; break;
       case 'roll': offY = dH * 0.4; rot = this.t * 15; sX = 0.7; sY = 0.7; break;
       case 'punch':
-        offX = dW * 0.55; rot = 0.25; sX = 1.25; sY = 0.85;
-        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 1.4; sY = 0.7; offX = dW * 0.65; }
+        offX = dW * 0.45; rot = 0.2; sX = 1.15; sY = 0.9;
+        // V19: Reduced player stretch (was 1.4/0.7 → 1.2/0.85) to prevent sprite split
+        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 1.2; sY = 0.85; offX = dW * 0.55; }
         break;
       case 'kick':
-        offX = dW * 0.45; rot = -0.3; sX = 0.8; sY = 1.25; offY = -dH * 0.08;
-        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 0.6; sY = 1.5; offY = -dH * 0.15; }
+        offX = dW * 0.35; rot = -0.2; sX = 0.85; sY = 1.15; offY = -dH * 0.06;
+        // V19: Reduced player stretch (was 0.6/1.5 → 0.75/1.3) to prevent sprite split
+        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) { sX = 0.75; sY = 1.3; offY = -dH * 0.1; }
         break;
       case 'jump': sX = 0.9; sY = 1.1; rot = this.vy > 0 ? 0.1 : -0.1; break;
       case 'hit': rot = -0.3; offX = -dW * 0.2; sX = 0.85; sY = 1.15; break;

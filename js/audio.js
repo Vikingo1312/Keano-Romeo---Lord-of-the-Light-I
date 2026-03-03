@@ -166,7 +166,8 @@ const SFX = {
     }
   },
 
-  restoreBGM(durationMs = 1200) {
+  // V19: Longer fade to prevent audio spike (was 1200ms)
+  restoreBGM(durationMs = 2500) {
     const timeToFade = durationMs / 1000;
     const userVol = document.getElementById('vol-music') ? parseFloat(document.getElementById('vol-music').value) : 0.5;
     let musicFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.music : 1.0;
@@ -187,7 +188,8 @@ const SFX = {
       let eqFader = (typeof FX_BYPASS !== 'undefined') ? FX_BYPASS.masterEQ : 1.0;
       let targetFreq = 5000 + (15000 * eqFader);
       this.bgmMasterEQ.frequency.cancelScheduledValues(this.bgmAudioCtx.currentTime);
-      this.bgmMasterEQ.frequency.setTargetAtTime(targetFreq, this.bgmAudioCtx.currentTime, timeToFade * 0.4);
+      // V19: Gentler EQ ramp (was 0.4, now 0.6) to prevent sharp spike
+      this.bgmMasterEQ.frequency.setTargetAtTime(targetFreq, this.bgmAudioCtx.currentTime, timeToFade * 0.6);
     }
 
     // Force volume restore on HTML Audio element

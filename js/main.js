@@ -351,7 +351,8 @@ if (btnTest) {
 function updateSkipButton() {
   const skipBtn = document.getElementById('btn-skip-sequence');
   if (!skipBtn) return;
-  const showStates = ['prologue', 'midpoint_reflexion', 'victory'];
+  // V19: Skip ONLY during prologue (user request: reflexion + epilog must be watched)
+  const showStates = ['prologue'];
   if (showStates.includes(gameState) && stateTimer > 2) {
     skipBtn.classList.remove('hidden');
   } else {
