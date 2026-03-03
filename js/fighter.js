@@ -333,6 +333,9 @@ class HybridFighter {
     if (this.shoutTimer > 0) this.shoutTimer -= dt;
     this.t += dt * 8;
 
+    // V19 Fix A: Process deferred attack hit check (Startup→Active)
+    this._checkPendingHit(dt);
+
     if (opponent && (this.state === 'special_roll' || this.state === 'special_flip' || this.state === 'special')) { // Added 'special'
       const dist = Math.abs(this.x - opponent.x);
       const range = this.w * (this.state === 'special_roll' ? 0.9 : (this.state === 'special_flip' ? 1.2 : 0.8)); // Adjusted range for 'special'
@@ -587,60 +590,67 @@ class HybridFighter {
     if (type === 'punch') SFX.dash();
 
     this.hitStop = 0.05;
-    this.hasHit = false; // 1-Hit KO Fix: Reset attack flag on start
+    this.hasHit = false;
 
-    if (opponent) {
-      // Capcom 2.0 / V12 "Surgical" Hitboxes: Calculate strict absolute center proximity
-      const distX = Math.abs(this.x - opponent.x);
-      const distY = Math.abs(this.y - opponent.y);
+    // V19 Fix A: Store attack info for delayed hit check (Startup→Active→Recovery)
+    // Punch startup: ~60ms, Kick startup: ~100ms
+    this._pendingHit = {
+      opponent: opponent,
+      type: type,
+      startupTimer: type === 'punch' ? 0.06 : 0.10
+    };
+  }
 
-      // V12 Polish: Dynamic Hitbox Extension ("Phantom Reach")
-      // Reach extends based on the state timer to match the Houdini stretch visually
-      const pulseProgress = Math.sin(this.stateTimer * Math.PI * 10);
-      const dynamicReach = Math.max(0, pulseProgress) * (this.w * 0.4);
+  // V19 Fix A: Deferred hit check – called from update loop
+  _checkPendingHit(dt) {
+    if (!this._pendingHit) return;
+    this._pendingHit.startupTimer -= dt;
+    if (this._pendingHit.startupTimer > 0) return; // Still in startup
 
-      // A punch is roughly 90% of the character width reaching forward, kick 100% PLUS dynamic reach
-      const baseRangeX = type === 'punch' ? this.w * 0.9 : this.w * 1.0;
-      const rangeX = baseRangeX + dynamicReach;
+    const { opponent, type } = this._pendingHit;
+    this._pendingHit = null; // Only check once
 
-      // Capcom 2.0 Y-Axis Constraint: High/Mid strikes shouldn't easily hit crouchers or jumpers
-      const rangeY = this.h * 0.75; // V12: Slightly increased vertical tolerance (was 0.65) to fix clunky misses
+    if (!opponent || this.hp <= 0 || opponent.hp <= 0) return;
+    if (this.state !== 'punch' && this.state !== 'kick') return;
+    if (this.hasHit) return;
 
-      const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
-      // Require both X and Y axis overlap for intersection
-      if (distX < rangeX && distY < rangeY && !isOpponentInvincible && !this.hasHit) {
-        this.hasHit = true; // Mark as hit to prevent multi-frame damage
-        // Damage scaled strictly for 100 HP Energy Bar for Capcom-style pacing
-        let baseDmg = type === 'punch' ? 4 + Math.random() * 3 : 8 + Math.random() * 4;
+    const distX = Math.abs(this.x - opponent.x);
+    const distY = Math.abs(this.y - opponent.y);
 
-        // V14 Game Balance: Removed the excessive -65% player damage nerf from older versions.
-        // We now rely purely on the 4-6 (Punch) and 8-12 (Kick) standardization for a fair Street Fighter feel.
-        if (!this.isPlayer) {
-          baseDmg *= (this.ld?.hitPow || 1); // Only CPU gets the character-specific damage boost to act as bosses
-          if (window.gameDifficulty === 'hard') baseDmg *= 1.3;
-          else if (window.gameDifficulty === 'easy') baseDmg *= 0.6;
-        }
+    const baseRangeX = type === 'punch' ? this.w * 0.9 : this.w * 1.0;
+    const rangeX = baseRangeX;
+    const rangeY = this.h * 0.75;
 
-        const dir = this.facingRight ? 1 : -1;
-        const isHeavyHit = type === 'kick';
+    const isOpponentInvincible = (opponent.state === 'roll' || opponent.state === 'evade_back' || opponent.state === 'roll_forward');
+    if (distX < rangeX && distY < rangeY && !isOpponentInvincible) {
+      this.hasHit = true;
+      let baseDmg = type === 'punch' ? 4 + Math.random() * 3 : 8 + Math.random() * 4;
 
-        opponent.takeHit(baseDmg, dir, isHeavyHit);
-        this.hitStop = isHeavyHit ? 0.15 : 0.08;
-        if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) {
-          this.hitStop *= 2.0; // Doppelte Hitstop-Wucht für den echten Spieler
-        }
-
-        if (this.isPlayer) {
-          comboCount++; comboTimer = 1.2;
-          this.super = Math.min(100, this.super + 8 + comboCount * 2);
-        } else {
-          this.super = Math.min(100, this.super + 10);
-        }
-
-        if (QATracker.active) { QATracker.misses--; QATracker.hits++; }
-
-        const ptType = isHeavyHit ? 'super_spark' : 'hitspark';
+      if (!this.isPlayer) {
+        baseDmg *= (this.ld?.hitPow || 1);
+        if (window.gameDifficulty === 'hard') baseDmg *= 1.3;
+        else if (window.gameDifficulty === 'easy') baseDmg *= 0.6;
       }
+
+      const dir = this.facingRight ? 1 : -1;
+      const isHeavyHit = type === 'kick';
+
+      opponent.takeHit(baseDmg, dir, isHeavyHit);
+      this.hitStop = isHeavyHit ? 0.15 : 0.08;
+      if (this.isPlayer && typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.playerImpactFeel : 1.0) > 0.0) {
+        this.hitStop *= 2.0;
+      }
+
+      if (this.isPlayer) {
+        comboCount++; comboTimer = 1.2;
+        this.super = Math.min(100, this.super + 8 + comboCount * 2);
+      } else {
+        this.super = Math.min(100, this.super + 10);
+      }
+
+      if (QATracker.active) { QATracker.misses--; QATracker.hits++; }
+
+      const ptType = isHeavyHit ? 'super_spark' : 'hitspark';
     }
   }
 
