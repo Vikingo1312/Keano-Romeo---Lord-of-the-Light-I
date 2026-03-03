@@ -26,6 +26,15 @@ const SFX = {
   bgmMasterEQ: null,
 
   init() {
+    // V19: Master Dynamics Compressor – glues the mix, prevents clipping
+    this._masterCompressor = AC.createDynamicsCompressor();
+    this._masterCompressor.threshold.value = -12;
+    this._masterCompressor.knee.value = 10;
+    this._masterCompressor.ratio.value = 4;
+    this._masterCompressor.attack.value = 0.003;
+    this._masterCompressor.release.value = 0.25;
+    this._masterCompressor.connect(AC.destination);
+
     this._musicGain = AC.createGain(); this._musicGain.gain.value = 0.5;
 
     // Add an EQ Filter (Lowpass) for Epic Cinematic Voice Overs
@@ -34,12 +43,12 @@ const SFX = {
     this._bgmFilter.frequency.value = 20000; // Open initially
     this._bgmFilter.Q.value = 1.2; // Slight resonance for epic feel
 
-    // Connect Chain: Gain -> Filter -> Destination (For generated synths)
+    // Connect Chain: Gain -> Filter -> Compressor -> Destination
     this._musicGain.connect(this._bgmFilter);
-    this._bgmFilter.connect(AC.destination);
+    this._bgmFilter.connect(this._masterCompressor);
 
     // V15 Global Mix Polish: Halved SFX volume to prevent clipping/deafening
-    this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.4; this._sfxGain.connect(AC.destination);
+    this._sfxGain = AC.createGain(); this._sfxGain.gain.value = 0.4; this._sfxGain.connect(this._masterCompressor);
 
     // Contexts for HTML Media Elements (BGM and Voice)
     this.bgmAudioCtx = AC;
@@ -48,13 +57,14 @@ const SFX = {
     // Create Master BGM EQ (-25% High Cut = roughly 5000Hz instead of 20000Hz)
     this.bgmMasterEQ = this.bgmAudioCtx.createBiquadFilter();
     this.bgmMasterEQ.type = 'lowpass';
-    this.bgmMasterEQ.frequency.value = typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.masterEQ : 1.0) > 0.0 ? 5000 : 20000;
-    this.bgmMasterEQ.connect(this.bgmAudioCtx.destination);
+    // V19: Raised from 5kHz to 15kHz for brighter, less muddy music
+    this.bgmMasterEQ.frequency.value = typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.masterEQ : 1.0) > 0.0 ? 15000 : 20000;
+    this.bgmMasterEQ.connect(this._masterCompressor);
 
     // Create Voice FX Chain: Distortion -> EQ -> Destination
     this.voiceDistortion = this.voiceAudioCtx.createWaveShaper();
-    // V16 Arcade Voice Mix: Increased distortion base from 50 to 200 for a noticeable "crunch"
-    this.voiceDistortion.curve = this._makeDistortionCurve(typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.voiceDistortion : 1.0) > 0.0 ? 200 : 0);
+    // V19: Reduced distortion from 200 to 50 for cleaner crunch without ear-fatigue
+    this.voiceDistortion.curve = this._makeDistortionCurve(typeof FX_BYPASS !== 'undefined' && (typeof FX_BYPASS !== "undefined" ? FX_BYPASS.voiceDistortion : 1.0) > 0.0 ? 50 : 0);
     this.voiceDistortion.oversample = '4x';
 
     this.voiceFilter = this.voiceAudioCtx.createBiquadFilter();
@@ -84,10 +94,10 @@ const SFX = {
 
     // Chain: Distortion -> Filter -> (Dry to Dest | Wet to Reverb -> Gain -> Dest)
     this.voiceDistortion.connect(this.voiceFilter);
-    this.voiceFilter.connect(this.voiceAudioCtx.destination); // Dry
+    this.voiceFilter.connect(this._masterCompressor); // Dry -> Compressor
     this.voiceFilter.connect(this.voiceReverbNode); // Send to Reverb
     this.voiceReverbNode.connect(this.voiceReverbGain);
-    this.voiceReverbGain.connect(this.voiceAudioCtx.destination);
+    this.voiceReverbGain.connect(this._masterCompressor); // Reverb -> Compressor
   },
 
   _makeDistortionCurve(amount) {
