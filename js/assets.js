@@ -13,7 +13,9 @@ function removeWhiteBackground(imgObj, src) {
   ctx.drawImage(imgObj, 0, 0, cvs.width, cvs.height);
   const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height); const data = imgData.data;
   for (let i = 0; i < data.length; i += 4) {
-    if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) { data[i + 3] = 0; } // Strict white to alpha
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    // Remove white AND checkerboard grays (the pseudo-transparency pattern)
+    if (r > 200 && g > 200 && b > 200) { data[i + 3] = 0; }
   }
   ctx.putImageData(imgData, 0, 0);
   processedSprites[src] = cvs;
@@ -22,13 +24,17 @@ function removeWhiteBackground(imgObj, src) {
 // Force load strictly _front.png, _left.png, _right.png for EVERY character
 // V19 SF Alpha: Also load pose sprites (_punch, _kick, _hit, _ko) if they exist
 const POSE_SPRITES = ['_punch.png', '_kick.png', '_hit.png', '_ko.png'];
+// V19: Only load pose sprites for fighters that have them (avoid 404 spam)
+const FIGHTERS_WITH_POSES = ['0.Keano'];
 const allSrcs = new Set();
 [KEANO, ...LEVELS].forEach(l => {
   allSrcs.add(l.fighterDir + '/_front.png');
   allSrcs.add(l.fighterDir + '/_left.png');
   allSrcs.add(l.fighterDir + '/_right.png');
-  // V19: Attempt to load pose sprites (will silently fail if not present)
-  POSE_SPRITES.forEach(pose => allSrcs.add(l.fighterDir + '/' + pose));
+  // V19: Only load poses for fighters that have generated sprites
+  if (FIGHTERS_WITH_POSES.some(f => l.fighterDir.includes(f))) {
+    POSE_SPRITES.forEach(pose => allSrcs.add(l.fighterDir + '/' + pose));
+  }
   if (l.stage) allSrcs.add(l.stage);
   if (l.objType) {
     allSrcs.add(`assets/props/${l.objType}.png`);

@@ -756,7 +756,8 @@ class HybridFighter {
     X.translate(cX, fY);
 
     let faceScale = this.facingRight ? 1 : -1;
-    if (this.cleanImgSrc.includes('_left.png') || this.cleanImgSrc.includes('_right.png')) faceScale = 1; // Actual sprites don't need reverse if strictly loaded
+    // V19: Pose sprites (punch/kick/hit/ko) need auto-flip, but _left/_right idle sprites don't
+    if (activeSrc === this.cleanImgSrc && (this.cleanImgSrc.includes('_left.png') || this.cleanImgSrc.includes('_right.png'))) faceScale = 1;
 
     // Studio Polish 8: Performance Bypass for costly canvas filters
     if ((typeof FX_BYPASS !== "undefined" ? FX_BYPASS.canvasFilters : 1.0) > 0.0) {
