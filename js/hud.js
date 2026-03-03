@@ -1,4 +1,5 @@
 // ===== HUD (MODERNIZED & CAPCOM STYLE) =====
+// V19 SF Alpha Upgrade: Damage Trail + Super Pulse
 
 function drawHUD(p1, p2, ld) {
   const bw = C.width * 0.38; // Wider bars
@@ -13,6 +14,18 @@ function drawHUD(p1, p2, ld) {
 
   // P1 Health Fill (Gradient: Neon Blue to Purple to Red)
   const p1Pct = Math.max(0, p1.hp / 100);
+
+  // V19: Damage Trail (red trailing bar like SF Alpha)
+  if (p1._displayHP === undefined) p1._displayHP = p1.hp;
+  if (p1._displayHP > p1.hp) p1._displayHP = Math.max(p1.hp, p1._displayHP - 0.4);
+  else p1._displayHP = p1.hp;
+  const p1TrailPct = Math.max(0, p1._displayHP / 100);
+  // Draw trail first (red)
+  if (p1TrailPct > p1Pct) {
+    X.fillStyle = 'rgba(255, 0, 50, 0.7)';
+    X.fillRect(20 + by * 0.4, by, bw * p1TrailPct, bh);
+  }
+
   const gw1 = X.createLinearGradient(20 + by * 0.4, by, 20 + by * 0.4 + bw, by);
   gw1.addColorStop(0, '#ff00aa');
   gw1.addColorStop(0.5, '#7700ff');
@@ -44,17 +57,21 @@ function drawHUD(p1, p2, ld) {
   const sw = bw * 0.6;
   const sh = 12;
   const sY = C.height - sh - 20;
+  const superPulse = Math.sin(performance.now() * 0.008) * 0.5 + 0.5; // 0→1 pulse
   X.save();
   X.transform(1, 0, -0.5, 1, 0, 0);
   X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(40, sY, sw, sh);
   X.fillStyle = p1.super >= 100 ? '#00ffff' : '#0055ff';
-  X.shadowBlur = p1.super >= 100 ? 15 : 0; X.shadowColor = '#00ffff';
-  X.fillRect(40, sY, sw * (p1.super / 100), sh);
+  X.shadowBlur = p1.super >= 100 ? (10 + superPulse * 20) : 0; X.shadowColor = '#00ffff';
+  X.fillRect(40, sY, sw * (Math.min(100, p1.super) / 100), sh);
   X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(40, sY, sw, sh);
   X.restore();
   if (p1.super >= 100) {
+    X.globalAlpha = 0.6 + superPulse * 0.4;
     X.fillStyle = '#00ffff'; X.font = 'bold 16px "Orbitron"';
-    X.fillText('SUPER', 20, sY - 10);
+    X.shadowBlur = 10 + superPulse * 15; X.shadowColor = '#00ffff';
+    X.fillText('⚡ SUPER ⚡', 20, sY - 10);
+    X.globalAlpha = 1.0; X.shadowBlur = 0;
   }
 
   // Draw P2 (Right) Health Bar Background
@@ -66,6 +83,19 @@ function drawHUD(p1, p2, ld) {
 
   // P2 Health Fill
   const p2Pct = Math.max(0, p2.hp / p2.maxHP);
+
+  // V19: Damage Trail for P2
+  if (p2._displayHP === undefined) p2._displayHP = p2.hp;
+  if (p2._displayHP > p2.hp) p2._displayHP = Math.max(p2.hp, p2._displayHP - 0.4);
+  else p2._displayHP = p2.hp;
+  const p2TrailPct = Math.max(0, p2._displayHP / p2.maxHP);
+  // Draw trail first (red, right-aligned)
+  if (p2TrailPct > p2Pct) {
+    X.fillStyle = 'rgba(255, 0, 50, 0.7)';
+    const trailW = bw * p2TrailPct;
+    X.fillRect(rx - by * 0.4 + (bw - trailW), by, trailW, bh);
+  }
+
   const gw2 = X.createLinearGradient(rx - by * 0.4, by, rx - by * 0.4 + bw, by);
   gw2.addColorStop(0, '#00ffff');
   gw2.addColorStop(0.5, '#7700ff');
@@ -96,15 +126,16 @@ function drawHUD(p1, p2, ld) {
     X.font = '22px serif'; X.fillText('★', C.width - 30 - (i * 24), by + bh + 50);
   }
 
-  // P2 Super Meter (Bottom Right)
+  // P2 Super Meter (Bottom Right) – V19: Pulse when full
   X.save();
   X.transform(1, 0, 0.5, 1, 0, 0);
-  X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+  const p2sX = C.width - 40 - sw - (C.height - sY) * 0.5;
+  X.fillStyle = 'rgba(0,0,0,0.8)'; X.fillRect(p2sX, sY, sw, sh);
   X.fillStyle = p2.super >= 100 ? '#ff00ff' : '#aa00aa';
-  X.shadowBlur = p2.super >= 100 ? 15 : 0; X.shadowColor = '#ff00ff';
-  const p2Sw = sw * (p2.super / 100);
-  X.fillRect(C.width - 40 - sw - (C.height - sY) * 0.5 + (sw - p2Sw), sY, p2Sw, sh);
-  X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(C.width - 40 - sw - (C.height - sY) * 0.5, sY, sw, sh);
+  X.shadowBlur = p2.super >= 100 ? (10 + superPulse * 20) : 0; X.shadowColor = '#ff00ff';
+  const p2Sw = sw * (Math.min(100, p2.super) / 100);
+  X.fillRect(p2sX + (sw - p2Sw), sY, p2Sw, sh);
+  X.strokeStyle = '#fff'; X.lineWidth = 2; X.strokeRect(p2sX, sY, sw, sh);
   X.restore();
 
   // VERSUS or STAGE text in center
